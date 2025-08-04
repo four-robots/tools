@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { glob } from 'glob';
+import { glob as globSync } from 'glob';
 import type { TechnicalDebtItem, DebtType, SeverityLevel } from '../types.js';
 
 export interface TechnicalDebtScannerConfig {
@@ -58,11 +58,11 @@ export class TechnicalDebtScanner {
     
     // Get all files matching our criteria
     const extensionPattern = `**/*{${this.config.includeExtensions.join(',')}}`;
-    const files = await glob(extensionPattern, {
+    const files = await globSync(extensionPattern, {
       cwd: directoryPath,
       ignore: this.config.excludeFiles,
       absolute: true
-    }) as string[];
+    });
 
     console.log(`Scanning ${files.length} files for technical debt...`);
 
