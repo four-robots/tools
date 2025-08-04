@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { glob as globSync } from 'glob';
+// @ts-ignore - glob v10 has built-in types
+import { glob } from 'glob';
 import type { TechnicalDebtItem, DebtType, SeverityLevel } from '../types.js';
 
 export interface TechnicalDebtScannerConfig {
@@ -58,7 +59,7 @@ export class TechnicalDebtScanner {
     
     // Get all files matching our criteria
     const extensionPattern = `**/*{${this.config.includeExtensions.join(',')}}`;
-    const files = await globSync(extensionPattern, {
+    const files = await glob(extensionPattern, {
       cwd: directoryPath,
       ignore: this.config.excludeFiles,
       absolute: true
