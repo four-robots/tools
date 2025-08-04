@@ -18,12 +18,7 @@ export default defineConfig({
   minify: false,
   splitting: false,
   treeshake: true,
-  dts: {
-    compilerOptions: {
-      composite: false,
-      skipLibCheck: true
-    }
-  },
+  dts: false, // Temporarily disabled to fix Docker build
   external: [
     // External dependencies should not be bundled
     'pg',
