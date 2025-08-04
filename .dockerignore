@@ -2,8 +2,9 @@
 node_modules
 **/node_modules
 npm-debug.log*
-package-lock.json
-**/package-lock.json
+# Keep package-lock.json for Docker builds
+# package-lock.json
+# **/package-lock.json
 
 # Next.js
 .next/

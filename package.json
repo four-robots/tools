@@ -1,0 +1,62 @@
+{
+  "name": "@mcp-tools/monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP Tools - Comprehensive work management and documentation ecosystem",
+  "workspaces": [
+    "core",
+    "gateway", 
+    "web",
+    "servers/kanban",
+    "servers/wiki", 
+    "servers/memory",
+    "workers/embeddings",
+    "workers/markitdown",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:core": "npm run build -w core",
+    "build:gateway": "npm run build -w gateway",
+    "build:web": "npm run build -w web",
+    "build:servers": "npm run build -w servers/kanban -w servers/wiki -w servers/memory",
+    "build:workers": "npm run build -w workers/embeddings -w workers/markitdown",
+    "build:migrations": "npm run build -w migrations",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "dev:gateway": "npm run dev -w gateway",
+    "dev:web": "npm run dev -w web",
+    "dev:kanban": "npm run dev -w servers/kanban",
+    "dev:wiki": "npm run dev -w servers/wiki", 
+    "dev:memory": "npm run dev -w servers/memory",
+    "dev:embeddings": "npm run dev -w workers/embeddings",
+    "dev:markitdown": "npm run dev -w workers/markitdown"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.3.3",
+    "tsup": "^8.0.1",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.12"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "workspace-management",
+    "kanban", 
+    "wiki",
+    "memory-graph",
+    "embeddings",
+    "document-processing"
+  ],
+  "author": "Tyler Coles",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tylercoles/mcp-tools"
+  }
+}

@@ -1,11 +1,12 @@
 # Multi-stage Docker build for MCP Tools
 
-# Stage 1: Dependencies
+# Stage 1: Dependencies (using npm workspaces)
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files for all workspaces
+# Copy workspace package files (including package-lock.json)
+COPY package*.json ./
 COPY core/package*.json ./core/
 COPY gateway/package*.json ./gateway/
 COPY workers/embeddings/package*.json ./workers/embeddings/
@@ -14,64 +15,25 @@ COPY servers/kanban/package*.json ./servers/kanban/
 COPY servers/wiki/package*.json ./servers/wiki/
 COPY servers/memory/package*.json ./servers/memory/
 COPY web/package*.json ./web/
+COPY migrations/package*.json ./migrations/
 
-# Install dependencies for all workspaces
-RUN cd core && npm ci --omit=dev && \
-    cd ../gateway && npm ci --omit=dev && \
-    cd ../workers/embeddings && npm ci --omit=dev && \
-    cd ../workers/markitdown && npm ci --omit=dev && \
-    cd ../servers/kanban && npm ci --omit=dev && \
-    cd ../servers/wiki && npm ci --omit=dev && \
-    cd ../servers/memory && npm ci --omit=dev && \
-    cd ../web && npm ci --omit=dev
+# Install all workspace dependencies at once (more efficient)
+RUN npm ci --workspaces --omit=dev
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# Copy workspace dependencies (npm workspaces handles linking)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/core/node_modules ./core/node_modules
-COPY --from=deps /app/gateway/node_modules ./gateway/node_modules
-COPY --from=deps /app/workers/embeddings/node_modules ./workers/embeddings/node_modules
-COPY --from=deps /app/workers/markitdown/node_modules ./workers/markitdown/node_modules
-COPY --from=deps /app/servers/kanban/node_modules ./servers/kanban/node_modules
-COPY --from=deps /app/servers/wiki/node_modules ./servers/wiki/node_modules
-COPY --from=deps /app/servers/memory/node_modules ./servers/memory/node_modules
-COPY --from=deps /app/web/node_modules ./web/node_modules
+COPY --from=deps /app/*/node_modules ./*/node_modules
 
-# Copy source code
+# Copy workspace package files and source code
+COPY package*.json ./
 COPY . .
 
-# Build shared core package first
-WORKDIR /app/core
-RUN npm run build
-
-# Build gateway service
-WORKDIR /app/gateway
-RUN npm run build
-
-# Build embeddings worker
-WORKDIR /app/workers/embeddings
-RUN npm run build
-
-# Build markitdown worker
-WORKDIR /app/workers/markitdown
-RUN npm run build
-
-# Build MCP servers
-WORKDIR /app/servers/kanban
-RUN npm run build
-
-WORKDIR /app/servers/wiki
-RUN npm run build
-
-WORKDIR /app/servers/memory
-RUN npm run build
-
-# Build web client
-WORKDIR /app/web
-RUN npm run build
+# Build all workspaces (core will be built first due to dependency order)
+RUN npm run build --workspaces --if-present
 
 # Stage 3: Gateway Service
 FROM node:22-alpine AS gateway
