@@ -62,7 +62,7 @@ export class TechnicalDebtScanner {
       cwd: directoryPath,
       ignore: this.config.excludeFiles,
       absolute: true
-    });
+    }) as string[];
 
     console.log(`Scanning ${files.length} files for technical debt...`);
 
