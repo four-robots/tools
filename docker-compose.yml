@@ -76,7 +76,8 @@ services:
   migrations:
     build:
       context: .
-      dockerfile: ./migrations/Dockerfile
+      dockerfile: Dockerfile
+      target: migrations
     container_name: mcp-tools-migrations
     environment:
       NODE_ENV: production
@@ -105,7 +106,8 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: ./gateway/Dockerfile
+      dockerfile: Dockerfile
+      target: gateway
     container_name: mcp-tools-gateway
     environment:
       NODE_ENV: production
@@ -155,7 +157,8 @@ services:
   embeddings-worker:
     build:
       context: .
-      dockerfile: ./workers/embeddings/Dockerfile
+      dockerfile: Dockerfile
+      target: embeddings-worker
     container_name: mcp-tools-embeddings-worker
     environment:
       NODE_ENV: production
@@ -185,7 +188,8 @@ services:
   markitdown-worker:
     build:
       context: .
-      dockerfile: ./workers/markitdown/Dockerfile
+      dockerfile: Dockerfile
+      target: markitdown-worker
     environment:
       NODE_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379
@@ -212,7 +216,8 @@ services:
   kanban-server:
     build:
       context: .
-      dockerfile: ./servers/kanban/Dockerfile
+      dockerfile: Dockerfile
+      target: kanban-server
     environment:
       NODE_ENV: production
       PORT: 6102
@@ -245,7 +250,8 @@ services:
   wiki-server:
     build:
       context: .
-      dockerfile: ./servers/wiki/Dockerfile
+      dockerfile: Dockerfile
+      target: wiki-server
     environment:
       NODE_ENV: production
       PORT: 6103
@@ -278,7 +284,8 @@ services:
   memory-server:
     build:
       context: .
-      dockerfile: ./servers/memory/Dockerfile
+      dockerfile: Dockerfile
+      target: memory-server
     environment:
       NODE_ENV: production
       PORT: 6104
@@ -314,7 +321,8 @@ services:
   web:
     build:
       context: .
-      dockerfile: ./web/Dockerfile
+      dockerfile: Dockerfile
+      target: web
     environment:
       NODE_ENV: production
       API_BASE_URL: http://gateway:6100

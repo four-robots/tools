@@ -17,10 +17,30 @@ COPY servers/memory/package*.json ./servers/memory/
 COPY web/package*.json ./web/
 COPY migrations/package*.json ./migrations/
 
-# Install all workspace dependencies at once (more efficient)
+# Install all workspace dependencies including dev dependencies for build
+RUN npm ci --workspaces
+
+# Stage 2: Production Dependencies
+FROM node:22-alpine AS prod-deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy workspace package files
+COPY package*.json ./
+COPY core/package*.json ./core/
+COPY gateway/package*.json ./gateway/
+COPY workers/embeddings/package*.json ./workers/embeddings/
+COPY workers/markitdown/package*.json ./workers/markitdown/
+COPY servers/kanban/package*.json ./servers/kanban/
+COPY servers/wiki/package*.json ./servers/wiki/
+COPY servers/memory/package*.json ./servers/memory/
+COPY web/package*.json ./web/
+COPY migrations/package*.json ./migrations/
+
+# Install only production dependencies
 RUN npm ci --workspaces --omit=dev
 
-# Stage 2: Builder
+# Stage 3: Builder
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -48,9 +68,8 @@ COPY --from=builder --chown=gateway:nodejs /app/gateway/package*.json ./gateway/
 COPY --from=builder --chown=gateway:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=gateway:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=gateway:nodejs /app/gateway/node_modules ./gateway/node_modules
-COPY --from=deps --chown=gateway:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=gateway:nodejs /app/node_modules ./node_modules
 
 USER gateway
 
@@ -72,9 +91,8 @@ COPY --from=builder --chown=worker:nodejs /app/workers/embeddings/package*.json 
 COPY --from=builder --chown=worker:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=worker:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=worker:nodejs /app/workers/embeddings/node_modules ./workers/embeddings/node_modules
-COPY --from=deps --chown=worker:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=worker:nodejs /app/node_modules ./node_modules
 
 USER worker
 
@@ -115,9 +133,8 @@ COPY --from=builder --chown=worker:nodejs /app/workers/markitdown/package*.json 
 COPY --from=builder --chown=worker:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=worker:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=worker:nodejs /app/workers/markitdown/node_modules ./workers/markitdown/node_modules
-COPY --from=deps --chown=worker:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=worker:nodejs /app/node_modules ./node_modules
 
 USER worker
 
@@ -137,9 +154,8 @@ COPY --from=builder --chown=mcp:nodejs /app/servers/kanban/package*.json ./serve
 COPY --from=builder --chown=mcp:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=mcp:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=mcp:nodejs /app/servers/kanban/node_modules ./servers/kanban/node_modules
-COPY --from=deps --chown=mcp:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=mcp:nodejs /app/node_modules ./node_modules
 
 USER mcp
 
@@ -161,9 +177,8 @@ COPY --from=builder --chown=mcp:nodejs /app/servers/wiki/package*.json ./servers
 COPY --from=builder --chown=mcp:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=mcp:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=mcp:nodejs /app/servers/wiki/node_modules ./servers/wiki/node_modules
-COPY --from=deps --chown=mcp:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=mcp:nodejs /app/node_modules ./node_modules
 
 USER mcp
 
@@ -185,13 +200,31 @@ COPY --from=builder --chown=mcp:nodejs /app/servers/memory/package*.json ./serve
 COPY --from=builder --chown=mcp:nodejs /app/core/dist ./core/dist
 COPY --from=builder --chown=mcp:nodejs /app/core/package*.json ./core/
 
-# Copy production dependencies
-COPY --from=deps --chown=mcp:nodejs /app/servers/memory/node_modules ./servers/memory/node_modules
-COPY --from=deps --chown=mcp:nodejs /app/core/node_modules ./core/node_modules
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=mcp:nodejs /app/node_modules ./node_modules
 
 USER mcp
 
 EXPOSE 3004
 
 WORKDIR /app/servers/memory
+CMD ["npm", "start"]
+
+# Stage 10: Database Migrations
+FROM node:22-alpine AS migrations
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 migration
+
+# Copy built migrations
+COPY --from=builder --chown=migration:nodejs /app/migrations/dist ./migrations/dist
+COPY --from=builder --chown=migration:nodejs /app/migrations/package*.json ./migrations/
+
+# Copy workspace node_modules (shared across all workspaces)
+COPY --from=prod-deps --chown=migration:nodejs /app/node_modules ./node_modules
+
+USER migration
+
+WORKDIR /app/migrations
 CMD ["npm", "start"]
