@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { glob } from 'glob';
+import { getGlob } from '../utils/glob-loader.js';
 import type { PerformanceBudget, SeverityLevel } from '../types.js';
 
 export interface PerformanceScannerConfig {

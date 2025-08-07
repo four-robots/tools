@@ -48,11 +48,8 @@ services:
     environment:
       QDRANT__SERVICE__HTTP_PORT: 6333
       QDRANT__SERVICE__GRPC_PORT: 6334
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Qdrant container doesn't include standard networking tools for healthcheck
+    # Services depending on it will retry connections
     networks:
       - mcp-network
 
@@ -125,11 +122,11 @@ services:
       - "6100:6100"
     depends_on:
       migrations:
-        condition: service_healthy
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
-      qdrant:
-        condition: service_healthy
+      #qdrant:
+      #  condition: service_started
       kanban-server:
         condition: service_healthy
       wiki-server:
@@ -162,6 +159,8 @@ services:
     container_name: mcp-tools-embeddings-worker
     environment:
       NODE_ENV: production
+      WORKER_NAME: embeddings-worker-1
+      NATS_URL: nats://nats:4222
       QDRANT_URL: http://qdrant:6333
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
@@ -169,8 +168,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      qdrant:
-        condition: service_healthy
+      #qdrant:
+      #  condition: service_started
     #restart: unless-stopped
     deploy:
       resources:
@@ -227,7 +226,7 @@ services:
       - "6102:6102"
     depends_on:
       migrations:
-        condition: service_healthy
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6102/health"]
       interval: 30s
@@ -261,7 +260,7 @@ services:
       - "6103:6103"
     depends_on:
       migrations:
-        condition: service_healthy
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6103/health"]
       interval: 30s
@@ -296,9 +295,9 @@ services:
       - "6104:6104"
     depends_on:
       migrations:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
+        condition: service_completed_successfully
+      #qdrant:
+      #  condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6104/health"]
       interval: 30s

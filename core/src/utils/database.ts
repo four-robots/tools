@@ -49,17 +49,25 @@ export function createKyselyInstance<T>(config: DatabaseConfig): Kysely<T> {
     throw new Error(`Only PostgreSQL is supported. Received: ${config.type}`);
   }
   
-  const pool = new Pool({
-    host: config.host,
-    port: config.port,
-    database: config.database,
-    user: config.user,
-    password: config.password,
+  // Use connectionString if available, otherwise use individual fields
+  const poolConfig: any = {
     max: config.poolSize || 10,
     ssl: config.ssl ? { rejectUnauthorized: false } : false,
     connectionTimeoutMillis: config.connectionTimeout || 30000,
     idleTimeoutMillis: config.idleTimeout || 30000
-  });
+  };
+
+  if (config.connectionString) {
+    poolConfig.connectionString = config.connectionString;
+  } else {
+    poolConfig.host = config.host;
+    poolConfig.port = config.port;
+    poolConfig.database = config.database;
+    poolConfig.user = config.user;
+    poolConfig.password = config.password;
+  }
+
+  const pool = new Pool(poolConfig);
   
   return new Kysely<T>({
     dialect: new PostgresDialect({ pool })

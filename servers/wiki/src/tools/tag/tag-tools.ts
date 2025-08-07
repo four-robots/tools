@@ -4,14 +4,14 @@ import { WikiService } from '../../services/WikiService.js';
 
 export function registerTagTools(server: MCPServer, wikiService: WikiService): void {
   // Get all tags
-  server.registerTool(
-    'get_tags',
-    {
+  server.registerTool({
+    name: 'get_tags',
+    config: {
       title: 'Get Tags',
       description: 'Retrieve all wiki tags',
-      argsSchema: z.object({}),
+      inputSchema: z.object({}),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const tags = await wikiService.getTags();
         
@@ -35,20 +35,20 @@ export function registerTagTools(server: MCPServer, wikiService: WikiService): v
         };
       }
     }
-  );
+  });
 
   // Create tag
-  server.registerTool(
-    'create_tag',
-    {
+  server.registerTool({
+    name: 'create_tag',
+    config: {
       title: 'Create Tag',
       description: 'Create a new wiki tag',
-      argsSchema: z.object({
+      inputSchema: z.object({
         name: z.string().describe('Name of the tag'),
         color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().describe('Color code for the tag (hex format, e.g., #ff0000)'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const { name, color } = args;
         const tag = await wikiService.createTag(name, color);
@@ -69,5 +69,5 @@ export function registerTagTools(server: MCPServer, wikiService: WikiService): v
         };
       }
     }
-  );
+  });
 }

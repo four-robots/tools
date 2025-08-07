@@ -7,9 +7,10 @@
  * Based on the @tylercoles/mcp-server framework.
  */
 
-import { Server } from '@tylercoles/mcp-server';
-import { StdioServerTransport } from '@tylercoles/mcp-transport-http';
-import { MemoryService } from '@mcp-tools/core/memory';
+import { MCPServer } from '@tylercoles/mcp-server';
+import { HttpTransport } from '@tylercoles/mcp-transport-http';
+import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
+import { z } from 'zod';
 import { 
   storeMemoryTool,
   retrieveMemoryTool,
@@ -24,7 +25,7 @@ import {
 // Environment configuration (PostgreSQL only)
 const config = {
   database: {
-    type: 'postgres' as const,
+    type: 'postgresql' as const,
     connectionString: process.env.DATABASE_URL,
     host: process.env.DATABASE_HOST,
     port: process.env.DATABASE_PORT ? parseInt(process.env.DATABASE_PORT) : undefined,
@@ -42,13 +43,14 @@ const config = {
 
 async function main() {
   try {
-    // Initialize memory service
+    // Initialize database and vector engine
     console.log('Initializing memory service...');
-    const memoryService = new MemoryService(config.database, config.natsUrl);
-    await memoryService.initialize();
+    const database = new MemoryDatabaseManager(config.database);
+    const vectorEngine = new VectorEngine();
+    const memoryService = new MemoryService(database, vectorEngine);
 
     // Create MCP server
-    const server = new Server({
+    const server = new MCPServer({
       name: config.server.name,
       version: config.server.version
     }, {
@@ -58,359 +60,233 @@ async function main() {
       }
     });
 
-    // Register tools
+    // Register tools with new ToolModule format
     console.log('Registering MCP tools...');
-    server.setRequestHandler('tools/list', async () => {
+    
+    server.registerTool({
+      name: 'store_memory',
+      config: {
+        description: 'Store a new memory in the graph with automatic relationship detection',
+        inputSchema: z.object({
+          content: z.string().describe('The memory content to store'),
+          context: z.object({
+            source: z.string().optional(),
+            timestamp: z.string().optional(),
+            location: z.string().optional(),
+            participants: z.array(z.string()).optional(),
+            tags: z.array(z.string()).optional(),
+            userId: z.string().optional(),
+            projectName: z.string().optional(),
+            memoryTopic: z.string().optional(),
+            memoryType: z.string().optional()
+          }).passthrough().describe('Context information for the memory'),
+          concepts: z.array(z.string()).optional().describe('Explicit concepts to associate with this memory'),
+          importance: z.number().min(1).max(5).optional().describe('Importance level (1=low, 5=critical)')
+        })
+      },
+      handler: async (args) => await storeMemoryTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'retrieve_memory',
+      config: {
+        description: 'Retrieve memories based on query and context filters',
+        inputSchema: z.object({
+          query: z.string().optional().describe('Search query for memory content'),
+          concepts: z.array(z.string()).optional(),
+          dateRange: z.object({
+            from: z.string(),
+            to: z.string()
+          }).optional(),
+          context: z.object({}).passthrough().optional(),
+          userId: z.string().optional(),
+          projectName: z.string().optional(),
+          similarityThreshold: z.number().min(0).max(1).optional(),
+          limit: z.number().min(1).max(100).optional()
+        })
+      },
+      handler: async (args) => await retrieveMemoryTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'search_memories',
+      config: {
+        description: 'Perform semantic search across all memories',
+        inputSchema: z.object({
+          query: z.string().describe('Search query'),
+          contextFilters: z.object({}).passthrough().optional(),
+          conceptFilters: z.array(z.string()).optional(),
+          includeRelated: z.boolean().optional(),
+          maxDepth: z.number().min(1).max(5).optional(),
+          userId: z.string().optional(),
+          projectName: z.string().optional(),
+          similarityThreshold: z.number().min(0).max(1).optional(),
+          limit: z.number().min(1).max(100).optional()
+        })
+      },
+      handler: async (args) => await searchMemoriesTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'create_connection',
+      config: {
+        description: 'Create an explicit relationship between two memories',
+        inputSchema: z.object({
+          sourceId: z.string(),
+          targetId: z.string(),
+          relationshipType: z.enum(['semantic_similarity', 'causal', 'temporal', 'conceptual', 'custom']),
+          strength: z.number().min(0).max(1).optional(),
+          metadata: z.object({}).passthrough().optional(),
+          bidirectional: z.boolean().optional()
+        })
+      },
+      handler: async (args) => await createConnectionTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'get_related',
+      config: {
+        description: 'Find memories related to a specific memory through the relationship graph',
+        inputSchema: z.object({
+          memoryId: z.string(),
+          relationshipTypes: z.array(z.string()).optional(),
+          maxDepth: z.number().min(1).max(5).optional(),
+          minStrength: z.number().min(0).max(1).optional()
+        })
+      },
+      handler: async (args) => await getRelatedTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'merge_memories',
+      config: {
+        description: 'Merge multiple memories into one, combining their content and relationships',
+        inputSchema: z.object({
+          primaryMemoryId: z.string(),
+          secondaryMemoryIds: z.array(z.string()),
+          strategy: z.enum(['combine_content', 'preserve_primary', 'create_summary'])
+        })
+      },
+      handler: async (args) => await mergeMemoriesTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'get_memory_stats',
+      config: {
+        description: 'Get statistics and insights about the memory graph',
+        inputSchema: z.object({
+          userId: z.string().optional(),
+          projectName: z.string().optional(),
+          dateRange: z.object({
+            from: z.string(),
+            to: z.string()
+          }).optional()
+        })
+      },
+      handler: async (args) => await getMemoryStatsTool(memoryService, args)
+    });
+
+    server.registerTool({
+      name: 'create_concept',
+      config: {
+        description: 'Create or update a concept in the knowledge graph',
+        inputSchema: z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          type: z.enum(['entity', 'topic', 'skill', 'project', 'person', 'custom']),
+          relatedMemoryIds: z.array(z.string()).optional()
+        })
+      },
+      handler: async (args) => await createConceptTool(memoryService, args)
+    });
+
+    // Register resources
+    server.registerResourceTemplate('memory-by-id', 'memory://memory/{id}', {
+      title: 'Memory by ID',
+      description: 'Access a specific memory by its ID',
+      mimeType: 'application/json'
+    }, async (uri) => {
+      const uriString = typeof uri === 'string' ? uri : uri.toString();
+      const match = uriString.match(/memory:\/\/memory\/(.+)/);
+      if (!match) {
+        throw new Error('Invalid memory URI format');
+      }
+
+      const memoryId = match[1];
+      const memoryRecord = await database.getMemory(memoryId);
+      if (!memoryRecord) {
+        throw new Error('Memory not found');
+      }
+      
+      const concepts = await database.getMemoryConcepts(memoryId);
+      const memory = memoryService['convertToMemoryNode'](memoryRecord, concepts.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || undefined,
+        type: c.type,
+        confidence: c.confidence,
+        extractedAt: c.extracted_at
+      })));
+      
       return {
-        tools: [
-          {
-            name: 'store_memory',
-            description: 'Store a new memory in the graph with automatic relationship detection',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                content: { type: 'string', description: 'The memory content to store' },
-                context: { 
-                  type: 'object',
-                  description: 'Context information for the memory',
-                  properties: {
-                    source: { type: 'string' },
-                    timestamp: { type: 'string' },
-                    location: { type: 'string' },
-                    participants: { type: 'array', items: { type: 'string' } },
-                    tags: { type: 'array', items: { type: 'string' } },
-                    userId: { type: 'string' },
-                    projectName: { type: 'string' },
-                    memoryTopic: { type: 'string' },
-                    memoryType: { type: 'string' }
-                  },
-                  additionalProperties: true
-                },
-                concepts: { 
-                  type: 'array', 
-                  items: { type: 'string' },
-                  description: 'Explicit concepts to associate with this memory'
-                },
-                importance: { 
-                  type: 'number', 
-                  minimum: 1, 
-                  maximum: 5,
-                  description: 'Importance level (1=low, 5=critical)'
-                }
-              },
-              required: ['content', 'context']
-            }
-          },
-          {
-            name: 'retrieve_memory',
-            description: 'Retrieve memories based on query and context filters',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                query: { type: 'string', description: 'Search query for memory content' },
-                concepts: { type: 'array', items: { type: 'string' } },
-                dateRange: {
-                  type: 'object',
-                  properties: {
-                    from: { type: 'string' },
-                    to: { type: 'string' }
-                  }
-                },
-                context: { type: 'object', additionalProperties: true },
-                userId: { type: 'string' },
-                projectName: { type: 'string' },
-                similarityThreshold: { type: 'number', minimum: 0, maximum: 1 },
-                limit: { type: 'number', minimum: 1, maximum: 100 }
-              }
-            }
-          },
-          {
-            name: 'search_memories',
-            description: 'Perform semantic search across all memories',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                query: { type: 'string', description: 'Search query' },
-                contextFilters: { type: 'object', additionalProperties: true },
-                conceptFilters: { type: 'array', items: { type: 'string' } },
-                includeRelated: { type: 'boolean' },
-                maxDepth: { type: 'number', minimum: 1, maximum: 5 },
-                userId: { type: 'string' },
-                projectName: { type: 'string' },
-                similarityThreshold: { type: 'number', minimum: 0, maximum: 1 },
-                limit: { type: 'number', minimum: 1, maximum: 100 }
-              },
-              required: ['query']
-            }
-          },
-          {
-            name: 'create_connection',
-            description: 'Create an explicit relationship between two memories',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                sourceId: { type: 'string' },
-                targetId: { type: 'string' },
-                relationshipType: { 
-                  type: 'string',
-                  enum: ['semantic_similarity', 'causal', 'temporal', 'conceptual', 'custom']
-                },
-                strength: { type: 'number', minimum: 0, maximum: 1 },
-                metadata: { type: 'object', additionalProperties: true },
-                bidirectional: { type: 'boolean' }
-              },
-              required: ['sourceId', 'targetId', 'relationshipType']
-            }
-          },
-          {
-            name: 'get_related',
-            description: 'Find memories related to a specific memory through the relationship graph',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                memoryId: { type: 'string' },
-                relationshipTypes: { type: 'array', items: { type: 'string' } },
-                maxDepth: { type: 'number', minimum: 1, maximum: 5 },
-                minStrength: { type: 'number', minimum: 0, maximum: 1 }
-              },
-              required: ['memoryId']
-            }
-          },
-          {
-            name: 'merge_memories',
-            description: 'Merge multiple memories into one, combining their content and relationships',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                primaryMemoryId: { type: 'string' },
-                secondaryMemoryIds: { type: 'array', items: { type: 'string' } },
-                strategy: { 
-                  type: 'string',
-                  enum: ['combine_content', 'preserve_primary', 'create_summary']
-                }
-              },
-              required: ['primaryMemoryId', 'secondaryMemoryIds', 'strategy']
-            }
-          },
-          {
-            name: 'get_memory_stats',
-            description: 'Get statistics and insights about the memory graph',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                userId: { type: 'string' },
-                projectName: { type: 'string' },
-                dateRange: {
-                  type: 'object',
-                  properties: {
-                    from: { type: 'string' },
-                    to: { type: 'string' }
-                  }
-                }
-              }
-            }
-          },
-          {
-            name: 'create_concept',
-            description: 'Create or update a concept in the knowledge graph',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                description: { type: 'string' },
-                type: { 
-                  type: 'string',
-                  enum: ['entity', 'topic', 'skill', 'project', 'person', 'custom']
-                },
-                relatedMemoryIds: { type: 'array', items: { type: 'string' } }
-              },
-              required: ['name', 'type']
-            }
-          }
-        ]
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(memory, null, 2)
+        }]
       };
     });
 
-    // Register tool handlers
-    server.setRequestHandler('tools/call', async (request) => {
-      const { name, arguments: args } = request.params;
-      
-      switch (name) {
-        case 'store_memory':
-          return await storeMemoryTool(memoryService, args);
-        case 'retrieve_memory':
-          return await retrieveMemoryTool(memoryService, args);
-        case 'search_memories':
-          return await searchMemoriesTool(memoryService, args);
-        case 'create_connection':
-          return await createConnectionTool(memoryService, args);
-        case 'get_related':
-          return await getRelatedTool(memoryService, args);
-        case 'merge_memories':
-          return await mergeMemoriesTool(memoryService, args);
-        case 'get_memory_stats':
-          return await getMemoryStatsTool(memoryService, args);
-        case 'create_concept':
-          return await createConceptTool(memoryService, args);
-        default:
-          throw new Error(`Unknown tool: ${name}`);
+    server.registerResourceTemplate('memory-search', 'memory://search/{query}', {
+      title: 'Memory Search',
+      description: 'Search memories by query',
+      mimeType: 'application/json'
+    }, async (uri) => {
+      const uriString = typeof uri === 'string' ? uri : uri.toString();
+      const match = uriString.match(/memory:\/\/search\/(.+)/);
+      if (!match) {
+        throw new Error('Invalid search URI format');
       }
-    });
 
-    // Register resource templates
-    server.setRequestHandler('resources/templates/list', async () => {
+      const query = decodeURIComponent(match[1]);
+      const results = await memoryService.searchMemories({ query });
+      
       return {
-        resourceTemplates: [
-          {
-            uriTemplate: 'memory://memory/{id}',
-            name: 'Memory by ID',
-            description: 'Access a specific memory by its ID',
-            mimeType: 'application/json'
-          },
-          {
-            uriTemplate: 'memory://search/{query}',
-            name: 'Memory Search',
-            description: 'Search memories by query',
-            mimeType: 'application/json'
-          },
-          {
-            uriTemplate: 'memory://concept/{name}',
-            name: 'Concept by Name',
-            description: 'Access memories related to a specific concept',
-            mimeType: 'application/json'
-          },
-          {
-            uriTemplate: 'memory://stats',
-            name: 'Memory Statistics',
-            description: 'Get memory graph statistics',
-            mimeType: 'application/json'
-          }
-        ]
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(results, null, 2)
+        }]
       };
     });
 
-    // Register resource handlers
-    server.setRequestHandler('resources/read', async (request) => {
-      const { uri } = request.params;
-      const url = new URL(uri);
+    server.registerResource('memory-stats', 'memory://stats', {
+      title: 'Memory Statistics',
+      description: 'Get memory graph statistics',
+      mimeType: 'application/json'
+    }, async () => {
+      const stats = await memoryService.getMemoryStats();
       
-      try {
-        switch (url.hostname) {
-          case 'memory': {
-            const pathParts = url.pathname.split('/').filter(p => p);
-            
-            if (pathParts[0] === 'memory' && pathParts[1]) {
-              // Get specific memory
-              const memoryRecord = await database.getMemory(pathParts[1]);
-              if (!memoryRecord) {
-                throw new Error('Memory not found');
-              }
-              
-              const concepts = await database.getMemoryConcepts(pathParts[1]);
-              const memory = memoryService['convertToMemoryNode'](memoryRecord, concepts.map(c => ({
-                id: c.id,
-                name: c.name,
-                description: c.description || undefined,
-                type: c.type,
-                confidence: c.confidence,
-                extractedAt: c.extracted_at
-              })));
-              
-              return {
-                contents: [{
-                  uri,
-                  mimeType: 'application/json',
-                  text: JSON.stringify(memory, null, 2)
-                }]
-              };
-            }
-            
-            if (pathParts[0] === 'search' && pathParts[1]) {
-              // Search memories
-              const query = decodeURIComponent(pathParts[1]);
-              const results = await memoryService.searchMemories({ query });
-              
-              return {
-                contents: [{
-                  uri,
-                  mimeType: 'application/json',
-                  text: JSON.stringify(results, null, 2)
-                }]
-              };
-            }
-            
-            if (pathParts[0] === 'stats') {
-              // Get statistics
-              const stats = await memoryService.getMemoryStats();
-              
-              return {
-                contents: [{
-                  uri,
-                  mimeType: 'application/json',
-                  text: JSON.stringify(stats, null, 2)
-                }]
-              };
-            }
-            
-            throw new Error('Invalid memory resource path');
-          }
-          
-          default:
-            throw new Error('Unknown resource scheme');
-        }
-      } catch (error) {
-        throw new Error(`Failed to read resource: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+      return {
+        contents: [{
+          uri: 'memory://stats',
+          mimeType: 'application/json',
+          text: JSON.stringify(stats, null, 2)
+        }]
+      };
     });
 
     // Register prompts
-    server.setRequestHandler('prompts/list', async () => {
-      return {
-        prompts: [
-          {
-            name: 'analyze_memory_patterns',
-            description: 'Analyze patterns in stored memories to identify insights and relationships',
-            arguments: [
-              {
-                name: 'user_id',
-                description: 'User ID to analyze memories for',
-                required: false
-              },
-              {
-                name: 'time_range',
-                description: 'Time range for analysis (e.g., "last_week", "last_month")',
-                required: false
-              }
-            ]
-          },
-          {
-            name: 'memory_summary',
-            description: 'Generate a summary of memories related to a specific topic or concept',
-            arguments: [
-              {
-                name: 'topic',
-                description: 'Topic or concept to summarize memories for',
-                required: true
-              },
-              {
-                name: 'depth',
-                description: 'Analysis depth (1-5, where 5 is most detailed)',
-                required: false
-              }
-            ]
-          }
-        ]
-      };
-    });
-
-    // Register prompt handlers
-    server.setRequestHandler('prompts/get', async (request) => {
-      const { name, arguments: args } = request.params;
-      
-      switch (name) {
-        case 'analyze_memory_patterns': {
-          const stats = await memoryService.getMemoryStats();
-          const prompt = `You are a memory pattern analyst. Analyze the following memory statistics and provide insights:
+    server.registerPrompt('analyze_memory_patterns', {
+      title: 'Analyze Memory Patterns',
+      description: 'Analyze patterns in stored memories to identify insights and relationships',
+      argsSchema: z.object({
+        user_id: z.string().optional().describe('User ID to analyze memories for'),
+        time_range: z.string().optional().describe('Time range for analysis (e.g., "last_week", "last_month")')
+      })
+    }, async (args) => {
+      const stats = await memoryService.getMemoryStats();
+      const prompt = `You are a memory pattern analyst. Analyze the following memory statistics and provide insights:
 
 Memory Statistics:
 - Total Memories: ${stats.totalMemories}
@@ -428,36 +304,42 @@ Provide insights on:
 4. Recommendations for memory organization
 `;
 
-          return {
-            description: 'Memory pattern analysis prompt',
-            messages: [
-              {
-                role: 'user',
-                content: {
-                  type: 'text',
-                  text: prompt
-                }
-              }
-            ]
-          };
-        }
-        
-        case 'memory_summary': {
-          if (!args?.topic) {
-            throw new Error('Topic argument is required for memory summary');
+      return {
+        messages: [
+          {
+            role: 'user' as const,
+            content: {
+              type: 'text' as const,
+              text: prompt
+            }
           }
-          
-          const searchResults = await memoryService.searchMemories({
-            query: args.topic,
-            limit: 20
-          });
-          
-          const memoriesText = searchResults.memories.map(m => 
-            `Memory ID: ${m.id}\nContent: ${m.content}\nConcepts: ${m.concepts.map(c => c.name).join(', ')}\nCreated: ${m.createdAt}\n`
-          ).join('\n---\n\n');
-          
-          const depth = args?.depth || 3;
-          const prompt = `You are a memory summarizer. Create a comprehensive summary of memories related to "${args.topic}".
+        ]
+      };
+    });
+
+    server.registerPrompt('memory_summary', {
+      title: 'Memory Summary',
+      description: 'Generate a summary of memories related to a specific topic or concept',
+      argsSchema: z.object({
+        topic: z.string().describe('Topic or concept to summarize memories for'),
+        depth: z.number().optional().describe('Analysis depth (1-5, where 5 is most detailed)')
+      })
+    }, async (args) => {
+      if (!args?.topic) {
+        throw new Error('Topic argument is required for memory summary');
+      }
+      
+      const searchResults = await memoryService.searchMemories({
+        query: args.topic,
+        limit: 20
+      });
+      
+      const memoriesText = searchResults.memories.map(m => 
+        `Memory ID: ${m.id}\nContent: ${m.content}\nConcepts: ${m.concepts.map(c => c.name).join(', ')}\nCreated: ${m.createdAt}\n`
+      ).join('\n---\n\n');
+      
+      const depth = args?.depth || 3;
+      const prompt = `You are a memory summarizer. Create a comprehensive summary of memories related to "${args.topic}".
 
 Analysis Depth: ${depth}/5 (${depth <= 2 ? 'Brief' : depth <= 3 ? 'Moderate' : 'Detailed'})
 
@@ -473,30 +355,40 @@ Please provide:
 
 Format as a well-structured summary with clear sections.`;
 
-          return {
-            description: `Memory summary for topic: ${args.topic}`,
-            messages: [
-              {
-                role: 'user',
-                content: {
-                  type: 'text',
-                  text: prompt
-                }
-              }
-            ]
-          };
-        }
-        
-        default:
-          throw new Error(`Unknown prompt: ${name}`);
-      }
+      return {
+        messages: [
+          {
+            role: 'user' as const,
+            content: {
+              type: 'text' as const,
+              text: prompt
+            }
+          }
+        ]
+      };
     });
 
     // Start server
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
+    const transport = new HttpTransport({
+        port: config.server.port,
+        host: 'localhost',
+        cors: {
+            origin: ['http://localhost:3000', 'http://localhost:5173'],
+            credentials: true,
+        },
+    });
     
-    console.log(`Memory Graph MCP Server started on port ${config.server.port}`);
+    server.useTransport(transport);
+    await server.start();
+    
+    console.log(`✅ Memory Graph MCP Server started on port ${config.server.port}`);
+    console.log('📚 Available resources:');
+    console.log('   • memory://memory/{id} - Specific memory details');
+    console.log('   • memory://search/{query} - Search results');
+    console.log('   • memory://stats - Memory statistics');
+    console.log('📋 Available prompts:');
+    console.log('   • analyze_memory_patterns - Analyze memory patterns');
+    console.log('   • memory_summary - Generate topic summaries');
     console.log('Server ready to handle MCP requests');
 
   } catch (error) {

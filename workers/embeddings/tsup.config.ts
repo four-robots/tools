@@ -19,7 +19,33 @@ export default defineConfig({
     'pg',
     'p-limit',
     'p-retry',
-    'zod'
+    'zod',
+    'proxy-agent',
+    'http',
+    'https',
+    'url',
+    // Node.js built-in modules that cause dynamic require issues
+    'tty',
+    'util',
+    'os',
+    'fs',
+    'path',
+    'child_process',
+    'stream',
+    'buffer',
+    'events',
+    'crypto',
+    'net',
+    'http',
+    'https',
+    'url',
+    // WebSocket and Puppeteer-related modules
+    'ws',
+    'puppeteer-core',
+    'puppeteer',
+    // Debug-related modules that use dynamic requires
+    'debug',
+    '@puppeteer/browsers'
   ],
   esbuildOptions(options) {
     // Ensure proper module resolution for path mappings

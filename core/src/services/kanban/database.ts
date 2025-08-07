@@ -117,12 +117,10 @@ export class KanbanDatabase {
   async initialize(): Promise<void> {
     try {
       await this.dbManager.initialize();
-      console.log('🔄 Creating kanban database tables...');
-      await this.createTables();
-      console.log('✅ Kanban database tables created successfully');
+      console.log('✅ Kanban database initialization: Database schema is managed by the centralized migration service');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Failed to create kanban tables:', errorMessage);
+      console.error('❌ Failed to initialize kanban database:', errorMessage);
       console.error('Error details:', error);
       throw error;
     }

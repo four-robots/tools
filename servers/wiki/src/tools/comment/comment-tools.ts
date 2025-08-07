@@ -4,16 +4,16 @@ import { WikiService } from '../../services/WikiService.js';
 
 export function registerCommentTools(server: MCPServer, wikiService: WikiService): void {
   // Get comments for a page
-  server.registerTool(
-    'get_page_comments',
-    {
+  server.registerTool({
+    name: 'get_page_comments',
+    config: {
       title: 'Get Page Comments',
       description: 'Retrieve all comments for a specific wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the page to get comments for'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const { page_id } = args;
         const comments = await wikiService.getPageComments(page_id);
@@ -39,22 +39,22 @@ export function registerCommentTools(server: MCPServer, wikiService: WikiService
         };
       }
     }
-  );
+  });
 
   // Add comment to a page
-  server.registerTool(
-    'add_comment',
-    {
+  server.registerTool({
+    name: 'add_comment',
+    config: {
       title: 'Add Comment',
       description: 'Add a comment to a wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the page to comment on'),
         content: z.string().describe('Content of the comment'),
         author: z.string().optional().describe('Author of the comment'),
         parent_id: z.number().optional().describe('ID of parent comment for replies'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const { page_id, content, author, parent_id } = args;
         const comment = await wikiService.addComment(page_id, content, author, parent_id);
@@ -75,19 +75,19 @@ export function registerCommentTools(server: MCPServer, wikiService: WikiService
         };
       }
     }
-  );
+  });
 
   // Delete comment
-  server.registerTool(
-    'delete_comment',
-    {
+  server.registerTool({
+    name: 'delete_comment',
+    config: {
       title: 'Delete Comment',
       description: 'Delete a comment from a wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         comment_id: z.number().describe('ID of the comment to delete'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const { comment_id } = args;
         await wikiService.deleteComment(comment_id);
@@ -108,5 +108,5 @@ export function registerCommentTools(server: MCPServer, wikiService: WikiService
         };
       }
     }
-  );
+  });
 }

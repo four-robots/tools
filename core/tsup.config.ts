@@ -8,7 +8,6 @@ export default defineConfig({
     'src/services/memory-processing/index.ts',
     'src/services/wiki/index.ts',
     'src/services/scraper/index.ts',
-    'src/services/quality/index.ts',
     'src/shared/types/index.ts'
   ],
   format: ['esm'],
@@ -28,6 +27,7 @@ export default defineConfig({
     'slugify',
     'nats',
     'uuid',
-    'zod'
+    'zod',
+    'glob'
   ]
 });

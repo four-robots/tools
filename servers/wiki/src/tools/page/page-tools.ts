@@ -4,15 +4,16 @@ import { WikiService } from '../../services/WikiService.js';
 
 export function registerPageTools(server: MCPServer, wikiService: WikiService): void {
   // Get all pages
-  server.registerTool(
-    'get_pages',
-    {
+  server.registerTool({
+    name: 'get_pages',
+    config: {
       title: 'Get Pages',
       description: 'Retrieve all wiki pages with optional filtering',
-      argsSchema: z.object({
+      inputSchema: z.object({
         published_only: z.boolean().optional().default(false).describe('Only return published pages'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const { published_only = false } = args;
@@ -38,18 +39,19 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Get page by ID
-  server.registerTool(
-    'get_page',
-    {
+  server.registerTool({
+    name: 'get_page',
+    config: {
       title: 'Get Page',
       description: 'Retrieve a specific wiki page by ID',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the page to retrieve'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const { page_id } = args;
@@ -81,18 +83,19 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Get page by slug
-  server.registerTool(
-    'get_page_by_slug',
-    {
+  server.registerTool({
+    name: 'get_page_by_slug',
+    config: {
       title: 'Get Page by Slug',
       description: 'Retrieve a specific wiki page by its slug',
-      argsSchema: z.object({
+      inputSchema: z.object({
         slug: z.string().describe('Slug of the page to retrieve'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const { slug } = args;
@@ -124,15 +127,15 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Create page
-  server.registerTool(
-    'create_page',
-    {
+  server.registerTool({
+    name: 'create_page',
+    config: {
       title: 'Create Page',
       description: 'Create a new wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         title: z.string().describe('Title of the page'),
         content: z.string().describe('Markdown content of the page'),
         summary: z.string().optional().describe('Optional summary/excerpt of the page'),
@@ -143,6 +146,7 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         created_by: z.string().optional().describe('Username or identifier of the page creator'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const page = await wikiService.createPage(args);
@@ -163,15 +167,15 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Update page
-  server.registerTool(
-    'update_page',
-    {
+  server.registerTool({
+    name: 'update_page',
+    config: {
       title: 'Update Page',
       description: 'Update an existing wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the page to update'),
         title: z.string().optional().describe('New title of the page'),
         content: z.string().optional().describe('New markdown content of the page'),
@@ -184,6 +188,7 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         change_reason: z.string().optional().describe('Reason for the change (for version history)'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const { page_id, ...updateData } = args;
@@ -205,18 +210,19 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Delete page
-  server.registerTool(
-    'delete_page',
-    {
+  server.registerTool({
+    name: 'delete_page',
+    config: {
       title: 'Delete Page',
       description: 'Delete a wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the page to delete'),
       }),
     },
+    handler:
     async (args: any) => {
       try {
         const { page_id } = args;
@@ -238,16 +244,17 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 
   // Get navigation tree
-  server.registerTool(
-    'get_navigation',
-    {
+  server.registerTool({
+    name: 'get_navigation',
+    config: {
       title: 'Get Navigation Tree',
       description: 'Get hierarchical navigation tree of all pages',
-      argsSchema: z.object({}),
+      inputSchema: z.object({}),
     },
+    handler:
     async (args: any) => {
       try {
         const navigation = await wikiService.getNavigationTree();
@@ -271,5 +278,5 @@ export function registerPageTools(server: MCPServer, wikiService: WikiService): 
         };
       }
     }
-  );
+  });
 }

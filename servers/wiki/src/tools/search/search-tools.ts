@@ -4,12 +4,12 @@ import { WikiService } from '../../services/WikiService.js';
 
 export function registerSearchTools(server: MCPServer, wikiService: WikiService): void {
   // Search pages
-  server.registerTool(
-    'search_pages',
-    {
+  server.registerTool({
+    name: 'search_pages',
+    config: {
       title: 'Search Pages',
       description: 'Search wiki pages by content, title, or metadata',
-      argsSchema: z.object({
+      inputSchema: z.object({
         query: z.string().describe('Search query text'),
         category_id: z.number().optional().describe('Filter by category ID'),
         tag_names: z.array(z.string()).optional().describe('Filter by tag names'),
@@ -18,7 +18,7 @@ export function registerSearchTools(server: MCPServer, wikiService: WikiService)
         offset: z.number().optional().default(0).describe('Number of results to skip (for pagination)'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const searchResults = await wikiService.searchPages(args);
         
@@ -43,17 +43,17 @@ export function registerSearchTools(server: MCPServer, wikiService: WikiService)
         };
       }
     }
-  );
+  });
 
   // Get wiki statistics
-  server.registerTool(
-    'get_wiki_stats',
-    {
+  server.registerTool({
+    name: 'get_wiki_stats',
+    config: {
       title: 'Get Wiki Statistics',
       description: 'Get comprehensive statistics about the wiki',
-      argsSchema: z.object({}),
+      inputSchema: z.object({}),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const stats = await wikiService.getStats();
         
@@ -76,5 +76,5 @@ export function registerSearchTools(server: MCPServer, wikiService: WikiService)
         };
       }
     }
-  );
+  });
 }

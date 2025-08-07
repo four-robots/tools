@@ -4,14 +4,14 @@ import { WikiService } from '../../services/WikiService.js';
 
 export function registerCategoryTools(server: MCPServer, wikiService: WikiService): void {
   // Get all categories
-  server.registerTool(
-    'get_categories',
-    {
+  server.registerTool({
+    name: 'get_categories',
+    config: {
       title: 'Get Categories',
       description: 'Retrieve all wiki categories',
-      argsSchema: z.object({}),
+      inputSchema: z.object({}),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const categories = await wikiService.getCategories();
         
@@ -35,21 +35,21 @@ export function registerCategoryTools(server: MCPServer, wikiService: WikiServic
         };
       }
     }
-  );
+  });
 
   // Create category
-  server.registerTool(
-    'create_category',
-    {
+  server.registerTool({
+    name: 'create_category',
+    config: {
       title: 'Create Category',
       description: 'Create a new wiki category',
-      argsSchema: z.object({
+      inputSchema: z.object({
         name: z.string().describe('Name of the category'),
         description: z.string().optional().describe('Description of the category'),
         color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().describe('Color code for the category (hex format, e.g., #ff0000)'),
       }),
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         const { name, description, color } = args;
         const category = await wikiService.createCategory(name, description, color);
@@ -70,5 +70,5 @@ export function registerCategoryTools(server: MCPServer, wikiService: WikiServic
         };
       }
     }
-  );
+  });
 }

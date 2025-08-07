@@ -22,12 +22,12 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
   // The full implementation with storage service will be integrated later
   
   // Upload attachment tool
-  server.registerTool(
-    'wiki_upload_attachment',
-    {
+  server.registerTool({
+    name: 'wiki_upload_attachment',
+    config: {
       title: 'Upload Attachment',
       description: 'Upload a file attachment to a wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the wiki page to attach the file to'),
         file_data: z.string().describe('Base64 encoded file data'),
         filename: z.string().describe('Original filename'),
@@ -36,7 +36,7 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
         uploaded_by: z.string().optional().describe('User who uploaded the file'),
       })
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         // This is a placeholder implementation
         // The full implementation will be added when we integrate the storage service
@@ -58,20 +58,20 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
         };
       }
     }
-  );
+  });
 
   
   // List page attachments tool
-  server.registerTool(
-    'wiki_list_page_attachments',
-    {
+  server.registerTool({
+    name: 'wiki_list_page_attachments',
+    config: {
       title: 'List Page Attachments',
       description: 'List all attachments for a wiki page',
-      argsSchema: z.object({
+      inputSchema: z.object({
         page_id: z.number().describe('ID of the wiki page'),
       })
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         return {
           content: [{
@@ -91,19 +91,19 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
         };
       }
     }
-  );
+  });
 
   // Get attachment tool
-  server.registerTool(
-    'wiki_get_attachment',
-    {
+  server.registerTool({
+    name: 'wiki_get_attachment',
+    config: {
       title: 'Get Attachment',
       description: 'Get attachment details by ID',
-      argsSchema: z.object({
+      inputSchema: z.object({
         attachment_id: z.string().describe('ID of the attachment'),
       })
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         return {
           content: [{
@@ -122,19 +122,19 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
         };
       }
     }
-  );
+  });
 
   // Delete attachment tool
-  server.registerTool(
-    'wiki_delete_attachment',
-    {
+  server.registerTool({
+    name: 'wiki_delete_attachment',
+    config: {
       title: 'Delete Attachment',
       description: 'Delete an attachment',
-      argsSchema: z.object({
+      inputSchema: z.object({
         attachment_id: z.string().describe('ID of the attachment to delete'),
       })
     },
-    async (args: any) => {
+    handler: async (args: any) => {
       try {
         return {
           content: [{
@@ -154,5 +154,5 @@ export function registerAttachmentTools(server: MCPServer, wikiService: WikiServ
         };
       }
     }
-  );
+  });
 }
