@@ -146,19 +146,19 @@ async function createApp() {
   
   // Initialize databases with PostgreSQL configurations
   const kanbanDatabase = new KanbanDatabase({
-    type: 'postgres',
+    type: 'postgresql',
     connectionString: config.database.postgres
   });
   console.log('✅ KanbanDatabase created');
   
   const memoryDatabase = new MemoryDatabaseManager({
-    type: 'postgres',
+    type: 'postgresql',
     connectionString: config.database.postgres
   });
   console.log('✅ MemoryDatabase created');
   
   const scraperDatabase = new ScraperDatabaseManager({
-    type: 'postgres',
+    type: 'postgresql',
     connectionString: config.database.postgres
   });
   console.log('✅ ScraperDatabase created');
@@ -172,8 +172,13 @@ async function createApp() {
   console.log('✅ MemoryDatabase initialized');
   
   console.log('🔄 Initializing scraper database...');
-  await scraperDatabase.initialize();
-  console.log('✅ ScraperDatabase initialized');
+  try {
+    await scraperDatabase.initialize();
+    console.log('✅ ScraperDatabase initialized');
+  } catch (error) {
+    console.warn('⚠️  ScraperDatabase initialization failed, continuing without scraper service:', error.message);
+    // Don't throw - continue without scraper service
+  }
   
   // Initialize vector engine
   const vectorEngine = new VectorEngine();
@@ -207,7 +212,7 @@ async function createApp() {
   
   // API Documentation (before auth middleware)
   try {
-    const swaggerDocument = YAML.load(path.join(__dirname, '../../docs/openapi.yaml'));
+    const swaggerDocument = YAML.load(path.join(__dirname, 'openapi.yaml'));
     app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
       explorer: true,
       customSiteTitle: 'MCP Tools API Documentation'

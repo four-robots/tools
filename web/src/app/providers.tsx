@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { RealtimeProvider } from '@/components/realtime/realtime-provider';
@@ -32,12 +33,29 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
+  const pathname = usePathname();
+  
+  // Only enable real-time connections on app pages, not on landing/marketing pages
+  const needsRealtime = pathname !== '/' && 
+                       !pathname.startsWith('/auth') && 
+                       !pathname.startsWith('/privacy') && 
+                       !pathname.startsWith('/terms') && 
+                       !pathname.startsWith('/support') &&
+                       !pathname.startsWith('/demo');
+
   return (
     <QueryClientProvider client={queryClient}>
-      <RealtimeProvider>
-        {children}
-        <Toaster />
-      </RealtimeProvider>
+      {needsRealtime ? (
+        <RealtimeProvider>
+          {children}
+          <Toaster />
+        </RealtimeProvider>
+      ) : (
+        <>
+          {children}
+          <Toaster />
+        </>
+      )}
     </QueryClientProvider>
   );
 }

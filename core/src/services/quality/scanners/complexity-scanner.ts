@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { glob } from 'glob';
+import { getGlob } from '../utils/glob-loader.js';
 import type { CodeComplexityMetric, SeverityLevel } from '../types.js';
 
 export interface ComplexityScannerConfig {
@@ -62,6 +62,7 @@ export class ComplexityScanner {
     const complexityMetrics: CodeComplexityMetric[] = [];
     
     // Get all files matching our criteria
+    const glob = await getGlob();
     const extensionPattern = `**/*{${this.config.includeExtensions.join(',')}}`;
     const files = await glob(extensionPattern, {
       cwd: projectPath,

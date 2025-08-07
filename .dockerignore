@@ -69,6 +69,7 @@ README.md
 docs/
 *.md
 !DOCKER_DEPLOYMENT.md
+!gateway/docs/
 
 # Test files
 __tests__/

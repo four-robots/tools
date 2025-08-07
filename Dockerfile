@@ -108,8 +108,11 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy built Next.js app
 COPY --from=builder --chown=nextjs:nodejs /app/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/web/public ./web/public
+COPY --from=builder --chown=nextjs:nodejs /app/web/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/web/public ./public
+
+# Copy node_modules for standalone build
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 

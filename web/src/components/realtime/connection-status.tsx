@@ -38,6 +38,10 @@ export function ConnectionStatusIndicator({
         return <WifiOff className="w-4 h-4 text-gray-400" />;
       case 'error':
         return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      case 'circuit-open':
+        return <AlertTriangle className="w-4 h-4 text-orange-500" />;
       default:
         return <WifiOff className="w-4 h-4 text-gray-400" />;
     }
@@ -55,6 +59,10 @@ export function ConnectionStatusIndicator({
         return 'Disconnected';
       case 'error':
         return 'Connection Error';
+      case 'failed':
+        return 'Connection Failed';
+      case 'circuit-open':
+        return 'Connection Paused';
       default:
         return 'Unknown';
     }
@@ -71,6 +79,10 @@ export function ConnectionStatusIndicator({
         return 'text-gray-600 bg-gray-50 border-gray-200';
       case 'error':
         return 'text-red-600 bg-red-50 border-red-200';
+      case 'failed':
+        return 'text-red-700 bg-red-100 border-red-300';
+      case 'circuit-open':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
       default:
         return 'text-gray-600 bg-gray-50 border-gray-200';
     }
@@ -114,7 +126,7 @@ export function ConnectionStatusIndicator({
 
             {status === 'connected' && (
               <div className="text-xs text-gray-500">
-                Real-time updates are active. You'll receive live notifications for changes.
+                Real-time updates are active. You&apos;ll receive live notifications for changes.
               </div>
             )}
 
@@ -139,6 +151,33 @@ export function ConnectionStatusIndicator({
                     Try Reconnecting
                   </Button>
                 )}
+              </div>
+            )}
+
+            {status === 'failed' && (
+              <div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Connection failed after multiple attempts. Real-time features are unavailable.
+                </div>
+                {onReconnect && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onReconnect}
+                    className="w-full"
+                  >
+                    Retry Connection
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {status === 'circuit-open' && (
+              <div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Connection attempts are temporarily paused due to repeated failures. 
+                  The system will automatically retry shortly.
+                </div>
               </div>
             )}
 
@@ -167,13 +206,13 @@ export function ConnectionStatusBanner({ status, onReconnect }: ConnectionStatus
           <span className="text-sm font-medium">{getStatusText()}</span>
         </div>
         
-        {status === 'error' && onReconnect && (
+        {(status === 'error' || status === 'failed') && onReconnect && (
           <Button
             size="sm"
             variant="outline"
             onClick={onReconnect}
           >
-            Reconnect
+            {status === 'failed' ? 'Retry' : 'Reconnect'}
           </Button>
         )}
       </div>
@@ -188,6 +227,10 @@ export function ConnectionStatusBanner({ status, onReconnect }: ConnectionStatus
       case 'disconnected':
         return <WifiOff className="w-4 h-4" />;
       case 'error':
+        return <AlertTriangle className="w-4 h-4" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4" />;
+      case 'circuit-open':
         return <AlertTriangle className="w-4 h-4" />;
       default:
         return <WifiOff className="w-4 h-4" />;
@@ -204,6 +247,10 @@ export function ConnectionStatusBanner({ status, onReconnect }: ConnectionStatus
         return 'Real-time updates are disabled';
       case 'error':
         return 'Unable to connect for real-time updates';
+      case 'failed':
+        return 'Real-time connection failed';
+      case 'circuit-open':
+        return 'Connection attempts paused - will retry automatically';
       default:
         return 'Connection status unknown';
     }
@@ -218,6 +265,10 @@ export function ConnectionStatusBanner({ status, onReconnect }: ConnectionStatus
         return 'text-gray-700 bg-gray-50 border-gray-200';
       case 'error':
         return 'text-red-700 bg-red-50 border-red-200';
+      case 'failed':
+        return 'text-red-800 bg-red-100 border-red-300';
+      case 'circuit-open':
+        return 'text-orange-700 bg-orange-50 border-orange-200';
       default:
         return 'text-gray-700 bg-gray-50 border-gray-200';
     }

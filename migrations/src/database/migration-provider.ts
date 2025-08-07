@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 
 // Import consolidated migration
 import { initialSchemaComplete } from '../migrations/001_initial_schema_complete.js';
+import * as scraperTables from '../migrations/002_scraper_tables.js';
 
 /**
  * Migration registry that maps migration names to their implementations
@@ -16,7 +17,8 @@ import { initialSchemaComplete } from '../migrations/001_initial_schema_complete
  * migrations into a single comprehensive schema migration for simplicity.
  */
 const MIGRATION_REGISTRY: Record<string, Migration> = {
-  '001_initial_schema_complete': initialSchemaComplete
+  '001_initial_schema_complete': initialSchemaComplete,
+  '002_scraper_tables': scraperTables
 };
 
 /**
@@ -26,7 +28,7 @@ const MIGRATION_REGISTRY: Record<string, Migration> = {
  */
 export class CodeMigrationProvider implements MigrationProvider {
   async getMigrations(): Promise<Record<string, Migration>> {
-    logger.info(`Loading ${Object.keys(MIGRATION_REGISTRY).length} migration from registry`);
+    logger.info(`Loading ${Object.keys(MIGRATION_REGISTRY).length} migrations from registry`);
     
     // Validate all migrations have required methods
     for (const [name, migration] of Object.entries(MIGRATION_REGISTRY)) {
@@ -78,13 +80,14 @@ export function validateMigrationRegistry(): void {
     }
   }
   
-  // For single migration, just validate the naming
-  if (names.length === 1) {
-    const name = names[0];
-    if (!name.startsWith('001_')) {
-      throw new Error(`Single migration must start with 001_, found: ${name}`);
+  // Validate sequential numbering
+  for (let i = 0; i < names.length; i++) {
+    const expectedNumber = String(i + 1).padStart(3, '0');
+    const name = names[i];
+    if (!name.startsWith(`${expectedNumber}_`)) {
+      throw new Error(`Migration ${name} should be numbered ${expectedNumber}_, found: ${name}`);
     }
   }
   
-  logger.info(`Migration registry validated: ${names.length} migration ready for execution`);
+  logger.info(`Migration registry validated: ${names.length} migrations ready for execution`);
 }

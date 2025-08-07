@@ -1,0 +1,510 @@
+openapi: 3.0.3
+info:
+  title: MCP Tools API Gateway
+  description: |
+    Unified API Gateway for the MCP Tools ecosystem providing access to Kanban boards,
+    Wiki pages, Memory graphs, Web scraping, and Analytics services.
+    
+    This gateway aggregates multiple MCP (Model Context Protocol) servers into a single
+    REST API with WebSocket support for real-time collaboration.
+  version: 1.0.0
+  contact:
+    name: MCP Tools Support
+    url: https://github.com/tylercoles/mcp-tools
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:6100
+    description: Development server
+  - url: http://gateway:6100
+    description: Docker container server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API gateway and connected services
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "connected"
+                      kanban:
+                        type: string
+                        example: "active"
+                      wiki:
+                        type: string
+                        example: "active"
+                      memory:
+                        type: string
+                        example: "active"
+                      scraper:
+                        type: string
+                        example: "active"
+
+  /api/kanban/boards:
+    get:
+      summary: List all kanban boards
+      description: Retrieve all kanban boards with optional filtering
+      tags:
+        - Kanban
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of kanban boards
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  boards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KanbanBoard'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      summary: Create new kanban board
+      description: Create a new kanban board with specified configuration
+      tags:
+        - Kanban
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Project Alpha"
+                description:
+                  type: string
+                  example: "Main development project board"
+                settings:
+                  type: object
+      responses:
+        '201':
+          description: Board created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KanbanBoard'
+
+  /api/wiki/pages:
+    get:
+      summary: List wiki pages
+      description: Retrieve wiki pages with search and filtering
+      tags:
+        - Wiki
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of wiki pages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WikiPage'
+
+    post:
+      summary: Create wiki page
+      description: Create a new wiki page
+      tags:
+        - Wiki
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - content
+              properties:
+                title:
+                  type: string
+                  example: "Getting Started Guide"
+                content:
+                  type: string
+                  example: "# Welcome to MCP Tools\n\nThis guide will help you get started..."
+                slug:
+                  type: string
+                  example: "getting-started-guide"
+      responses:
+        '201':
+          description: Page created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiPage'
+
+  /api/memory/thoughts:
+    get:
+      summary: List memory thoughts
+      description: Retrieve thoughts from the memory graph
+      tags:
+        - Memory
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of memory thoughts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  thoughts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryThought'
+
+    post:
+      summary: Create memory thought
+      description: Add a new thought to the memory graph
+      tags:
+        - Memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: "Remember to update the documentation after the API changes"
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["documentation", "api", "todo"]
+      responses:
+        '201':
+          description: Thought created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryThought'
+
+  /api/scraper/scrape:
+    post:
+      summary: Scrape URL
+      description: Scrape content from a specified URL
+      tags:
+        - Scraper
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://example.com/page"
+                selector:
+                  type: string
+                  example: ".main-content"
+                options:
+                  type: object
+                  properties:
+                    timeout:
+                      type: integer
+                      default: 10000
+                    extractMainContent:
+                      type: boolean
+                      default: true
+      responses:
+        '200':
+          description: Content scraped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScrapedContent'
+
+  /api/scraper/jobs:
+    get:
+      summary: List scraping jobs
+      description: Retrieve scraping job status and history
+      tags:
+        - Scraper
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+      responses:
+        '200':
+          description: List of scraping jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScrapingJob'
+
+  /api/analytics/dashboard:
+    get:
+      summary: Analytics dashboard data
+      description: Get comprehensive analytics data for dashboard display
+      tags:
+        - Analytics
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: week
+      responses:
+        '200':
+          description: Analytics dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: object
+                    properties:
+                      totalBoards:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      totalThoughts:
+                        type: integer
+                      activeUsers:
+                        type: integer
+                  charts:
+                    type: object
+
+components:
+  schemas:
+    KanbanBoard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        settings:
+          type: object
+
+    WikiPage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        content:
+          type: string
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_published:
+          type: boolean
+
+    MemoryThought:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        embedding_vector:
+          type: array
+          items:
+            type: number
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ScrapedContent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        content:
+          type: string
+        contentHash:
+          type: string
+        metadata:
+          type: object
+        scrapedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [success, error]
+
+    ScrapingJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        selector:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        scheduledAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        errorMessage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Kanban
+    description: Kanban board management
+  - name: Wiki
+    description: Wiki page management
+  - name: Memory
+    description: Memory graph and thought management
+  - name: Scraper
+    description: Web scraping and content extraction
+  - name: Analytics
+    description: Analytics and reporting

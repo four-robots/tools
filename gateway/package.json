@@ -8,7 +8,7 @@
     "api-gateway": "dist/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && cp src/openapi.yaml dist/openapi.yaml",
     "dev": "tsup --watch --onSuccess \"node dist/index.js\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",

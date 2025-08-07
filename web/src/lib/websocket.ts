@@ -22,9 +22,13 @@ export interface WebSocketConfig {
   reconnectAttempts?: number;
   reconnectInterval?: number;
   heartbeatInterval?: number;
+  maxReconnectDelay?: number;
+  circuitBreakerThreshold?: number;
+  circuitBreakerTimeout?: number;
+  enableReconnect?: boolean;
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting';
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error' | 'reconnecting' | 'failed' | 'circuit-open';
 
 export function useWebSocket(config: WebSocketConfig) {
   const {
@@ -35,18 +39,77 @@ export function useWebSocket(config: WebSocketConfig) {
     onError,
     onMessage,
     reconnectAttempts = 5,
-    reconnectInterval = 3000,
+    reconnectInterval = 1000,
     heartbeatInterval = 30000,
+    maxReconnectDelay = 30000,
+    circuitBreakerThreshold = 5,
+    circuitBreakerTimeout = 60000,
+    enableReconnect = true,
   } = config;
 
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeoutId = useRef<NodeJS.Timeout | null>(null);
   const heartbeatTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  const circuitBreakerTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  
+  // Connection state tracking
   const reconnectCount = useRef(0);
+  const consecutiveFailures = useRef(0);
+  const lastConnectAttempt = useRef(0);
+  const isCircuitOpen = useRef(false);
+  
   const { toast } = useToast();
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+
+  // Calculate exponential backoff delay
+  const calculateBackoffDelay = useCallback((attempt: number) => {
+    const delay = Math.min(reconnectInterval * Math.pow(2, attempt - 1), maxReconnectDelay);
+    // Add jitter to prevent thundering herd problem
+    const jitter = Math.random() * 0.1 * delay;
+    return delay + jitter;
+  }, [reconnectInterval, maxReconnectDelay]);
+
+  // Check if circuit breaker should be opened
+  const shouldOpenCircuit = useCallback(() => {
+    return consecutiveFailures.current >= circuitBreakerThreshold;
+  }, [circuitBreakerThreshold]);
+
+  // Open the circuit breaker
+  const openCircuit = useCallback(() => {
+    console.warn(`WebSocket circuit breaker opened after ${consecutiveFailures.current} consecutive failures`);
+    isCircuitOpen.current = true;
+    setConnectionStatus('circuit-open');
+    
+    toast({
+      title: 'Connection temporarily disabled',
+      description: `Too many connection failures. Retrying in ${Math.round(circuitBreakerTimeout / 1000)} seconds.`,
+      variant: 'warning',
+    });
+
+    // Schedule circuit breaker to close (half-open state)
+    circuitBreakerTimeoutId.current = setTimeout(() => {
+      console.log('WebSocket circuit breaker entering half-open state');
+      isCircuitOpen.current = false;
+      consecutiveFailures.current = 0; // Reset failure count
+      if (enableReconnect) {
+        // Call connect directly here to avoid dependency cycle
+        tryConnect();
+      }
+    }, circuitBreakerTimeout);
+  }, [circuitBreakerTimeout, toast, enableReconnect]);
+
+  // Reset circuit breaker on successful connection
+  const closeCircuit = useCallback(() => {
+    if (circuitBreakerTimeoutId.current) {
+      clearTimeout(circuitBreakerTimeoutId.current);
+      circuitBreakerTimeoutId.current = null;
+    }
+    isCircuitOpen.current = false;
+    consecutiveFailures.current = 0;
+    reconnectCount.current = 0;
+  }, []);
 
   const sendHeartbeat = useCallback(() => {
     if (ws.current?.readyState === WebSocket.OPEN) {
@@ -73,57 +136,119 @@ export function useWebSocket(config: WebSocketConfig) {
     }
   }, []);
 
-  const connect = useCallback(() => {
+  const tryConnect = useCallback(() => {
+    // Check if circuit breaker is open
+    if (isCircuitOpen.current) {
+      console.log('WebSocket connection attempt blocked - circuit breaker is open');
+      return;
+    }
+
+    // Check if we've exceeded max reconnection attempts
+    if (reconnectCount.current >= reconnectAttempts) {
+      if (shouldOpenCircuit()) {
+        openCircuit();
+        return;
+      }
+      setConnectionStatus('failed');
+      console.error(`WebSocket connection failed after ${reconnectAttempts} attempts`);
+      toast({
+        title: 'Connection failed',
+        description: 'Maximum reconnection attempts exceeded',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      setConnectionStatus('connecting');
+      const now = Date.now();
+      lastConnectAttempt.current = now;
       
+      setConnectionStatus(reconnectCount.current === 0 ? 'connecting' : 'reconnecting');
+      
+      // Close existing connection if any
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      
+      console.log(`WebSocket connection attempt ${reconnectCount.current + 1}/${reconnectAttempts} to ${url}`);
       ws.current = new WebSocket(url, protocols);
 
       ws.current.onopen = (event) => {
+        console.log('WebSocket connected successfully');
         setConnectionStatus('connected');
-        reconnectCount.current = 0;
+        closeCircuit(); // Reset all failure counters
         startHeartbeat();
         onOpen?.(event);
         
-        toast({
-          title: 'Connected',
-          description: 'Real-time connection established',
-          variant: 'success',
-        });
-      };
-
-      ws.current.onclose = (event) => {
-        setConnectionStatus('disconnected');
-        stopHeartbeat();
-        onClose?.(event);
-
-        // Attempt to reconnect if not a clean close
-        if (!event.wasClean && reconnectCount.current < reconnectAttempts) {
-          setConnectionStatus('reconnecting');
-          reconnectCount.current++;
-          
+        // Only show success toast for reconnections, not initial connections
+        if (reconnectCount.current > 0) {
           toast({
-            title: 'Connection lost',
-            description: `Attempting to reconnect... (${reconnectCount.current}/${reconnectAttempts})`,
-            variant: 'warning',
-          });
-
-          reconnectTimeoutId.current = setTimeout(() => {
-            connect();
-          }, reconnectInterval);
-        } else if (reconnectCount.current >= reconnectAttempts) {
-          setConnectionStatus('error');
-          toast({
-            title: 'Connection failed',
-            description: 'Unable to establish real-time connection',
-            variant: 'destructive',
+            title: 'Reconnected',
+            description: 'Real-time connection restored',
+            variant: 'success',
           });
         }
       };
 
+      ws.current.onclose = (event) => {
+        console.log(`WebSocket closed: code=${event.code}, reason="${event.reason}", wasClean=${event.wasClean}`);
+        stopHeartbeat();
+        onClose?.(event);
+
+        // Don't attempt to reconnect if this was a clean close or reconnection is disabled
+        if (event.wasClean || !enableReconnect) {
+          setConnectionStatus('disconnected');
+          return;
+        }
+
+        // Increment failure counters
+        reconnectCount.current++;
+        consecutiveFailures.current++;
+
+        // Check if we should open circuit breaker
+        if (shouldOpenCircuit()) {
+          openCircuit();
+          return;
+        }
+
+        // Check if we've hit max attempts
+        if (reconnectCount.current >= reconnectAttempts) {
+          setConnectionStatus('failed');
+          console.error(`WebSocket connection failed after ${reconnectAttempts} attempts`);
+          toast({
+            title: 'Connection failed',
+            description: 'Unable to establish connection after multiple attempts',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Schedule reconnection with exponential backoff
+        setConnectionStatus('reconnecting');
+        const delay = calculateBackoffDelay(reconnectCount.current);
+        
+        console.log(`WebSocket scheduling reconnection attempt ${reconnectCount.current + 1}/${reconnectAttempts} in ${Math.round(delay)}ms`);
+        
+        // Only show toast for first few reconnection attempts to avoid spam
+        if (reconnectCount.current <= 3) {
+          toast({
+            title: 'Connection lost',
+            description: `Reconnecting in ${Math.round(delay / 1000)} seconds... (${reconnectCount.current}/${reconnectAttempts})`,
+            variant: 'warning',
+          });
+        }
+
+        reconnectTimeoutId.current = setTimeout(() => {
+          tryConnect();
+        }, delay);
+      };
+
       ws.current.onerror = (event) => {
+        console.error('WebSocket error:', event);
         setConnectionStatus('error');
         onError?.(event);
+        // Note: onclose will be called after onerror, so we handle reconnection there
       };
 
       ws.current.onmessage = (event) => {
@@ -140,10 +265,37 @@ export function useWebSocket(config: WebSocketConfig) {
         }
       };
     } catch (error) {
-      setConnectionStatus('error');
       console.error('WebSocket connection error:', error);
+      consecutiveFailures.current++;
+      
+      if (shouldOpenCircuit()) {
+        openCircuit();
+      } else {
+        setConnectionStatus('error');
+        toast({
+          title: 'Connection error',
+          description: 'Failed to initialize WebSocket connection',
+          variant: 'destructive',
+        });
+      }
     }
-  }, [url, protocols, onOpen, onClose, onError, onMessage, reconnectAttempts, reconnectInterval, startHeartbeat, stopHeartbeat, toast]);
+  }, [
+    url,
+    protocols,
+    onOpen,
+    onClose,
+    onError,
+    onMessage,
+    reconnectAttempts,
+    enableReconnect,
+    startHeartbeat,
+    stopHeartbeat,
+    toast,
+    calculateBackoffDelay,
+    shouldOpenCircuit,
+    openCircuit,
+    closeCircuit
+  ]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutId.current) {
@@ -151,7 +303,17 @@ export function useWebSocket(config: WebSocketConfig) {
       reconnectTimeoutId.current = null;
     }
     
+    if (circuitBreakerTimeoutId.current) {
+      clearTimeout(circuitBreakerTimeoutId.current);
+      circuitBreakerTimeoutId.current = null;
+    }
+    
     stopHeartbeat();
+    
+    // Reset connection state
+    reconnectCount.current = 0;
+    consecutiveFailures.current = 0;
+    isCircuitOpen.current = false;
     
     if (ws.current) {
       ws.current.close(1000, 'Client disconnect');
@@ -180,12 +342,17 @@ export function useWebSocket(config: WebSocketConfig) {
 
   // Auto-connect on mount
   useEffect(() => {
-    connect();
+    tryConnect();
 
     return () => {
       disconnect();
     };
-  }, [connect, disconnect]);
+  }, [tryConnect, disconnect]);
+
+  // Create a stable connect function for external use
+  const connect = useCallback(() => {
+    tryConnect();
+  }, [tryConnect]);
 
   return {
     connectionStatus,
@@ -195,6 +362,9 @@ export function useWebSocket(config: WebSocketConfig) {
     disconnect,
     isConnected: connectionStatus === 'connected',
     isConnecting: connectionStatus === 'connecting' || connectionStatus === 'reconnecting',
+    isCircuitOpen: isCircuitOpen.current,
+    reconnectAttempt: reconnectCount.current,
+    consecutiveFailures: consecutiveFailures.current,
   };
 }
 

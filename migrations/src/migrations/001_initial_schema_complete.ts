@@ -619,6 +619,8 @@ export const initialSchemaComplete: Migration = {
       .addColumn('content_hash', 'text', (col) => col.notNull())
       .execute();
 
+
+
     // System administration tables
     logger.info('Creating system administration tables...');
     

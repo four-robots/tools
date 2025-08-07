@@ -9,6 +9,7 @@ export default defineConfig({
   minify: false,
   splitting: false,
   treeshake: true,
+  publicDir: false,
   external: [
     // Mark all node_modules as external
     '@mcp-tools/core',

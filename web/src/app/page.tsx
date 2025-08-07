@@ -43,10 +43,10 @@ const features = [
 ];
 
 const stats = [
-  { name: 'Projects Managed', value: '10,000+' },
-  { name: 'Active Users', value: '2,500+' },
-  { name: 'Notes Created', value: '50,000+' },
-  { name: 'Uptime', value: '99.9%' },
+  { name: 'Core Features', value: '3' },
+  { name: 'Development Status', value: 'Beta' },
+  { name: 'Open Source', value: 'TypeScript' },
+  { name: 'Real-time Updates', value: 'WebSocket' },
 ];
 
 export default function HomePage() {
@@ -89,21 +89,21 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 text-xl leading-8 text-gray-600">
               Integrate kanban boards, memory management, and collaborative wikis 
-              in one powerful productivity suite. Built for teams that value efficiency and clarity.
+              in one powerful productivity suite. Built with TypeScript and modern web technologies.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
               <Link
                 href="/auth/signup"
                 className="btn btn-primary px-8 py-3 text-base"
               >
-                Start Free Trial
+                Try the Beta
                 <ArrowRightIcon className="ml-2 h-4 w-4" />
               </Link>
               <Link
-                href="/demo"
+                href="/dashboard"
                 className="btn btn-secondary px-8 py-3 text-base"
               >
-                View Demo
+                View Dashboard
               </Link>
             </div>
           </div>
@@ -159,10 +159,10 @@ export default function HomePage() {
           <div className="mx-auto max-w-4xl">
             <div className="text-center">
               <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-                Trusted by teams worldwide
+                Development Showcase
               </h2>
               <p className="mt-4 text-lg text-gray-600">
-                Join thousands of productive teams already using MCP Tools
+                Modern productivity suite built with cutting-edge technology
               </p>
             </div>
             
@@ -187,17 +187,17 @@ export default function HomePage() {
         <div className="container-app">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-              Ready to boost your productivity?
+              Ready to explore the platform?
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Start your free trial today. No credit card required.
+              Experience the integrated productivity suite in development.
             </p>
             <div className="mt-8">
               <Link
-                href="/auth/signup"
+                href="/dashboard"
                 className="btn btn-primary px-8 py-3 text-base"
               >
-                Get Started Free
+                Explore Features
                 <ArrowRightIcon className="ml-2 h-4 w-4" />
               </Link>
             </div>
