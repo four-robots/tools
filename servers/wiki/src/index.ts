@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Configuration (PostgreSQL only)
 const config = {
   port: parseInt(process.env.PORT || '8196'),
-  host: process.env.HOST || 'localhost',
+  host: process.env.HOST || '0.0.0.0', // Bind to all interfaces for Docker compatibility
   database: {
     type: 'postgres' as const,
     connectionString: process.env.DATABASE_URL,

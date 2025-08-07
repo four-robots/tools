@@ -371,7 +371,7 @@ Format as a well-structured summary with clear sections.`;
     // Start server
     const transport = new HttpTransport({
         port: config.server.port,
-        host: 'localhost',
+        host: '0.0.0.0', // Bind to all interfaces for Docker compatibility
         cors: {
             origin: ['http://localhost:3000', 'http://localhost:5173'],
             credentials: true,
