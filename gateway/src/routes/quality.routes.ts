@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { QualityService, DEFAULT_QUALITY_CONFIG } from '@mcp-tools/core/services/quality/service.js';
+import { QualityService, DEFAULT_QUALITY_CONFIG } from '@mcp-tools/core/quality';
 import { validateRequest } from '../middleware/validation.middleware.js';
 import { z } from 'zod';
 

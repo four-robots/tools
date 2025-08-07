@@ -118,7 +118,7 @@ EXPOSE 3001
 ENV PORT 3001
 ENV HOSTNAME "0.0.0.0"
 
-CMD ["node", "web/server.js"]
+CMD ["node", "server.js"]
 
 # Stage 6: Markitdown Worker
 FROM node:22-alpine AS markitdown-worker
