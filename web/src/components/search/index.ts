@@ -32,6 +32,9 @@ export { default as SearchPaginationDefault } from './SearchPagination';
 export { SearchAnalytics } from './SearchAnalytics';
 export { default as SearchAnalyticsDefault } from './SearchAnalytics';
 
+// Search Page
+export { SearchPage } from './SearchPage';
+
 // ============================================================================
 // Common Components
 // ============================================================================

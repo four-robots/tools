@@ -12,12 +12,15 @@ import {
   KanbanSquare,
   Plus,
   Activity,
-  TrendingUp
+  TrendingUp,
+  Search,
+  Command
 } from 'lucide-react';
 import Link from 'next/link';
 import { LiveUpdates, LiveActivityIndicator } from '@/components/realtime/live-updates';
 import { ConnectionStatusIndicator } from '@/components/realtime/connection-status';
 import { useRealtime } from '@/components/realtime/realtime-provider';
+import { GlobalSearch } from '@/components/layout/GlobalSearch';
 
 function DashboardPageContent() {
   const { logout, isLoggingOut } = useAuth();
@@ -27,6 +30,14 @@ function DashboardPageContent() {
   const { connectionStatus } = useRealtime();
 
   const stats = [
+    {
+      title: 'Search',
+      value: '🔍',
+      description: 'Find anything',
+      icon: Search,
+      color: 'bg-orange-500',
+      href: '/search',
+    },
     {
       title: 'Kanban Boards',
       value: kanbanData?.data?.length || 0,
@@ -100,6 +111,10 @@ function DashboardPageContent() {
             
             <div className="flex items-center space-x-4">
               <nav className="hidden md:flex space-x-6">
+                <Link href="/search" className="text-gray-600 hover:text-gray-900 flex items-center">
+                  <Search className="w-4 h-4 mr-1" />
+                  Search
+                </Link>
                 <Link href="/kanban" className="text-gray-600 hover:text-gray-900">
                   Kanban
                 </Link>
@@ -113,6 +128,25 @@ function DashboardPageContent() {
                   Analytics
                 </Link>
               </nav>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex items-center space-x-2 text-gray-600"
+                onClick={() => {
+                  // This will be handled by the global search hook
+                  window.dispatchEvent(new KeyboardEvent('keydown', { 
+                    key: 'k', 
+                    metaKey: true, 
+                    bubbles: true 
+                  }));
+                }}
+              >
+                <Search className="w-4 h-4" />
+                <span>Search</span>
+                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded">
+                  ⌘K
+                </kbd>
+              </Button>
               <ConnectionStatusIndicator 
                 status={connectionStatus as any}
                 showText={false}
@@ -229,6 +263,9 @@ function DashboardPageContent() {
       {/* Real-time updates */}
       <LiveUpdates />
       <LiveActivityIndicator />
+      
+      {/* Global Search Modal */}
+      <GlobalSearch />
     </div>
   );
 }

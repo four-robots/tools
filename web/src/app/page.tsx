@@ -7,7 +7,8 @@ import {
   BookOpenIcon,
   BarChart3Icon,
   UsersIcon,
-  SparklesIcon
+  SparklesIcon,
+  SearchIcon
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -16,6 +17,14 @@ export const metadata: Metadata = {
 };
 
 const features = [
+  {
+    name: 'Unified Search',
+    description: 'Search across all your content with semantic search, filters, and intelligent suggestions across all tools.',
+    icon: SearchIcon,
+    href: '/search',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+  },
   {
     name: 'Kanban Boards',
     description: 'Organize tasks and projects with intuitive drag-and-drop boards, custom workflows, and team collaboration.',
@@ -43,7 +52,7 @@ const features = [
 ];
 
 const stats = [
-  { name: 'Core Features', value: '3' },
+  { name: 'Core Features', value: '4' },
   { name: 'Development Status', value: 'Beta' },
   { name: 'Open Source', value: 'TypeScript' },
   { name: 'Real-time Updates', value: 'WebSocket' },
@@ -127,7 +136,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
             {features.map((feature) => (
               <Link
                 key={feature.name}
