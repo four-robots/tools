@@ -354,7 +354,13 @@ export const BackfillOptionsSchema = z.object({
     to: z.string().datetime().optional()
   }).optional(),
   /** Chunking options to use */
-  chunkingOptions: VectorScrapingOptionsSchema.shape.vector.shape.chunkingOptions.optional(),
+  chunkingOptions: z.object({
+    strategy: z.enum(['fixed_size', 'paragraph', 'sentence']).default('paragraph'),
+    target_size: z.number().int().min(100).max(8000).default(1000),
+    max_size: z.number().int().min(100).max(10000).default(1500),
+    min_size: z.number().int().min(50).max(1000).default(200),
+    overlap_size: z.number().int().min(0).max(500).default(100)
+  }).optional(),
   /** Force reprocessing even if embeddings exist */
   forceReprocess: z.boolean().default(false)
 });
