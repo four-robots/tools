@@ -1518,3 +1518,697 @@ export interface SearchContext {
   currentFile?: string;
   projectContext?: string;
 }
+
+// ===================
+// CODE QUALITY METRICS TYPES
+// ===================
+
+/**
+ * Code smell types for quality analysis
+ */
+export enum CodeSmellType {
+  LONG_METHOD = 'long_method',
+  LARGE_CLASS = 'large_class',
+  DUPLICATE_CODE = 'duplicate_code',
+  COMPLEX_CONDITION = 'complex_condition',
+  MAGIC_NUMBER = 'magic_number',
+  DEAD_CODE = 'dead_code',
+  GOD_CLASS = 'god_class',
+  FEATURE_ENVY = 'feature_envy',
+  LONG_PARAMETER_LIST = 'long_parameter_list',
+  PRIMITIVE_OBSESSION = 'primitive_obsession',
+  DATA_CLUMPS = 'data_clumps',
+  SWITCH_STATEMENTS = 'switch_statements',
+  LAZY_CLASS = 'lazy_class',
+  SPECULATIVE_GENERALITY = 'speculative_generality',
+  TEMPORARY_FIELD = 'temporary_field',
+  MESSAGE_CHAINS = 'message_chains',
+  MIDDLE_MAN = 'middle_man',
+  INAPPROPRIATE_INTIMACY = 'inappropriate_intimacy',
+  ALTERNATIVE_CLASSES = 'alternative_classes',
+  INCOMPLETE_LIBRARY_CLASS = 'incomplete_library_class',
+  DATA_CLASS = 'data_class',
+  REFUSED_BEQUEST = 'refused_bequest',
+  COMMENTS = 'comments'
+}
+
+/**
+ * Quality rating levels (A-E scale)
+ */
+export enum QualityRating {
+  A = 'A', // Excellent (90-100%)
+  B = 'B', // Good (75-89%)
+  C = 'C', // Average (60-74%)
+  D = 'D', // Poor (40-59%)
+  E = 'E'  // Very Poor (0-39%)
+}
+
+/**
+ * Severity levels for issues
+ */
+export enum Severity {
+  CRITICAL = 'critical',
+  MAJOR = 'major',
+  MINOR = 'minor',
+  INFO = 'info'
+}
+
+/**
+ * Comparison operators for quality gates
+ */
+export enum ComparisonOperator {
+  GT = 'gt',          // Greater than
+  LT = 'lt',          // Less than
+  GTE = 'gte',        // Greater than or equal
+  LTE = 'lte',        // Less than or equal
+  EQ = 'eq',          // Equal
+  NE = 'ne'           // Not equal
+}
+
+/**
+ * Refactoring types
+ */
+export enum RefactoringType {
+  EXTRACT_METHOD = 'extract_method',
+  EXTRACT_CLASS = 'extract_class',
+  INLINE_METHOD = 'inline_method',
+  MOVE_METHOD = 'move_method',
+  MOVE_FIELD = 'move_field',
+  RENAME = 'rename',
+  SIMPLIFY_CONDITION = 'simplify_condition',
+  CONSOLIDATE_CONDITIONAL = 'consolidate_conditional',
+  DECOMPOSE_CONDITIONAL = 'decompose_conditional',
+  REPLACE_MAGIC_NUMBER = 'replace_magic_number',
+  REMOVE_DUPLICATE = 'remove_duplicate',
+  OPTIMIZE_IMPORTS = 'optimize_imports',
+  INTRODUCE_PARAMETER_OBJECT = 'introduce_parameter_object',
+  PRESERVE_WHOLE_OBJECT = 'preserve_whole_object',
+  REPLACE_PARAMETER_WITH_QUERY = 'replace_parameter_with_query',
+  SEPARATE_QUERY_FROM_MODIFIER = 'separate_query_from_modifier',
+  PARAMETERIZE_METHOD = 'parameterize_method',
+  REPLACE_CONSTRUCTOR_WITH_FACTORY = 'replace_constructor_with_factory',
+  ENCAPSULATE_FIELD = 'encapsulate_field',
+  REPLACE_DATA_VALUE_WITH_OBJECT = 'replace_data_value_with_object',
+  CHANGE_VALUE_TO_REFERENCE = 'change_value_to_reference',
+  CHANGE_REFERENCE_TO_VALUE = 'change_reference_to_value',
+  REPLACE_ARRAY_WITH_OBJECT = 'replace_array_with_object',
+  DUPLICATE_OBSERVED_DATA = 'duplicate_observed_data',
+  CHANGE_UNIDIRECTIONAL_TO_BIDIRECTIONAL = 'change_unidirectional_to_bidirectional',
+  CHANGE_BIDIRECTIONAL_TO_UNIDIRECTIONAL = 'change_bidirectional_to_unidirectional',
+  REPLACE_TYPE_CODE_WITH_CLASS = 'replace_type_code_with_class',
+  REPLACE_TYPE_CODE_WITH_SUBCLASSES = 'replace_type_code_with_subclasses',
+  REPLACE_TYPE_CODE_WITH_STATE_STRATEGY = 'replace_type_code_with_state_strategy',
+  REPLACE_SUBCLASS_WITH_FIELDS = 'replace_subclass_with_fields'
+}
+
+/**
+ * Refactoring impact levels
+ */
+export enum RefactoringImpact {
+  LOW = 'low',         // Minimal change, safe refactoring
+  MEDIUM = 'medium',   // Moderate change, some testing required
+  HIGH = 'high',       // Significant change, extensive testing required
+  CRITICAL = 'critical' // Major architectural change
+}
+
+/**
+ * Priority levels
+ */
+export enum Priority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical'
+}
+
+/**
+ * Time range specifications
+ */
+export enum TimeRange {
+  LAST_DAY = 'last_day',
+  LAST_WEEK = 'last_week',
+  LAST_MONTH = 'last_month',
+  LAST_QUARTER = 'last_quarter',
+  LAST_YEAR = 'last_year',
+  ALL_TIME = 'all_time'
+}
+
+// ===================
+// CODE QUALITY SCHEMAS
+// ===================
+
+/**
+ * Enhanced quality metrics schema
+ */
+export const qualityMetricsSchema = z.object({
+  // Complexity metrics
+  cyclomaticComplexity: z.number().min(0).default(0),
+  cognitiveComplexity: z.number().min(0).default(0),
+  structuralComplexity: z.number().min(0).default(0),
+  nestingDepth: z.number().int().min(0).default(0),
+  
+  // Size metrics
+  linesOfCode: z.number().int().min(0).default(0),
+  logicalLines: z.number().int().min(0).default(0),
+  commentLines: z.number().int().min(0).default(0),
+  blankLines: z.number().int().min(0).default(0),
+  
+  // Quality metrics
+  maintainabilityIndex: z.number().min(0).max(171).default(0),
+  technicalDebtMinutes: z.number().min(0).default(0),
+  codeSmellsCount: z.number().int().min(0).default(0),
+  
+  // Security & performance
+  securityHotspots: z.number().int().min(0).default(0),
+  performanceIssues: z.number().int().min(0).default(0),
+  
+  // Coverage metrics
+  testCoverage: z.number().min(0).max(100).default(0),
+  branchCoverage: z.number().min(0).max(100).default(0),
+  
+  // Composite scores
+  overallQualityScore: z.number().min(0).max(100).default(0),
+  reliabilityRating: z.nativeEnum(QualityRating).default(QualityRating.D),
+  maintainabilityRating: z.nativeEnum(QualityRating).default(QualityRating.D),
+  securityRating: z.nativeEnum(QualityRating).default(QualityRating.D),
+  
+  // Additional metrics
+  duplicatedLines: z.number().int().min(0).default(0),
+  bugs: z.number().int().min(0).default(0),
+  codeSmellsDebt: z.number().min(0).default(0), // Technical debt from code smells
+  vulnerabilities: z.number().int().min(0).default(0),
+  
+  // Halstead metrics
+  halsteadVolume: z.number().min(0).default(0).optional(),
+  halsteadDifficulty: z.number().min(0).default(0).optional(),
+  halsteadEffort: z.number().min(0).default(0).optional(),
+  
+  language: z.nativeEnum(SupportedLanguage)
+});
+
+/**
+ * Code smell schema
+ */
+export const codeSmellSchema = z.object({
+  id: z.string().uuid(),
+  fileId: z.string().uuid(),
+  repositoryId: z.string().uuid(),
+  smellType: z.nativeEnum(CodeSmellType),
+  severity: z.nativeEnum(Severity),
+  title: z.string(),
+  description: z.string(),
+  startLine: z.number().int().min(1),
+  endLine: z.number().int().min(1).optional(),
+  startColumn: z.number().int().min(0).optional(),
+  endColumn: z.number().int().min(0).optional(),
+  effortMinutes: z.number().int().min(0).default(0),
+  suggestedFix: z.string().optional(),
+  ruleKey: z.string().optional(),
+  isResolved: z.boolean().default(false),
+  resolvedBy: z.string().optional(),
+  resolvedAt: z.date().optional(),
+  detectedAt: z.date().default(() => new Date()),
+  
+  // Additional metadata
+  messageArguments: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
+  component: z.string().optional(),
+  project: z.string().optional(),
+  author: z.string().optional(),
+  assignee: z.string().optional(),
+  status: z.enum(['OPEN', 'CONFIRMED', 'REOPENED', 'RESOLVED', 'CLOSED']).default('OPEN'),
+  resolution: z.string().optional(),
+  creationDate: z.date().default(() => new Date()),
+  updateDate: z.date().default(() => new Date())
+});
+
+/**
+ * Quality gate schema
+ */
+export const qualityGateSchema = z.object({
+  id: z.string().uuid(),
+  repositoryId: z.string().uuid(),
+  gateName: z.string(),
+  metricName: z.string(),
+  operator: z.nativeEnum(ComparisonOperator),
+  thresholdValue: z.number(),
+  isBlocking: z.boolean().default(false),
+  severity: z.nativeEnum(Severity).default(Severity.MAJOR),
+  isActive: z.boolean().default(true),
+  description: z.string().optional(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality gate result schema
+ */
+export const qualityGateResultSchema = z.object({
+  gateId: z.string().uuid(),
+  gateName: z.string(),
+  status: z.enum(['PASSED', 'FAILED', 'NO_VALUE']),
+  metricName: z.string(),
+  actualValue: z.number(),
+  expectedOperator: z.nativeEnum(ComparisonOperator),
+  expectedValue: z.number(),
+  message: z.string().optional(),
+  evaluatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality gate evaluation result schema
+ */
+export const qualityGateEvaluationSchema = z.object({
+  repositoryId: z.string().uuid(),
+  overallStatus: z.enum(['PASSED', 'FAILED', 'ERROR']),
+  gateResults: z.array(qualityGateResultSchema),
+  blockerIssues: z.number().int().min(0).default(0),
+  criticalIssues: z.number().int().min(0).default(0),
+  majorIssues: z.number().int().min(0).default(0),
+  minorIssues: z.number().int().min(0).default(0),
+  evaluatedAt: z.date().default(() => new Date()),
+  processingTime: z.number().min(0),
+  canDeploy: z.boolean()
+});
+
+/**
+ * Refactoring suggestion schema
+ */
+export const refactoringSuggestionSchema = z.object({
+  id: z.string().uuid(),
+  type: z.nativeEnum(RefactoringType),
+  title: z.string(),
+  description: z.string(),
+  fileId: z.string().uuid(),
+  startLine: z.number().int().min(1),
+  endLine: z.number().int().min(1),
+  startColumn: z.number().int().min(0).optional(),
+  endColumn: z.number().int().min(0).optional(),
+  estimatedEffort: z.number().int().min(0), // minutes
+  impact: z.nativeEnum(RefactoringImpact),
+  priority: z.nativeEnum(Priority),
+  potentialBenefit: z.string().optional(),
+  riskAssessment: z.string().optional(),
+  automationLevel: z.enum(['MANUAL', 'SEMI_AUTOMATED', 'AUTOMATED']).default('MANUAL'),
+  prerequisites: z.array(z.string()).default([]),
+  affectedFiles: z.array(z.string()).default([]),
+  confidenceScore: z.number().min(0).max(1).default(0.5),
+  createdAt: z.date().default(() => new Date())
+});
+
+/**
+ * Code example schema for refactoring suggestions
+ */
+export const codeExampleSchema = z.object({
+  title: z.string(),
+  before: z.string(),
+  after: z.string(),
+  explanation: z.string().optional()
+});
+
+/**
+ * Enhanced refactoring suggestion with examples
+ */
+export const enhancedRefactoringSuggestionSchema = refactoringSuggestionSchema.extend({
+  examples: z.array(codeExampleSchema).default([])
+});
+
+/**
+ * Quality trend data point schema
+ */
+export const qualityTrendDataPointSchema = z.object({
+  timestamp: z.date(),
+  metricName: z.string(),
+  value: z.number(),
+  repositoryId: z.string().uuid(),
+  fileCount: z.number().int().min(0).optional(),
+  totalLoc: z.number().int().min(0).optional()
+});
+
+/**
+ * Quality trend schema
+ */
+export const qualityTrendSchema = z.object({
+  repositoryId: z.string().uuid(),
+  metricName: z.string(),
+  dataPoints: z.array(qualityTrendDataPointSchema),
+  trend: z.enum(['IMPROVING', 'STABLE', 'DEGRADING']),
+  changeRate: z.number(), // Rate of change per unit time
+  confidence: z.number().min(0).max(1),
+  startDate: z.date(),
+  endDate: z.date()
+});
+
+/**
+ * Quality prediction schema
+ */
+export const qualityPredictionSchema = z.object({
+  repositoryId: z.string().uuid(),
+  metricName: z.string(),
+  currentValue: z.number(),
+  predictedValues: z.array(z.object({
+    timestamp: z.date(),
+    value: z.number(),
+    confidence: z.number().min(0).max(1)
+  })),
+  model: z.string(),
+  accuracy: z.number().min(0).max(1),
+  predictionHorizon: z.string(), // e.g., "30_days", "3_months"
+  generatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality analysis options schema
+ */
+export const qualityAnalysisOptionsSchema = z.object({
+  includeTests: z.boolean().default(true),
+  includeDependencies: z.boolean().default(false),
+  complexityThreshold: z.number().min(1).default(10),
+  duplicateThreshold: z.number().min(0).max(1).default(0.9),
+  languages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  customRules: z.array(z.string()).default([]),
+  skipFiles: z.array(z.string()).default([]),
+  parallel: z.boolean().default(true),
+  maxConcurrency: z.number().int().min(1).max(16).default(4)
+});
+
+/**
+ * Quality analysis result schema
+ */
+export const qualityAnalysisResultSchema = z.object({
+  fileId: z.string().uuid(),
+  repositoryId: z.string().uuid(),
+  language: z.nativeEnum(SupportedLanguage),
+  metrics: qualityMetricsSchema,
+  codeSmells: z.array(codeSmellSchema).default([]),
+  refactoringSuggestions: z.array(enhancedRefactoringSuggestionSchema).default([]),
+  analysisTime: z.number().min(0),
+  analysisDate: z.date().default(() => new Date()),
+  version: z.string().default('1.0'),
+  errors: z.array(z.object({
+    type: z.string(),
+    message: z.string(),
+    line: z.number().int().optional(),
+    column: z.number().int().optional()
+  })).default([])
+});
+
+/**
+ * Repository quality result schema
+ */
+export const repositoryQualityResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  overallMetrics: qualityMetricsSchema,
+  fileResults: z.array(qualityAnalysisResultSchema),
+  aggregateMetrics: z.object({
+    totalFiles: z.number().int().min(0),
+    totalLines: z.number().int().min(0),
+    averageComplexity: z.number().min(0),
+    totalCodeSmells: z.number().int().min(0),
+    totalTechnicalDebt: z.number().min(0),
+    languageBreakdown: z.record(z.number().int())
+  }),
+  qualityGateStatus: qualityGateEvaluationSchema.optional(),
+  analysisDate: z.date().default(() => new Date()),
+  processingTime: z.number().min(0),
+  version: z.string().default('1.0')
+});
+
+/**
+ * Quality delta (change comparison) schema
+ */
+export const qualityDeltaSchema = z.object({
+  repositoryId: z.string().uuid(),
+  changedFiles: z.array(z.string()),
+  before: z.object({
+    overallQualityScore: z.number().min(0).max(100),
+    codeSmellsCount: z.number().int().min(0),
+    technicalDebtMinutes: z.number().min(0),
+    testCoverage: z.number().min(0).max(100)
+  }),
+  after: z.object({
+    overallQualityScore: z.number().min(0).max(100),
+    codeSmellsCount: z.number().int().min(0),
+    technicalDebtMinutes: z.number().min(0),
+    testCoverage: z.number().min(0).max(100)
+  }),
+  delta: z.object({
+    qualityScoreChange: z.number(),
+    codeSmellsChange: z.number().int(),
+    technicalDebtChange: z.number(),
+    coverageChange: z.number()
+  }),
+  impact: z.enum(['POSITIVE', 'NEGATIVE', 'NEUTRAL']),
+  newIssues: z.array(codeSmellSchema).default([]),
+  resolvedIssues: z.array(codeSmellSchema).default([]),
+  comparedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Technical debt metrics schema
+ */
+export const technicalDebtMetricsSchema = z.object({
+  totalDebtMinutes: z.number().min(0),
+  debtRatio: z.number().min(0).max(1), // Debt / (Debt + Development cost)
+  sqaleRating: z.nativeEnum(QualityRating),
+  breakdown: z.object({
+    reliabilityDebt: z.number().min(0),
+    securityDebt: z.number().min(0),
+    maintainabilityDebt: z.number().min(0)
+  }),
+  remediationCost: z.number().min(0), // in developer days
+  interestRate: z.number().min(0), // How much debt increases over time
+  principalDebt: z.number().min(0), // Core debt amount
+  interestDebt: z.number().min(0), // Accumulated interest
+  calculatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality score calculation schema
+ */
+export const qualityScoreSchema = z.object({
+  overallScore: z.number().min(0).max(100),
+  components: z.object({
+    reliability: z.number().min(0).max(100),
+    security: z.number().min(0).max(100),
+    maintainability: z.number().min(0).max(100),
+    coverage: z.number().min(0).max(100),
+    duplication: z.number().min(0).max(100)
+  }),
+  weights: z.object({
+    reliability: z.number().min(0).max(1).default(0.25),
+    security: z.number().min(0).max(1).default(0.25),
+    maintainability: z.number().min(0).max(1).default(0.25),
+    coverage: z.number().min(0).max(1).default(0.15),
+    duplication: z.number().min(0).max(1).default(0.10)
+  }),
+  rating: z.nativeEnum(QualityRating),
+  calculationMethod: z.string().default('weighted_average'),
+  calculatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality comparison schema
+ */
+export const qualityComparisonSchema = z.object({
+  repositoryId: z.string().uuid(),
+  baselineScore: qualityScoreSchema,
+  currentScore: qualityScoreSchema,
+  improvement: z.number(),
+  degradation: z.number(),
+  netChange: z.number(),
+  significantChanges: z.array(z.object({
+    metric: z.string(),
+    oldValue: z.number(),
+    newValue: z.number(),
+    change: z.number(),
+    isImprovement: z.boolean()
+  })),
+  comparisonDate: z.date().default(() => new Date()),
+  baseReference: z.string().optional() // Git ref or timestamp
+});
+
+/**
+ * Effort estimate schema for refactoring
+ */
+export const effortEstimateSchema = z.object({
+  totalMinutes: z.number().int().min(0),
+  breakdown: z.object({
+    analysis: z.number().int().min(0),
+    implementation: z.number().int().min(0),
+    testing: z.number().int().min(0),
+    review: z.number().int().min(0)
+  }),
+  confidence: z.number().min(0).max(1),
+  riskMultiplier: z.number().min(1),
+  complexity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH']),
+  assumptions: z.array(z.string()).default([]),
+  dependencies: z.array(z.string()).default([]),
+  estimatedBy: z.string().optional(),
+  estimatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Refactoring priority schema
+ */
+export const refactoringPrioritySchema = z.object({
+  suggestionId: z.string().uuid(),
+  priority: z.nativeEnum(Priority),
+  score: z.number().min(0).max(100),
+  factors: z.object({
+    businessValue: z.number().min(0).max(10),
+    technicalImpact: z.number().min(0).max(10),
+    riskLevel: z.number().min(0).max(10),
+    effortRequired: z.number().min(0).max(10),
+    urgency: z.number().min(0).max(10)
+  }),
+  reasoning: z.string(),
+  calculatedAt: z.date().default(() => new Date())
+});
+
+/**
+ * Quality gate status schema
+ */
+export const qualityGateStatusSchema = z.object({
+  repositoryId: z.string().uuid(),
+  status: z.enum(['PASSED', 'FAILED', 'PENDING', 'ERROR']),
+  gates: z.array(qualityGateResultSchema),
+  blockers: z.array(z.string()),
+  warnings: z.array(z.string()),
+  canProceed: z.boolean(),
+  message: z.string().optional(),
+  lastEvaluation: z.date().default(() => new Date())
+});
+
+// ===================
+// TYPESCRIPT INFERENCE TYPES
+// ===================
+
+export type QualityMetrics = z.infer<typeof qualityMetricsSchema>;
+export type CodeSmell = z.infer<typeof codeSmellSchema>;
+export type QualityGate = z.infer<typeof qualityGateSchema>;
+export type QualityGateResult = z.infer<typeof qualityGateResultSchema>;
+export type QualityGateEvaluation = z.infer<typeof qualityGateEvaluationSchema>;
+export type RefactoringSuggestion = z.infer<typeof refactoringSuggestionSchema>;
+export type EnhancedRefactoringSuggestion = z.infer<typeof enhancedRefactoringSuggestionSchema>;
+export type CodeExample = z.infer<typeof codeExampleSchema>;
+export type QualityTrendDataPoint = z.infer<typeof qualityTrendDataPointSchema>;
+export type QualityTrend = z.infer<typeof qualityTrendSchema>;
+export type QualityPrediction = z.infer<typeof qualityPredictionSchema>;
+export type QualityAnalysisOptions = z.infer<typeof qualityAnalysisOptionsSchema>;
+export type QualityAnalysisResult = z.infer<typeof qualityAnalysisResultSchema>;
+export type RepositoryQualityResult = z.infer<typeof repositoryQualityResultSchema>;
+export type QualityDelta = z.infer<typeof qualityDeltaSchema>;
+export type TechnicalDebtMetrics = z.infer<typeof technicalDebtMetricsSchema>;
+export type QualityScore = z.infer<typeof qualityScoreSchema>;
+export type QualityComparison = z.infer<typeof qualityComparisonSchema>;
+export type EffortEstimate = z.infer<typeof effortEstimateSchema>;
+export type RefactoringPriority = z.infer<typeof refactoringPrioritySchema>;
+export type QualityGateStatus = z.infer<typeof qualityGateStatusSchema>;
+
+// Additional specialized types
+export type QualityGateConfig = Omit<QualityGate, 'id' | 'createdAt' | 'updatedAt'>;
+export type RepositoryAnalysisOptions = QualityAnalysisOptions & {
+  includeFilePatterns?: string[];
+  excludeFilePatterns?: string[];
+  maxFilesToAnalyze?: number;
+  analysisDepth?: 'SHALLOW' | 'DEEP' | 'COMPREHENSIVE';
+};
+
+export type UsageInfo = {
+  isUsed: boolean;
+  usageCount: number;
+  calledBy: string[];
+  referencedIn: string[];
+};
+
+export type DependencyInfo = {
+  imports: string[];
+  exports: string[];
+  internalDependencies: string[];
+  externalDependencies: string[];
+};
+
+export type SizeMetrics = {
+  linesOfCode: number;
+  logicalLines: number;
+  commentLines: number;
+  blankLines: number;
+};
+
+export type HalsteadMetrics = {
+  vocabulary: number;
+  length: number;
+  calculatedLength: number;
+  volume: number;
+  difficulty: number;
+  effort: number;
+  timeRequiredToProgram: number;
+  numberOfDeliveredBugs: number;
+};
+
+export type SecurityHotspot = {
+  id: string;
+  type: string;
+  severity: Severity;
+  title: string;
+  description: string;
+  line: number;
+  column?: number;
+  recommendation: string;
+};
+
+export type DuplicationReport = {
+  repositoryId: string;
+  duplicateBlocks: Array<{
+    id: string;
+    files: string[];
+    lines: number;
+    tokens: number;
+    startLines: number[];
+    endLines: number[];
+    similarity: number;
+  }>;
+  totalDuplicatedLines: number;
+  duplicationPercentage: number;
+  affectedFiles: number;
+};
+
+// ===================
+// QUALITY SERVICE INTERFACES
+// ===================
+
+/**
+ * Interface for code quality analysis
+ */
+export interface QualityAnalysisInterface {
+  /**
+   * Analyze a single file for quality metrics and issues
+   */
+  analyzeFile(fileId: string, options?: QualityAnalysisOptions): Promise<QualityAnalysisResult>;
+  
+  /**
+   * Analyze an entire repository
+   */
+  analyzeRepository(repositoryId: string, options?: RepositoryAnalysisOptions): Promise<RepositoryQualityResult>;
+  
+  /**
+   * Analyze changes between versions
+   */
+  analyzeChanges(repositoryId: string, changedFiles: string[]): Promise<QualityDelta>;
+  
+  /**
+   * Generate refactoring suggestions
+   */
+  generateRefactoringSuggestions(fileId: string): Promise<EnhancedRefactoringSuggestion[]>;
+  
+  /**
+   * Calculate quality score
+   */
+  calculateQualityScore(metrics: QualityMetrics): Promise<QualityScore>;
+  
+  /**
+   * Evaluate quality gates
+   */
+  evaluateQualityGates(repositoryId: string): Promise<QualityGateEvaluation>;
+}
