@@ -1,13 +1,43 @@
 /**
- * Dependency Analysis Service
+ * Comprehensive Dependency Analysis Service
  * 
- * Analyzes project dependencies from various package manifest files
- * across different programming language ecosystems.
+ * Provides complete dependency analysis including:
+ * - Dependency graph construction and circular detection
+ * - Impact analysis for dependency changes  
+ * - Security vulnerability scanning
+ * - License compliance checking
+ * - Optimization and maintenance suggestions
  */
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { validateInput } from '../../utils/validation.js';
+import { DatabaseManager } from '../../utils/database.js';
+import { CodeParserService } from './code-parser-service.js';
+import { VulnerabilityScanner } from './security/vulnerability-scanner.js';
+import { LicenseAnalyzer } from './compliance/license-analyzer.js';
+import type {
+  DependencyGraphAnalysis,
+  DependencyNode,
+  DependencyEdge,
+  CircularDependency,
+  ImpactAnalysis,
+  AffectedFile,
+  DependencyChange,
+  VulnerabilityScanResult,
+  LicenseAnalysisResult,
+  SecurityScore,
+  UpdateSuggestion,
+  OptimizationSuggestion,
+  AnalysisSession,
+  SupportedLanguage,
+  DependencyRelationType,
+  RiskLevel,
+  ImpactScope,
+  ImpactType,
+  UpdateType,
+  AnalysisStatus
+} from '../../shared/types/codebase.js';
 import type {
   PackageDependency,
   DependencyType,

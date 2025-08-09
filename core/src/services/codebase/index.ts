@@ -52,16 +52,46 @@ export type {
   ApiDiscoveryResult
 } from './api-documentation-discovery.js';
 
-// Dependency Analysis (existing)
+// Dependency Analysis Services
 export { DependencyAnalysisService } from './dependency-analysis-service.js';
+export { EnhancedDependencyAnalysisService } from './enhanced-dependency-analysis-service.js';
 export type {
+  GraphOptions,
+  ScanOptions,
+  DepthAnalysis,
+  RiskAssessment,
+  ImpactReport,
+  UnusedDependency,
+  UpdateResult
+} from './enhanced-dependency-analysis-service.js';
+
+// Security Analysis
+export { VulnerabilityScanner } from './security/vulnerability-scanner.js';
+export type {
+  SecurityConfig,
+  PackageInfo,
+  VulnerabilityResult,
+  RepositoryScanResult,
+  Advisory,
+  SnykVulnerability,
+  CVSSScore,
+  PrioritizedVulnerability
+} from './security/vulnerability-scanner.js';
+
+// License and Compliance Analysis
+export { LicenseAnalyzer } from './compliance/license-analyzer.js';
+export type {
+  ComplianceConfig,
   DependencyInfo,
-  SecurityVulnerability,
-  DependencyAnalysisResult,
-  DependencyGraph,
-  DependencyNode,
-  DependencyEdge
-} from './dependency-analysis-service.js';
+  CompatibilityMatrix,
+  CompatibilityIssue,
+  CompliancePolicy,
+  ComplianceResult,
+  ComplianceViolation,
+  ComplianceWarning,
+  NormalizedLicense,
+  LicenseReport
+} from './compliance/license-analyzer.js';
 
 // Documentation Fetchers (existing)
 export { 
@@ -220,5 +250,29 @@ export type {
   EmbeddingModelInterface,
   SemanticSearchInterface,
   ASTPattern,
-  SearchContext
+  SearchContext,
+  // Enhanced dependency analysis types
+  DependencyRelationType,
+  VulnerabilitySeverity,
+  RiskLevel,
+  CopyleftScope,
+  ImpactScope,
+  ImpactType,
+  UpdateType,
+  AnalysisStatus,
+  DependencyNode,
+  DependencyEdge,
+  CircularDependency,
+  DependencyGraphAnalysis,
+  Vulnerability,
+  LicenseInfo,
+  DependencyChange,
+  AffectedFile,
+  ImpactAnalysis,
+  SecurityScore,
+  VulnerabilityScanResult,
+  LicenseAnalysisResult,
+  UpdateSuggestion,
+  OptimizationSuggestion,
+  AnalysisSession
 } from '../../shared/types/codebase.js';

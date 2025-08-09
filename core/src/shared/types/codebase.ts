@@ -1070,6 +1070,349 @@ export type EmbeddingStats = z.infer<typeof embeddingStatsSchema>;
 export type SearchOptimizationResult = z.infer<typeof searchOptimizationResultSchema>;
 
 // ===================
+// DEPENDENCY ANALYSIS TYPES
+// ===================
+
+/**
+ * Dependency relationship types for analysis
+ */
+export enum DependencyRelationType {
+  DIRECT = 'direct',
+  TRANSITIVE = 'transitive', 
+  DEV = 'dev',
+  PEER = 'peer',
+  OPTIONAL = 'optional'
+}
+
+/**
+ * Vulnerability severity levels
+ */
+export enum VulnerabilitySeverity {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium', 
+  LOW = 'low',
+  INFO = 'info'
+}
+
+/**
+ * Risk levels for various assessments
+ */
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical',
+  UNKNOWN = 'unknown'
+}
+
+/**
+ * License copyleft scope types
+ */
+export enum CopyleftScope {
+  NONE = 'none',
+  WEAK = 'weak', 
+  STRONG = 'strong',
+  NETWORK = 'network'
+}
+
+/**
+ * Impact scope for dependency changes
+ */
+export enum ImpactScope {
+  FILE = 'file',
+  MODULE = 'module',
+  PACKAGE = 'package', 
+  GLOBAL = 'global'
+}
+
+/**
+ * Impact type assessment
+ */
+export enum ImpactType {
+  BREAKING = 'breaking',
+  COMPATIBLE = 'compatible',
+  UNKNOWN = 'unknown'
+}
+
+/**
+ * Update types for dependencies
+ */
+export enum UpdateType {
+  MAJOR = 'major',
+  MINOR = 'minor',
+  PATCH = 'patch'
+}
+
+/**
+ * Analysis session status
+ */
+export enum AnalysisStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
+// ===================
+// DEPENDENCY ANALYSIS SCHEMAS
+// ===================
+
+/**
+ * Dependency graph node schema
+ */
+export const dependencyNodeSchema = z.object({
+  packageName: z.string(),
+  version: z.string(), 
+  language: z.nativeEnum(SupportedLanguage),
+  dependencyType: z.nativeEnum(DependencyRelationType),
+  depth: z.number().int().min(0),
+  vulnerabilityCount: z.number().int().min(0).default(0),
+  licenseRisk: z.nativeEnum(RiskLevel).default('unknown')
+});
+
+/**
+ * Dependency graph edge schema  
+ */
+export const dependencyEdgeSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  type: z.nativeEnum(DependencyRelationType)
+});
+
+/**
+ * Circular dependency schema
+ */
+export const circularDependencySchema = z.object({
+  id: z.string().uuid(),
+  packages: z.array(z.string()),
+  severity: z.enum(['warning', 'error']),
+  affectedFiles: z.array(z.string()),
+  suggestedFix: z.string().optional()
+});
+
+/**
+ * Dependency graph analysis schema
+ */
+export const dependencyGraphAnalysisSchema = z.object({
+  repositoryId: z.string().uuid(),
+  nodes: z.array(dependencyNodeSchema), 
+  edges: z.array(dependencyEdgeSchema),
+  circularDependencies: z.array(circularDependencySchema),
+  depth: z.number().int().min(0),
+  totalPackages: z.number().int().min(0),
+  stats: z.object({
+    directDependencies: z.number().int().min(0),
+    transitiveDependencies: z.number().int().min(0),
+    devDependencies: z.number().int().min(0),
+    peerDependencies: z.number().int().min(0),
+    optionalDependencies: z.number().int().min(0),
+    circularCount: z.number().int().min(0),
+    vulnerabilityCount: z.number().int().min(0),
+    licenseIssueCount: z.number().int().min(0)
+  })
+});
+
+/**
+ * Vulnerability schema
+ */
+export const vulnerabilitySchema = z.object({
+  id: z.string().uuid(),
+  cveId: z.string().optional(),
+  packageName: z.string(),
+  affectedVersions: z.array(z.string()),
+  fixedVersion: z.string().optional(),
+  severity: z.nativeEnum(VulnerabilitySeverity),
+  title: z.string(),
+  description: z.string(),
+  references: z.array(z.string()),
+  publishedDate: z.date(),
+  modifiedDate: z.date().optional(),
+  cvssScore: z.number().min(0).max(10).optional()
+});
+
+/**
+ * License info schema  
+ */
+export const licenseInfoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  spdxId: z.string().optional(),
+  osiApproved: z.boolean(),
+  fsfApproved: z.boolean(), 
+  commercialUseAllowed: z.boolean().optional(),
+  attributionRequired: z.boolean().optional(),
+  copyleftScope: z.nativeEnum(CopyleftScope),
+  riskLevel: z.nativeEnum(RiskLevel)
+});
+
+/**
+ * Dependency change schema
+ */
+export const dependencyChangeSchema = z.object({
+  packageName: z.string(),
+  fromVersion: z.string().optional(),
+  toVersion: z.string(),
+  changeType: z.nativeEnum(UpdateType),
+  isBreaking: z.boolean().default(false)
+});
+
+/**
+ * Affected file schema
+ */
+export const affectedFileSchema = z.object({
+  filePath: z.string(),
+  functionNames: z.array(z.string()).default([]),
+  classNames: z.array(z.string()).default([]),
+  importStatements: z.array(z.string()).default([]),
+  confidenceScore: z.number().min(0).max(1).default(0.0)
+});
+
+/**
+ * Impact analysis schema
+ */
+export const impactAnalysisSchema = z.object({
+  repositoryId: z.string().uuid(),
+  changes: z.array(dependencyChangeSchema),
+  affectedFiles: z.array(affectedFileSchema),
+  impactScope: z.nativeEnum(ImpactScope),
+  riskAssessment: z.nativeEnum(RiskLevel),
+  recommendations: z.array(z.string()),
+  confidenceScore: z.number().min(0).max(1).default(0.0)
+});
+
+/**
+ * Security score schema
+ */
+export const securityScoreSchema = z.object({
+  repositoryId: z.string().uuid(),
+  overallScore: z.number().min(0).max(1),
+  vulnerabilityScore: z.number().min(0).max(1),
+  licenseRiskScore: z.number().min(0).max(1), 
+  supplyChainScore: z.number().min(0).max(1),
+  maintenanceScore: z.number().min(0).max(1),
+  popularityScore: z.number().min(0).max(1),
+  breakdown: z.object({
+    criticalVulns: z.number().int().min(0),
+    highVulns: z.number().int().min(0),
+    mediumVulns: z.number().int().min(0),
+    lowVulns: z.number().int().min(0),
+    licenseIssues: z.number().int().min(0),
+    outdatedPackages: z.number().int().min(0)
+  }),
+  calculatedAt: z.date()
+});
+
+/**
+ * Vulnerability scan result schema
+ */
+export const vulnerabilityScanResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  vulnerabilities: z.array(vulnerabilitySchema),
+  summary: z.object({
+    totalVulnerabilities: z.number().int().min(0),
+    criticalCount: z.number().int().min(0),
+    highCount: z.number().int().min(0),
+    mediumCount: z.number().int().min(0), 
+    lowCount: z.number().int().min(0),
+    packagesAffected: z.number().int().min(0)
+  }),
+  scanTime: z.number().min(0),
+  lastScan: z.date(),
+  sources: z.array(z.string())
+});
+
+/**
+ * License analysis result schema
+ */
+export const licenseAnalysisResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  licenses: z.array(licenseInfoSchema),
+  compatibility: z.object({
+    issues: z.array(z.object({
+      license1: z.string(),
+      license2: z.string(),
+      conflictType: z.string(),
+      severity: z.nativeEnum(RiskLevel)
+    })),
+    overallCompatible: z.boolean()
+  }),
+  complianceScore: z.number().min(0).max(1),
+  riskAssessment: z.nativeEnum(RiskLevel),
+  analyzedAt: z.date()
+});
+
+/**
+ * Dependency update suggestion schema
+ */
+export const updateSuggestionSchema = z.object({
+  packageName: z.string(),
+  currentVersion: z.string(),
+  suggestedVersion: z.string(),
+  updateType: z.nativeEnum(UpdateType),
+  priority: z.nativeEnum(RiskLevel),
+  hasBreakingChanges: z.boolean(),
+  hasSecurityFixes: z.boolean(),
+  changelogUrl: z.string().optional(),
+  compatibilityScore: z.number().min(0).max(1),
+  effort: z.enum(['low', 'medium', 'high'])
+});
+
+/**
+ * Optimization suggestion schema
+ */
+export const optimizationSuggestionSchema = z.object({
+  type: z.enum(['remove_unused', 'update_version', 'replace_package', 'consolidate_duplicates']),
+  packageName: z.string(),
+  description: z.string(),
+  impact: z.nativeEnum(RiskLevel),
+  effort: z.enum(['low', 'medium', 'high']),
+  potentialSavings: z.object({
+    bundleSize: z.number().optional(), // in bytes
+    securityIssues: z.number().int().min(0).optional(),
+    maintenanceBurden: z.number().min(0).max(1).optional()
+  })
+});
+
+/**
+ * Analysis session schema
+ */
+export const analysisSessionSchema = z.object({
+  id: z.string().uuid(),
+  repositoryId: z.string().uuid(),
+  analysisType: z.enum(['graph', 'vulnerability', 'license', 'impact']),
+  status: z.nativeEnum(AnalysisStatus),
+  startedAt: z.date(),
+  completedAt: z.date().optional(),
+  duration: z.number().min(0).optional(),
+  packagesAnalyzed: z.number().int().min(0),
+  errorsEncountered: z.number().int().min(0),
+  configuration: z.record(z.unknown()).default({}),
+  resultsSummary: z.record(z.unknown()).default({}),
+  errorDetails: z.string().optional()
+});
+
+// ===================
+// DEPENDENCY ANALYSIS TYPESCRIPT TYPES
+// ===================
+
+export type DependencyNode = z.infer<typeof dependencyNodeSchema>;
+export type DependencyEdge = z.infer<typeof dependencyEdgeSchema>;
+export type CircularDependency = z.infer<typeof circularDependencySchema>;
+export type DependencyGraphAnalysis = z.infer<typeof dependencyGraphAnalysisSchema>;
+export type Vulnerability = z.infer<typeof vulnerabilitySchema>;
+export type LicenseInfo = z.infer<typeof licenseInfoSchema>;
+export type DependencyChange = z.infer<typeof dependencyChangeSchema>;
+export type AffectedFile = z.infer<typeof affectedFileSchema>;
+export type ImpactAnalysis = z.infer<typeof impactAnalysisSchema>;
+export type SecurityScore = z.infer<typeof securityScoreSchema>;
+export type VulnerabilityScanResult = z.infer<typeof vulnerabilityScanResultSchema>;
+export type LicenseAnalysisResult = z.infer<typeof licenseAnalysisResultSchema>;
+export type UpdateSuggestion = z.infer<typeof updateSuggestionSchema>;
+export type OptimizationSuggestion = z.infer<typeof optimizationSuggestionSchema>;
+export type AnalysisSession = z.infer<typeof analysisSessionSchema>;
+
+// ===================
 // ADVANCED SEARCH INTERFACES
 // ===================
 
