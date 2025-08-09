@@ -45,6 +45,10 @@
     "./codebase": {
       "import": "./dist/services/codebase/index.js",
       "types": "./dist/services/codebase/index.d.ts"
+    },
+    "./nlp": {
+      "import": "./dist/services/nlp/index.js",
+      "types": "./dist/services/nlp/index.d.ts"
     }
   },
   "files": [
@@ -111,7 +115,13 @@
     "jshint": "^2.13.6",
     "eslint": "^8.57.0",
     "escomplex": "^2.0.0-alpha",
-    "ts-morph": "^21.0.1"
+    "ts-morph": "^21.0.1",
+    "@google-ai/generativelanguage": "^2.2.0",
+    "@anthropic-ai/sdk": "^0.9.1",
+    "natural": "^6.12.0",
+    "franc": "^6.1.0",
+    "compromise": "^14.10.0",
+    "node-nlp": "^4.27.0"
   },
   "devDependencies": {
     "@types/babel__parser": "^7.0.0",

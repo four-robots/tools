@@ -34,3 +34,6 @@ export * from './repository.js';
 
 // Codebase analysis and parsing types
 export * from './codebase.js';
+
+// NLP and query processing types
+export * from './nlp.js';
