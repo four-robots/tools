@@ -15,6 +15,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import { WebSocketServer } from 'ws';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import dotenv from 'dotenv';
@@ -284,6 +285,50 @@ async function startServer() {
     });
     
     setupWebSocket(io, app.locals.kanbanService, app.locals.analyticsService);
+    
+    // Setup standard WebSocket server for real-time features
+    const wsServer = new WebSocketServer({ 
+      server,
+      path: '/ws',
+      perMessageDeflate: false
+    });
+    
+    wsServer.on('connection', (ws, request) => {
+      console.log('Standard WebSocket connection established');
+      
+      ws.on('message', (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          console.log('Received WebSocket message:', message);
+          
+          // Echo back for now - can be extended for real-time features
+          ws.send(JSON.stringify({
+            type: 'echo',
+            payload: message,
+            timestamp: new Date().toISOString(),
+            id: Math.random().toString(36).substring(2, 9)
+          }));
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      });
+      
+      ws.on('close', () => {
+        console.log('Standard WebSocket connection closed');
+      });
+      
+      ws.on('error', (error) => {
+        console.error('Standard WebSocket error:', error);
+      });
+      
+      // Send welcome message
+      ws.send(JSON.stringify({
+        type: 'connected',
+        payload: { message: 'WebSocket connection established' },
+        timestamp: new Date().toISOString(),
+        id: Math.random().toString(36).substring(2, 9)
+      }));
+    });
     
     // Start server
     server.listen(config.port, () => {

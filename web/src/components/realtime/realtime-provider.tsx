@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRealtimeUpdates, useRealtimeConnection } from '@/hooks/use-realtime';
 import { ConnectionStatusBanner } from './connection-status';
 
@@ -26,25 +26,38 @@ interface RealtimeProviderProps {
 }
 
 export function RealtimeProvider({ children }: RealtimeProviderProps) {
-  // Initialize real-time connection
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Initialize real-time connection with delay to prevent suspension
   const connection = useRealtimeConnection();
   
   // Set up real-time update handlers
   useRealtimeUpdates();
 
+  // Delay initialization to prevent synchronous suspension
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsInitialized(true);
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const contextValue: RealtimeContextType = {
-    connectionStatus: connection.connectionStatus,
-    isConnected: connection.isConnected,
-    sendMessage: connection.sendMessage,
-    reconnect: connection.connect,
+    connectionStatus: isInitialized ? connection.connectionStatus : 'disconnected',
+    isConnected: isInitialized ? connection.isConnected : false,
+    sendMessage: isInitialized ? connection.sendMessage : () => null,
+    reconnect: isInitialized ? connection.connect : () => {},
   };
 
   return (
     <RealtimeContext.Provider value={contextValue}>
-      <ConnectionStatusBanner 
-        status={connection.connectionStatus}
-        onReconnect={connection.connect}
-      />
+      {isInitialized && (
+        <ConnectionStatusBanner 
+          status={connection.connectionStatus}
+          onReconnect={connection.connect}
+        />
+      )}
       {children}
     </RealtimeContext.Provider>
   );

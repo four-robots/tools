@@ -280,16 +280,27 @@ export function usePageTracking(pageName: string, properties?: Record<string, an
   useEffect(() => {
     const startTime = Date.now();
     
-    // Track page view
-    track.pageView(pageName, properties);
+    // Delay tracking to prevent synchronous suspension during initial render
+    const timeoutId = setTimeout(() => {
+      try {
+        track.pageView(pageName, properties);
+      } catch (error) {
+        console.error('Failed to track page view:', error);
+      }
+    }, 50);
     
     // Track page unload
     return () => {
-      const timeSpent = Date.now() - startTime;
-      track.featureUse('dashboard', 'page_unload', pageName, {
-        timeSpent,
-        ...properties
-      });
+      clearTimeout(timeoutId);
+      try {
+        const timeSpent = Date.now() - startTime;
+        track.featureUse('dashboard', 'page_unload', pageName, {
+          timeSpent,
+          ...properties
+        });
+      } catch (error) {
+        console.error('Failed to track page unload:', error);
+      }
     };
   }, [pageName, track, properties]);
 }

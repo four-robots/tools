@@ -15,14 +15,15 @@ const nextConfig = {
         source: '/api/:path*',
         destination: process.env.API_BASE_URL 
           ? `${process.env.API_BASE_URL}/api/:path*`
-          : 'http://localhost:3000/api/:path*',
+          : 'http://localhost:6100/api/:path*',
       },
     ];
   },
   // Environment variables
   env: {
-    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000',
-    WS_BASE_URL: process.env.WS_BASE_URL || 'ws://localhost:3000',
+    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:6100',
+    WS_BASE_URL: process.env.WS_BASE_URL || 'ws://localhost:6100/ws',
+    NEXT_PUBLIC_WS_BASE_URL: process.env.WS_BASE_URL || 'ws://localhost:6100/ws',
     APP_ENV: process.env.NODE_ENV || 'development',
   },
   // Image optimization

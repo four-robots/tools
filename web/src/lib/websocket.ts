@@ -32,7 +32,7 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'er
 
 export function useWebSocket(config: WebSocketConfig) {
   const {
-    url = process.env.WS_BASE_URL || 'ws://localhost:3000',
+    url = process.env.NEXT_PUBLIC_WS_BASE_URL || process.env.WS_BASE_URL || (typeof window !== 'undefined' ? `ws://${window.location.host}/ws` : 'ws://localhost:6100/ws'),
     protocols,
     onOpen,
     onClose,
@@ -340,11 +340,15 @@ export function useWebSocket(config: WebSocketConfig) {
     }
   }, []);
 
-  // Auto-connect on mount
+  // Auto-connect on mount with delay to prevent synchronous suspension
   useEffect(() => {
-    tryConnect();
+    // Delay connection to prevent synchronous suspension during SSR/hydration
+    const timeoutId = setTimeout(() => {
+      tryConnect();
+    }, 100); // Small delay to allow component to mount fully
 
     return () => {
+      clearTimeout(timeoutId);
       disconnect();
     };
   }, [tryConnect, disconnect]);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useKanbanBoards, useKanbanMutations } from '@/hooks/use-api';
 import { usePageTracking, useInteractionTracking } from '@/hooks/use-analytics';
+import { PageWrapper } from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,13 +28,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function KanbanPage() {
+function KanbanPageContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
   
-  // Analytics tracking
-  usePageTracking('kanban_boards_list');
+  // Analytics tracking - wrapped in try-catch to prevent suspension
+  try {
+    usePageTracking('kanban_boards_list');
+  } catch (error) {
+    console.error('Analytics tracking failed:', error);
+  }
   const { trackClick, trackFormSubmit } = useInteractionTracking();
   
   const { data: boardsData, isLoading, error } = useKanbanBoards();
@@ -294,5 +299,13 @@ export default function KanbanPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function KanbanPage() {
+  return (
+    <PageWrapper>
+      <KanbanPageContent />
+    </PageWrapper>
   );
 }

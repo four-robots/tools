@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMemories, useMemoryMutations, useMemorySearch } from '@/hooks/use-api';
+import { PageWrapper } from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,7 +44,7 @@ interface Memory {
   type: 'text' | 'link' | 'note' | 'idea';
 }
 
-export default function MemoryPage() {
+function MemoryPageContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -422,5 +423,13 @@ export default function MemoryPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MemoryPage() {
+  return (
+    <PageWrapper>
+      <MemoryPageContent />
+    </PageWrapper>
   );
 }

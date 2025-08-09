@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useWikiPages, useWikiMutations } from '@/hooks/use-api';
+import { PageWrapper } from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,7 +50,7 @@ interface WikiPage {
   isPublished: boolean;
 }
 
-export default function WikiPage() {
+function WikiPageContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -437,5 +438,13 @@ export default function WikiPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WikiPage() {
+  return (
+    <PageWrapper>
+      <WikiPageContent />
+    </PageWrapper>
   );
 }

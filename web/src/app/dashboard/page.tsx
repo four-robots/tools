@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth, useKanbanBoards, useMemories, useWikiPages } from '@/hooks/use-api';
+import { PageWrapper } from '@/components/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -18,7 +19,7 @@ import { LiveUpdates, LiveActivityIndicator } from '@/components/realtime/live-u
 import { ConnectionStatusIndicator } from '@/components/realtime/connection-status';
 import { useRealtime } from '@/components/realtime/realtime-provider';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { logout, isLoggingOut } = useAuth();
   const { data: kanbanData } = useKanbanBoards();
   const { data: memoriesData } = useMemories();
@@ -229,5 +230,13 @@ export default function DashboardPage() {
       <LiveUpdates />
       <LiveActivityIndicator />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <PageWrapper>
+      <DashboardPageContent />
+    </PageWrapper>
   );
 }
