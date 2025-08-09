@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { DatabaseConnectionManager } from '../../utils/database.js';
 import type { DatabaseConfig } from '../../utils/database.js';
 import type { ScrapedPage, ScrapingJob } from './types.js';
+import type { ContentChunk } from '../../shared/types/content.js';
 
 // Database schema interfaces
 export interface ScraperPerformanceMetric {
@@ -20,10 +21,34 @@ export interface ScraperPerformanceMetric {
   timestamp: string;
 }
 
+// Enhanced scraped page with vector fields
+export interface EnhancedScrapedPage extends ScrapedPage {
+  markdown_content?: string;
+  vector_id?: string;
+  embedding_status: 'pending' | 'processing' | 'completed' | 'failed';
+  chunk_count: number;
+  last_vectorized?: string;
+}
+
+// Content chunk from unified search schema
+export interface ScrapedContentChunk {
+  id: string;
+  page_id: string;
+  content: string;
+  vector_id?: string;
+  start_position?: number;
+  end_position?: number;
+  chunk_index?: number;
+  metadata: string; // JSON
+  created_at: string;
+}
+
 export interface ScraperDatabase {
   scraped_pages: ScrapedPage;
   scraping_jobs: ScrapingJob;
   scraper_performance: ScraperPerformanceMetric;
+  // Note: content_chunks table is defined in unified search migration
+  // We'll use it via direct queries rather than adding to this interface
 }
 
 export class ScraperDatabaseManager {
@@ -413,6 +438,253 @@ export class ScraperDatabaseManager {
     }
     
     return now.toISOString();
+  }
+
+  // ============================================================================
+  // Enhanced Vector and Chunking Operations
+  // ============================================================================
+
+  /**
+   * Update page with enhanced fields for vector support
+   */
+  async updatePageWithVectorInfo(pageId: string, updates: {
+    markdownContent?: string;
+    vectorId?: string;
+    embeddingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    chunkCount?: number;
+    lastVectorized?: string;
+  }): Promise<void> {
+    const now = this.dbManager.getCurrentTimestamp();
+    
+    // Build update object with only provided fields
+    const updateObj: Record<string, any> = { updated_at: now };
+    
+    if (updates.markdownContent !== undefined) {
+      updateObj.markdown_content = updates.markdownContent;
+    }
+    if (updates.vectorId !== undefined) {
+      updateObj.vector_id = updates.vectorId;
+    }
+    if (updates.embeddingStatus !== undefined) {
+      updateObj.embedding_status = updates.embeddingStatus;
+    }
+    if (updates.chunkCount !== undefined) {
+      updateObj.chunk_count = updates.chunkCount;
+    }
+    if (updates.lastVectorized !== undefined) {
+      updateObj.last_vectorized = updates.lastVectorized;
+    }
+
+    // Use raw SQL since we're extending the base table schema
+    await sql`
+      UPDATE scraped_pages 
+      SET ${sql.raw(Object.keys(updateObj).map(key => `${key} = ?`).join(', '))}
+      WHERE id = ?
+    `.execute(this.db, [...Object.values(updateObj), pageId]);
+  }
+
+  /**
+   * Create content chunks for a scraped page
+   */
+  async createContentChunks(
+    pageId: string,
+    chunks: Array<{
+      id: string;
+      content: string;
+      vectorId?: string;
+      startPosition?: number;
+      endPosition?: number;
+      chunkIndex?: number;
+      metadata: any;
+    }>
+  ): Promise<void> {
+    if (chunks.length === 0) return;
+
+    const now = this.dbManager.getCurrentTimestamp();
+    
+    // Insert chunks using raw SQL to work with unified search schema
+    const values = chunks.map(chunk => [
+      chunk.id,
+      pageId,
+      'scraped_page',
+      chunk.content,
+      chunk.vectorId || null,
+      chunk.startPosition || null,
+      chunk.endPosition || null,
+      chunk.chunkIndex || null,
+      JSON.stringify(chunk.metadata),
+      now
+    ]);
+
+    await sql`
+      INSERT INTO content_chunks (
+        id, parent_id, parent_type, content, vector_id,
+        start_position, end_position, chunk_index, metadata, created_at
+      ) VALUES ${sql.join(values.map(vals => sql`(${sql.join(vals)})`), sql`, `)}
+    `.execute(this.db);
+  }
+
+  /**
+   * Get content chunks for a page
+   */
+  async getContentChunks(pageId: string): Promise<ScrapedContentChunk[]> {
+    const result = await sql<ScrapedContentChunk>`
+      SELECT id, parent_id as page_id, content, vector_id,
+             start_position, end_position, chunk_index, metadata, created_at
+      FROM content_chunks 
+      WHERE parent_id = ${pageId} AND parent_type = 'scraped_page'
+      ORDER BY chunk_index ASC
+    `.execute(this.db);
+    
+    return result.rows;
+  }
+
+  /**
+   * Update chunk with vector ID
+   */
+  async updateChunkVectorId(chunkId: string, vectorId: string): Promise<void> {
+    await sql`
+      UPDATE content_chunks 
+      SET vector_id = ${vectorId}
+      WHERE id = ${chunkId}
+    `.execute(this.db);
+  }
+
+  /**
+   * Get pages that need vector processing (backfill support)
+   */
+  async getPagesForVectorProcessing(options: {
+    missingEmbeddingsOnly?: boolean;
+    domain?: string;
+    limit?: number;
+    offset?: number;
+    dateRange?: { from?: string; to?: string };
+  } = {}): Promise<ScrapedPage[]> {
+    let query = sql`SELECT * FROM scraped_pages WHERE status = 'success'`;
+    const conditions: any[] = [];
+
+    if (options.missingEmbeddingsOnly) {
+      // Use raw SQL to check for fields that might not exist
+      conditions.push(sql`(embedding_status IS NULL OR embedding_status = 'pending' OR embedding_status = 'failed')`);
+    }
+
+    if (options.domain) {
+      conditions.push(sql`url LIKE ${'%' + options.domain + '%'}`);
+    }
+
+    if (options.dateRange?.from) {
+      conditions.push(sql`scraped_at >= ${options.dateRange.from}`);
+    }
+
+    if (options.dateRange?.to) {
+      conditions.push(sql`scraped_at <= ${options.dateRange.to}`);
+    }
+
+    if (conditions.length > 0) {
+      query = sql`${query} AND ${sql.join(conditions, sql` AND `)}`;
+    }
+
+    query = sql`${query} ORDER BY scraped_at DESC`;
+
+    if (options.limit) {
+      query = sql`${query} LIMIT ${options.limit}`;
+    }
+
+    if (options.offset) {
+      query = sql`${query} OFFSET ${options.offset}`;
+    }
+
+    const result = await query.execute(this.db);
+    return result.rows as ScrapedPage[];
+  }
+
+  /**
+   * Search content chunks using text search
+   */
+  async searchContentChunks(options: {
+    query: string;
+    limit?: number;
+    offset?: number;
+    pageIds?: string[];
+  }): Promise<Array<ScrapedContentChunk & { page_url?: string; page_title?: string }>> {
+    let query = sql`
+      SELECT c.*, p.url as page_url, p.title as page_title
+      FROM content_chunks c
+      LEFT JOIN scraped_pages p ON c.parent_id = p.id
+      WHERE c.parent_type = 'scraped_page' 
+        AND c.content ILIKE ${'%' + options.query + '%'}
+    `;
+
+    if (options.pageIds && options.pageIds.length > 0) {
+      query = sql`${query} AND c.parent_id = ANY(${options.pageIds})`;
+    }
+
+    query = sql`${query} ORDER BY c.created_at DESC`;
+
+    if (options.limit) {
+      query = sql`${query} LIMIT ${options.limit}`;
+    }
+
+    if (options.offset) {
+      query = sql`${query} OFFSET ${options.offset}`;
+    }
+
+    const result = await query.execute(this.db);
+    return result.rows as Array<ScrapedContentChunk & { page_url?: string; page_title?: string }>;
+  }
+
+  /**
+   * Delete all chunks for a page
+   */
+  async deleteContentChunks(pageId: string): Promise<void> {
+    await sql`
+      DELETE FROM content_chunks 
+      WHERE parent_id = ${pageId} AND parent_type = 'scraped_page'
+    `.execute(this.db);
+  }
+
+  /**
+   * Get vector processing statistics
+   */
+  async getVectorStats(): Promise<{
+    totalPages: number;
+    pagesWithEmbeddings: number;
+    pagesWithChunks: number;
+    totalChunks: number;
+    averageChunksPerPage: number;
+  }> {
+    const [pageStats, chunkStats] = await Promise.all([
+      sql`
+        SELECT 
+          COUNT(*) as total_pages,
+          COUNT(CASE WHEN embedding_status = 'completed' THEN 1 END) as pages_with_embeddings,
+          COUNT(CASE WHEN chunk_count > 0 THEN 1 END) as pages_with_chunks
+        FROM scraped_pages 
+        WHERE status = 'success'
+      `.execute(this.db),
+      sql`
+        SELECT 
+          COUNT(*) as total_chunks,
+          AVG(chunks_per_page) as avg_chunks_per_page
+        FROM (
+          SELECT parent_id, COUNT(*) as chunks_per_page
+          FROM content_chunks 
+          WHERE parent_type = 'scraped_page'
+          GROUP BY parent_id
+        ) chunk_counts
+      `.execute(this.db)
+    ]);
+
+    const pageRow = pageStats.rows[0] as any;
+    const chunkRow = chunkStats.rows[0] as any;
+
+    return {
+      totalPages: Number(pageRow.total_pages || 0),
+      pagesWithEmbeddings: Number(pageRow.pages_with_embeddings || 0),
+      pagesWithChunks: Number(pageRow.pages_with_chunks || 0),
+      totalChunks: Number(chunkRow.total_chunks || 0),
+      averageChunksPerPage: Number(chunkRow.avg_chunks_per_page || 0)
+    };
   }
 
   async close(): Promise<void> {

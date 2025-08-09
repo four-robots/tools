@@ -222,3 +222,163 @@ export class NetworkError extends ScraperError {
     super(`Network error while scraping ${url}: ${originalError.message}`, 'NETWORK_ERROR', 502, url);
   }
 }
+
+// ============================================================================
+// Enhanced Vector Scraper Types
+// ============================================================================
+
+/**
+ * Vector scraping options extending base scrape options
+ */
+export const VectorScrapingOptionsSchema = ScrapeUrlSchema.extend({
+  vector: z.object({
+    /** Enable vector processing and embeddings */
+    enabled: z.boolean().default(true),
+    /** Generate embeddings for content chunks */
+    generateEmbeddings: z.boolean().default(true),
+    /** Convert HTML to markdown before processing */
+    convertToMarkdown: z.boolean().default(true),
+    /** Chunking configuration */
+    chunkingOptions: z.object({
+      strategy: z.enum(['fixed_size', 'paragraph', 'sentence']).default('paragraph'),
+      target_size: z.number().int().min(100).max(8000).default(1000),
+      max_size: z.number().int().min(100).max(10000).default(1500),
+      min_size: z.number().int().min(50).max(1000).default(200),
+      overlap_size: z.number().int().min(0).max(500).default(100)
+    }).optional(),
+    /** Vector storage collection name */
+    collectionName: z.string().default('scraped_content'),
+    /** Embedding model to use */
+    embeddingModel: z.string().optional()
+  }).optional()
+});
+
+export type VectorScrapingOptions = z.infer<typeof VectorScrapingOptionsSchema>;
+
+/**
+ * Enhanced scraped content with vector information
+ */
+export interface ScrapedContentWithVector extends ScrapedContent {
+  /** Markdown converted content */
+  markdownContent?: string;
+  /** Vector embedding ID */
+  vectorId?: string;
+  /** Content chunks created */
+  chunks?: Array<{
+    id: string;
+    content: string;
+    vectorId?: string;
+    startPosition: number;
+    endPosition: number;
+    chunkIndex: number;
+    metadata: {
+      type?: string;
+      wordCount: number;
+      qualityScore?: number;
+    };
+  }>;
+  /** Embedding processing status */
+  embeddingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  /** Number of chunks created */
+  chunkCount: number;
+  /** Last vectorization timestamp */
+  lastVectorized?: string;
+}
+
+/**
+ * Search options for scraped content
+ */
+export const ScrapedContentSearchOptionsSchema = z.object({
+  /** Search query */
+  query: z.string().min(1),
+  /** Minimum similarity threshold (0-1) */
+  threshold: z.number().min(0).max(1).default(0.7),
+  /** Maximum number of results */
+  limit: z.number().int().min(1).max(100).default(10),
+  /** Filter by domain */
+  domain: z.string().optional(),
+  /** Filter by date range */
+  dateRange: z.object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional()
+  }).optional(),
+  /** Include chunks in results */
+  includeChunks: z.boolean().default(true),
+  /** Search type */
+  searchType: z.enum(['vector', 'text', 'hybrid']).default('vector')
+});
+
+export type ScrapedContentSearchOptions = z.infer<typeof ScrapedContentSearchOptionsSchema>;
+
+/**
+ * Search results for scraped content
+ */
+export interface ScrapedContentSearchResults {
+  /** Search results */
+  results: Array<{
+    /** Content item */
+    content: ScrapedContentWithVector;
+    /** Similarity score */
+    similarity?: number;
+    /** Matching chunks */
+    matchingChunks?: Array<{
+      id: string;
+      content: string;
+      similarity: number;
+      startPosition: number;
+      endPosition: number;
+    }>;
+  }>;
+  /** Search metadata */
+  metadata: {
+    query: string;
+    totalResults: number;
+    searchTimeMs: number;
+    searchType: 'vector' | 'text' | 'hybrid';
+  };
+}
+
+/**
+ * Backfill processing options
+ */
+export const BackfillOptionsSchema = z.object({
+  /** Process only pages without embeddings */
+  missingEmbeddingsOnly: z.boolean().default(true),
+  /** Batch size for processing */
+  batchSize: z.number().int().min(1).max(100).default(10),
+  /** Domain filter */
+  domain: z.string().optional(),
+  /** Date range filter */
+  dateRange: z.object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional()
+  }).optional(),
+  /** Chunking options to use */
+  chunkingOptions: VectorScrapingOptionsSchema.shape.vector.shape.chunkingOptions.optional(),
+  /** Force reprocessing even if embeddings exist */
+  forceReprocess: z.boolean().default(false)
+});
+
+export type BackfillOptions = z.infer<typeof BackfillOptionsSchema>;
+
+/**
+ * Backfill processing results
+ */
+export interface BackfillResults {
+  /** Number of pages processed */
+  pagesProcessed: number;
+  /** Number of pages that failed */
+  pagesFailed: number;
+  /** Total chunks created */
+  chunksCreated: number;
+  /** Total embeddings generated */
+  embeddingsGenerated: number;
+  /** Processing time in milliseconds */
+  processingTimeMs: number;
+  /** Failed items with reasons */
+  failures: Array<{
+    pageId: string;
+    url: string;
+    error: string;
+  }>;
+}
