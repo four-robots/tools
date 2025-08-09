@@ -379,6 +379,275 @@ export const cacheStatsSchema = z.object({
 });
 
 // ===================
+// CODE CHUNKING TYPES
+// ===================
+
+/**
+ * Dependency types for code analysis
+ */
+export enum DependencyType {
+  IMPORT = 'import',
+  REQUIRE = 'require',
+  INCLUDE = 'include',
+  USING = 'using',
+  FROM = 'from'
+}
+
+/**
+ * Supported chunk types for code segmentation
+ */
+export enum ChunkType {
+  FUNCTION = 'function',
+  CLASS = 'class',
+  METHOD = 'method',
+  VARIABLE = 'variable',
+  BLOCK = 'block',
+  COMMENT = 'comment',
+  IMPORT = 'import',
+  INTERFACE = 'interface',
+  TYPE = 'type',
+  NAMESPACE = 'namespace',
+  PROPERTY = 'property',
+  CONSTRUCTOR = 'constructor',
+  MODULE = 'module'
+}
+
+/**
+ * Chunking strategy types
+ */
+export enum ChunkingStrategy {
+  FUNCTION_BASED = 'function_based',
+  CLASS_BASED = 'class_based',
+  LOGICAL_BLOCK = 'logical_block',
+  SIZE_BASED = 'size_based',
+  SEMANTIC = 'semantic',
+  HYBRID = 'hybrid',
+  INTELLIGENT = 'intelligent'
+}
+
+/**
+ * Relationship types between code chunks
+ */
+export enum RelationshipType {
+  CALLS = 'calls',
+  IMPORTS = 'imports',
+  EXTENDS = 'extends',
+  IMPLEMENTS = 'implements',
+  REFERENCES = 'references',
+  CONTAINS = 'contains',
+  SIMILAR = 'similar',
+  DEPENDS_ON = 'depends_on',
+  USED_BY = 'used_by'
+}
+
+// ===================
+// CODE CHUNKING SCHEMAS
+// ===================
+
+/**
+ * Code chunk schema
+ */
+export const codeChunkSchema = z.object({
+  id: z.string().uuid(),
+  fileId: z.string().uuid(),
+  repositoryId: z.string().uuid(),
+  chunkType: z.nativeEnum(ChunkType),
+  chunkIndex: z.number().int().min(0),
+  startLine: z.number().int().min(1),
+  endLine: z.number().int().min(1),
+  startColumn: z.number().int().optional(),
+  endColumn: z.number().int().optional(),
+  content: z.string(),
+  contentHash: z.string().length(64), // SHA-256 hash
+  language: z.nativeEnum(SupportedLanguage),
+  symbolName: z.string().optional(),
+  symbolType: z.nativeEnum(SymbolType).optional(),
+  parentChunkId: z.string().uuid().optional(),
+  contextBefore: z.string().optional(),
+  contextAfter: z.string().optional(),
+  metadata: z.record(z.unknown()).default({}),
+  createdAt: z.date(),
+  updatedAt: z.date()
+});
+
+/**
+ * Chunk relationship schema
+ */
+export const chunkRelationshipSchema = z.object({
+  id: z.string().uuid(),
+  sourceChunkId: z.string().uuid(),
+  targetChunkId: z.string().uuid(),
+  relationshipType: z.nativeEnum(RelationshipType),
+  strength: z.number().min(0).max(1).default(0.0),
+  lineReferences: z.array(z.string()).default([]),
+  createdAt: z.date()
+});
+
+/**
+ * Chunking options schema
+ */
+export const chunkingOptionsSchema = z.object({
+  strategy: z.nativeEnum(ChunkingStrategy),
+  maxChunkSize: z.number().int().min(50).default(2000),
+  minChunkSize: z.number().int().min(10).default(50),
+  overlapLines: z.number().int().min(0).default(5),
+  contextLines: z.number().int().min(0).default(3),
+  includeComments: z.boolean().default(true),
+  includeImports: z.boolean().default(true),
+  preserveStructure: z.boolean().default(true),
+  respectLanguageRules: z.boolean().default(true),
+  generateEmbeddings: z.boolean().default(false)
+});
+
+/**
+ * Chunking result schema
+ */
+export const chunkingResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  totalFiles: z.number().int().min(0),
+  totalChunks: z.number().int().min(0),
+  chunksPerFile: z.record(z.number().int()),
+  averageChunkSize: z.number().min(0),
+  processingTime: z.number().min(0),
+  errors: z.array(z.object({
+    fileId: z.string().uuid(),
+    error: z.string(),
+    details: z.string().optional()
+  })).default([]),
+  strategies: z.record(z.number().int()).default({}) // strategy -> chunk count
+});
+
+/**
+ * Related chunk schema
+ */
+export const relatedChunkSchema = z.object({
+  chunk: codeChunkSchema,
+  relationshipType: z.nativeEnum(RelationshipType),
+  strength: z.number().min(0).max(1),
+  distance: z.number().int().min(0)
+});
+
+/**
+ * Chunk query options schema
+ */
+export const chunkQuerySchema = z.object({
+  repositoryId: z.string().uuid().optional(),
+  fileId: z.string().uuid().optional(),
+  chunkType: z.nativeEnum(ChunkType).optional(),
+  language: z.nativeEnum(SupportedLanguage).optional(),
+  symbolName: z.string().optional(),
+  symbolType: z.nativeEnum(SymbolType).optional(),
+  parentChunkId: z.string().uuid().optional(),
+  contentHash: z.string().optional(),
+  minSize: z.number().int().optional(),
+  maxSize: z.number().int().optional(),
+  startLine: z.number().int().optional(),
+  endLine: z.number().int().optional(),
+  includeContext: z.boolean().default(false),
+  includeRelationships: z.boolean().default(false),
+  limit: z.number().int().min(1).max(1000).default(50),
+  offset: z.number().int().min(0).default(0),
+  sortBy: z.enum(['created_at', 'updated_at', 'start_line', 'chunk_index', 'size']).default('chunk_index'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc')
+});
+
+/**
+ * Chunk search query schema
+ */
+export const chunkSearchQuerySchema = z.object({
+  query: z.string(),
+  repositoryId: z.string().uuid().optional(),
+  fileId: z.string().uuid().optional(),
+  chunkTypes: z.array(z.nativeEnum(ChunkType)).optional(),
+  languages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  symbolTypes: z.array(z.nativeEnum(SymbolType)).optional(),
+  fuzzy: z.boolean().default(false),
+  caseSensitive: z.boolean().default(false),
+  includeContent: z.boolean().default(true),
+  includeContext: z.boolean().default(false),
+  limit: z.number().int().min(1).max(100).default(20),
+  offset: z.number().int().min(0).default(0)
+});
+
+/**
+ * Chunk search result schema
+ */
+export const chunkSearchResultSchema = z.object({
+  chunks: z.array(codeChunkSchema),
+  totalResults: z.number().int().min(0),
+  searchTime: z.number().min(0),
+  query: z.string(),
+  suggestions: z.array(z.string()).default([])
+});
+
+/**
+ * Chunking statistics schema
+ */
+export const chunkingStatsSchema = z.object({
+  repositoryId: z.string().uuid().optional(),
+  totalChunks: z.number().int().min(0),
+  chunksByType: z.record(z.number().int()),
+  chunksByLanguage: z.record(z.number().int()),
+  chunksByFile: z.record(z.number().int()),
+  averageChunkSize: z.number().min(0),
+  medianChunkSize: z.number().min(0),
+  totalLinesChunked: z.number().int().min(0),
+  relationshipStats: z.object({
+    totalRelationships: z.number().int().min(0),
+    relationshipsByType: z.record(z.number().int()),
+    averageRelationshipsPerChunk: z.number().min(0)
+  }),
+  qualityMetrics: z.object({
+    chunkCohesion: z.number().min(0).max(1), // How well chunks represent logical units
+    contextPreservation: z.number().min(0).max(1), // How well context is preserved
+    deduplicationRate: z.number().min(0).max(1) // Rate of duplicate chunk detection
+  })
+});
+
+/**
+ * Optimization result schema
+ */
+export const optimizationResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  originalChunkCount: z.number().int().min(0),
+  optimizedChunkCount: z.number().int().min(0),
+  duplicatesRemoved: z.number().int().min(0),
+  relationshipsAdded: z.number().int().min(0),
+  qualityImprovements: z.record(z.number()),
+  optimizationTime: z.number().min(0),
+  recommendations: z.array(z.string()).default([])
+});
+
+// ===================
+// CHUNKING STRATEGY SCHEMAS
+// ===================
+
+/**
+ * Chunking strategy configuration schema
+ */
+export const chunkingStrategyConfigSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  language: z.nativeEnum(SupportedLanguage).optional(),
+  chunkByFunctions: z.boolean().default(true),
+  chunkByClasses: z.boolean().default(true),
+  chunkByMethods: z.boolean().default(true),
+  chunkByInterfaces: z.boolean().default(false),
+  chunkByVariables: z.boolean().default(false),
+  includeJSDoc: z.boolean().default(true),
+  includeDocstrings: z.boolean().default(true),
+  includeAnnotations: z.boolean().default(true),
+  preserveImports: z.boolean().default(true),
+  preservePackages: z.boolean().default(true),
+  maxChunkSize: z.number().int().min(50).default(2000),
+  minChunkSize: z.number().int().min(10).default(50),
+  overlapLines: z.number().int().min(0).default(5),
+  contextLines: z.number().int().min(0).default(3),
+  respectIndentation: z.boolean().default(true),
+  customPatterns: z.array(z.string()).default([])
+});
+
+// ===================
 // TYPESCRIPT TYPES
 // ===================
 
@@ -398,6 +667,19 @@ export type SymbolQuery = z.infer<typeof symbolQuerySchema>;
 export type DependencyGraphNode = z.infer<typeof dependencyGraphNodeSchema>;
 export type DependencyGraph = z.infer<typeof dependencyGraphSchema>;
 export type CacheStats = z.infer<typeof cacheStatsSchema>;
+
+// Code chunking types
+export type CodeChunk = z.infer<typeof codeChunkSchema>;
+export type ChunkRelationship = z.infer<typeof chunkRelationshipSchema>;
+export type ChunkingOptions = z.infer<typeof chunkingOptionsSchema>;
+export type ChunkingResult = z.infer<typeof chunkingResultSchema>;
+export type RelatedChunk = z.infer<typeof relatedChunkSchema>;
+export type ChunkQuery = z.infer<typeof chunkQuerySchema>;
+export type ChunkSearchQuery = z.infer<typeof chunkSearchQuerySchema>;
+export type ChunkSearchResult = z.infer<typeof chunkSearchResultSchema>;
+export type ChunkingStats = z.infer<typeof chunkingStatsSchema>;
+export type OptimizationResult = z.infer<typeof optimizationResultSchema>;
+export type ChunkingStrategyConfig = z.infer<typeof chunkingStrategyConfigSchema>;
 
 // ===================
 // PARSER ERROR TYPES

@@ -78,6 +78,10 @@ export type {
 // Code Parser & AST Service
 export { CodeParserService } from './code-parser-service.js';
 
+// Code Chunking Service
+export { CodeChunkingService } from './code-chunking-service.js';
+export type { LanguageChunker } from './code-chunking-service.js';
+
 // Language Parsers
 export { 
   ParserFactory,
@@ -88,6 +92,18 @@ export {
   CppParser,
   RustParser 
 } from './parsers/index.js';
+
+// Language Chunkers
+export {
+  ChunkerFactory,
+  TypeScriptChunker,
+  PythonChunker,
+  JavaChunker,
+  GoChunker,
+  CppChunker,
+  RustChunker,
+  UniversalChunker
+} from './chunkers/index.js';
 
 // Repository types (re-exported from shared types)
 export type {
@@ -140,5 +156,20 @@ export type {
   CacheStats,
   LanguageParser,
   ParseError,
-  UnsupportedLanguageError
+  UnsupportedLanguageError,
+  // Code chunking types
+  ChunkType,
+  ChunkingStrategy,
+  RelationshipType,
+  CodeChunk,
+  ChunkRelationship,
+  ChunkingOptions,
+  ChunkingResult,
+  RelatedChunk,
+  ChunkQuery,
+  ChunkSearchQuery,
+  ChunkSearchResult,
+  ChunkingStats,
+  OptimizationResult,
+  ChunkingStrategyConfig
 } from '../../shared/types/codebase.js';
