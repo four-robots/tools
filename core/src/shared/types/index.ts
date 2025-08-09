@@ -28,3 +28,9 @@ export * from './content.js';
 
 // API documentation discovery types
 export * from './api-documentation.js';
+
+// Repository management types
+export * from './repository.js';
+
+// Codebase analysis and parsing types
+export * from './codebase.js';

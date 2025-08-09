@@ -10,6 +10,9 @@ import { logger } from '../utils/logger.js';
 import { initialSchemaComplete } from '../migrations/001_initial_schema_complete.js';
 import * as scraperTables from '../migrations/002_scraper_tables.js';
 import * as unifiedSearchFoundation from '../migrations/003_unified_search_foundation.js';
+import { apiDocumentationDiscovery } from '../migrations/011_api_documentation_discovery.js';
+import { codeRepositoryManagement } from '../migrations/012_code_repository_management.js';
+import { codeAnalysis } from '../migrations/013_code_analysis.js';
 
 /**
  * Migration registry that maps migration names to their implementations
@@ -20,7 +23,10 @@ import * as unifiedSearchFoundation from '../migrations/003_unified_search_found
 const MIGRATION_REGISTRY: Record<string, Migration> = {
   '001_initial_schema_complete': initialSchemaComplete,
   '002_scraper_tables': scraperTables,
-  '003_unified_search_foundation': unifiedSearchFoundation
+  '003_unified_search_foundation': unifiedSearchFoundation,
+  '011_api_documentation_discovery': apiDocumentationDiscovery,
+  '012_code_repository_management': codeRepositoryManagement,
+  '013_code_analysis': codeAnalysis
 };
 
 /**

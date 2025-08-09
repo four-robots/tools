@@ -9,6 +9,8 @@ export default defineConfig({
     'src/services/wiki/index.ts',
     'src/services/scraper/index.ts',
     'src/services/quality/index.ts',
+    'src/services/codebase/index.ts',
+    'src/services/unified-search/index.ts',
     'src/shared/types/index.ts'
   ],
   format: ['esm'],
@@ -30,6 +32,10 @@ export default defineConfig({
     'uuid',
     'zod',
     'glob',
-    'puppeteer'
+    'puppeteer',
+    '@octokit/rest',
+    '@octokit/plugin-throttling',
+    '@gitbeaker/rest',
+    'axios'
   ]
 });

@@ -191,3 +191,9 @@ export async function down(db: Kysely<any>): Promise<void> {
 
   logger.info('API documentation discovery schema rollback completed successfully');
 }
+
+// Export the migration object as required by the migration provider
+export const apiDocumentationDiscovery = {
+  up,
+  down
+};
