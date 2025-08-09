@@ -37,6 +37,10 @@
     "./quality": {
       "import": "./dist/services/quality/index.js",
       "types": "./dist/services/quality/index.d.ts"
+    },
+    "./unified-search": {
+      "import": "./dist/services/unified-search/index.js",
+      "types": "./dist/services/unified-search/index.d.ts"
     }
   },
   "files": [
