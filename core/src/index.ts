@@ -12,6 +12,7 @@ export * from './services/wiki/index.js';
 export * from './services/scraper/index.js';
 export * from './services/chunking/index.js';
 export * from './services/unified-search/index.js';
+export * from './services/codebase/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 

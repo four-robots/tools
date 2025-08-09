@@ -25,3 +25,6 @@ export * from './search.js';
 
 // Content management and chunking types
 export * from './content.js';
+
+// API documentation discovery types
+export * from './api-documentation.js';

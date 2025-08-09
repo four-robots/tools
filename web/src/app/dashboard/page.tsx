@@ -14,7 +14,8 @@ import {
   Activity,
   TrendingUp,
   Search,
-  Command
+  Command,
+  FolderGit2
 } from 'lucide-react';
 import Link from 'next/link';
 import { LiveUpdates, LiveActivityIndicator } from '@/components/realtime/live-updates';
@@ -37,6 +38,14 @@ function DashboardPageContent() {
       icon: Search,
       color: 'bg-orange-500',
       href: '/search',
+    },
+    {
+      title: 'Repositories',
+      value: '3',
+      description: 'Code repositories',
+      icon: FolderGit2,
+      color: 'bg-gray-500',
+      href: '/repositories',
     },
     {
       title: 'Kanban Boards',
@@ -73,6 +82,13 @@ function DashboardPageContent() {
   ];
 
   const quickActions = [
+    {
+      title: 'Analyze Repository',
+      description: 'Discover API documentation',
+      icon: FolderGit2,
+      href: '/repositories',
+      color: 'bg-gray-50 text-gray-600 border-gray-200',
+    },
     {
       title: 'New Kanban Board',
       description: 'Create a new project board',
@@ -114,6 +130,9 @@ function DashboardPageContent() {
                 <Link href="/search" className="text-gray-600 hover:text-gray-900 flex items-center">
                   <Search className="w-4 h-4 mr-1" />
                   Search
+                </Link>
+                <Link href="/repositories" className="text-gray-600 hover:text-gray-900">
+                  Repositories
                 </Link>
                 <Link href="/kanban" className="text-gray-600 hover:text-gray-900">
                   Kanban

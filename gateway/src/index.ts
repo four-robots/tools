@@ -31,6 +31,7 @@ import searchRoutes from './routes/search.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import qualityRoutes from './routes/quality.routes.js';
 import { createAnalyticsRoutes } from './routes/analytics.routes.js';
+import apiDocumentationRecommendationsRoutes from './routes/api-documentation-recommendations.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -43,6 +44,7 @@ import { createAnalyticsMiddleware, createErrorTrackingMiddleware } from './midd
 import { KanbanService, KanbanDatabase } from '@mcp-tools/core/kanban';
 import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
 import { ScraperService, ScraperDatabaseManager, ScrapingEngine } from '@mcp-tools/core/scraper';
+import { APIDocumentationDiscoveryService, createDatabaseConfig } from '@mcp-tools/core';
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
 import { Pool } from 'pg';
@@ -203,12 +205,32 @@ async function createApp() {
   // Initialize analytics service
   const analyticsService = new AnalyticsService(pgPool, redis);
   console.log('✅ AnalyticsService created');
+
+  // Initialize API documentation discovery service
+  const apiDocumentationDatabase = createDatabaseConfig({
+    type: 'postgresql',
+    connectionString: config.database.postgres
+  });
+  const apiDocumentationDiscovery = new APIDocumentationDiscoveryService({
+    database: apiDocumentationDatabase,
+    maxConcurrentRequests: 10,
+    defaultTimeout: 15000,
+    enableRateLimit: true
+  });
+  
+  try {
+    await apiDocumentationDiscovery.initialize();
+    console.log('✅ APIDocumentationDiscoveryService created and initialized');
+  } catch (error) {
+    console.warn('⚠️  APIDocumentationDiscoveryService initialization failed, continuing without service:', error.message);
+  }
   
   // Store services in app locals for access in routes
   app.locals.kanbanService = kanbanService;
   app.locals.memoryService = memoryService;
   app.locals.scraperService = scraperService;
   app.locals.analyticsService = analyticsService;
+  app.locals.apiDocumentationDiscovery = apiDocumentationDiscovery;
   app.locals.pgPool = pgPool;
   app.locals.redis = redis;
   
@@ -240,6 +262,7 @@ async function createApp() {
   app.use('/api/v1/search', searchRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
+  app.use('/api', apiDocumentationRecommendationsRoutes);
   
   // Root endpoint
   app.get('/', (req, res) => {
