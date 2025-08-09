@@ -19,3 +19,9 @@ export * from './mcp.js';
 
 // Analytics and insights types
 export * from './analytics.js';
+
+// Unified search types
+export * from './search.js';
+
+// Content management and chunking types
+export * from './content.js';
