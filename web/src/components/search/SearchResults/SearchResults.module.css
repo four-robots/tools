@@ -1,0 +1,194 @@
+/**
+ * SearchResults Component Styles
+ */
+
+.searchResults {
+  @apply flex flex-col space-y-4;
+}
+
+/* Header */
+.resultsHeader {
+  @apply flex items-center justify-between border-b border-gray-200 pb-4;
+}
+
+.resultsInfo {
+  @apply flex items-center space-x-4;
+}
+
+.resultCount {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.pageInfo {
+  @apply text-gray-500 font-normal;
+}
+
+.resultsControls {
+  @apply flex items-center space-x-4;
+}
+
+/* Sort Selector */
+.sortSelector {
+  @apply flex items-center space-x-2;
+}
+
+.sortIcon {
+  @apply text-gray-400;
+}
+
+.sortSelect {
+  @apply text-sm border border-gray-300 rounded-md px-3 py-1 bg-white
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+         cursor-pointer;
+}
+
+/* View Toggle */
+.viewToggle {
+  @apply flex rounded-md overflow-hidden border border-gray-300;
+}
+
+.viewButton {
+  @apply px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50
+         focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500
+         transition-colors duration-200;
+}
+
+.viewButton.active {
+  @apply bg-blue-50 text-blue-600 border-blue-200;
+}
+
+/* Results Body */
+.resultsBody {
+  @apply flex gap-6;
+}
+
+.resultsContent {
+  @apply flex-1 relative;
+}
+
+/* Aggregations */
+.aggregations {
+  @apply w-64 shrink-0 space-y-6;
+}
+
+.aggregationSection {
+  @apply space-y-3;
+}
+
+.aggregationTitle {
+  @apply text-sm font-semibold text-gray-900 uppercase tracking-wide;
+}
+
+.aggregationList {
+  @apply space-y-1;
+}
+
+.aggregationItem {
+  @apply block w-full text-left px-3 py-2 text-sm text-gray-700 rounded-md
+         hover:bg-gray-100 hover:text-gray-900
+         focus:outline-none focus:ring-2 focus:ring-blue-500
+         transition-colors duration-200;
+}
+
+/* Results Grid */
+.resultsGrid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+.resultsList {
+  @apply space-y-4;
+}
+
+.resultCard {
+  @apply h-full;
+}
+
+/* Loading Overlay */
+.loadingOverlay {
+  @apply absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center
+         space-x-2 rounded-lg;
+}
+
+/* Pagination */
+.paginationContainer {
+  @apply border-t border-gray-200 pt-4;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .resultsHeader {
+    @apply flex-col space-y-4 items-start;
+  }
+  
+  .resultsControls {
+    @apply flex-col space-x-0 space-y-2 w-full;
+  }
+  
+  .sortSelector,
+  .viewToggle {
+    @apply w-full justify-center;
+  }
+  
+  .sortSelect {
+    @apply w-full;
+  }
+  
+  .resultsBody {
+    @apply flex-col gap-4;
+  }
+  
+  .aggregations {
+    @apply w-full;
+  }
+  
+  .resultsGrid {
+    @apply grid-cols-1;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .resultsHeader {
+    @apply border-gray-700;
+  }
+  
+  .resultCount {
+    @apply text-gray-300;
+  }
+  
+  .pageInfo {
+    @apply text-gray-400;
+  }
+  
+  .sortIcon {
+    @apply text-gray-500;
+  }
+  
+  .sortSelect {
+    @apply bg-gray-800 border-gray-600 text-gray-200;
+  }
+  
+  .viewButton {
+    @apply text-gray-400 hover:text-gray-200 hover:bg-gray-800;
+  }
+  
+  .viewButton.active {
+    @apply bg-blue-900 text-blue-300 border-blue-800;
+  }
+  
+  .aggregationTitle {
+    @apply text-gray-100;
+  }
+  
+  .aggregationItem {
+    @apply text-gray-300 hover:bg-gray-800 hover:text-gray-100;
+  }
+  
+  .loadingOverlay {
+    @apply bg-gray-900 bg-opacity-75;
+  }
+  
+  .paginationContainer {
+    @apply border-gray-700;
+  }
+}

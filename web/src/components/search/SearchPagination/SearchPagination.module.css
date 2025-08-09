@@ -1,0 +1,153 @@
+/**
+ * SearchPagination Component Styles
+ */
+
+.pagination {
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0;
+}
+
+/* Pagination Info */
+.paginationInfo {
+  @apply flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4;
+}
+
+.itemCount {
+  @apply text-sm text-gray-700 font-medium;
+}
+
+/* Page Size Selector */
+.pageSizeSelector {
+  @apply flex items-center space-x-2 text-sm;
+}
+
+.pageSizeLabel {
+  @apply text-gray-600;
+}
+
+.pageSizeSelect {
+  @apply border border-gray-300 rounded-md px-2 py-1 bg-white text-sm
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+         cursor-pointer;
+}
+
+/* Pagination Navigation */
+.paginationNav {
+  @apply flex items-center space-x-1;
+}
+
+/* Navigation Buttons */
+.navButton {
+  @apply flex items-center justify-center w-8 h-8 border border-gray-300 rounded-md
+         bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+         transition-colors duration-200;
+}
+
+.navButton.disabled {
+  @apply text-gray-300 cursor-not-allowed hover:text-gray-300 hover:bg-white;
+}
+
+/* Page Numbers */
+.pageNumbers {
+  @apply flex items-center space-x-1 mx-4;
+}
+
+.pageButton {
+  @apply flex items-center justify-center min-w-[32px] h-8 px-2 border border-gray-300 rounded-md
+         bg-white text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+         transition-colors duration-200;
+}
+
+.pageButton.active {
+  @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white;
+}
+
+.pageButton:disabled {
+  @apply cursor-default;
+}
+
+.ellipsis {
+  @apply flex items-center justify-center w-8 h-8 text-gray-400;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .pagination {
+    @apply items-start;
+  }
+  
+  .paginationNav {
+    @apply self-center;
+  }
+  
+  .pageNumbers {
+    @apply mx-2;
+  }
+  
+  .pageButton {
+    @apply min-w-[28px] h-7 text-xs;
+  }
+  
+  .navButton {
+    @apply w-7 h-7;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .paginationNav {
+    @apply space-x-0.5;
+  }
+  
+  .pageNumbers {
+    @apply mx-1 space-x-0.5;
+  }
+  
+  .pageButton {
+    @apply min-w-[24px] h-6 px-1 text-xs;
+  }
+  
+  .navButton {
+    @apply w-6 h-6;
+  }
+  
+  .ellipsis {
+    @apply w-6 h-6;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .itemCount {
+    @apply text-gray-300;
+  }
+  
+  .pageSizeLabel {
+    @apply text-gray-400;
+  }
+  
+  .pageSizeSelect {
+    @apply bg-gray-800 border-gray-600 text-gray-200;
+  }
+  
+  .navButton {
+    @apply bg-gray-800 border-gray-600 text-gray-400 hover:text-gray-200 hover:bg-gray-700;
+  }
+  
+  .navButton.disabled {
+    @apply text-gray-600 hover:text-gray-600 hover:bg-gray-800;
+  }
+  
+  .pageButton {
+    @apply bg-gray-800 border-gray-600 text-gray-300 hover:text-gray-100 hover:bg-gray-700;
+  }
+  
+  .pageButton.active {
+    @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700;
+  }
+  
+  .ellipsis {
+    @apply text-gray-500;
+  }
+}

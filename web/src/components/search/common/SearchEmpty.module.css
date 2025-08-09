@@ -1,0 +1,193 @@
+/**
+ * SearchEmpty Component Styles
+ */
+
+.searchEmpty {
+  @apply flex items-center justify-center p-8 min-h-[400px];
+}
+
+.emptyContent {
+  @apply text-center max-w-md space-y-6;
+}
+
+/* Icon Styles */
+.emptyIcon {
+  @apply flex justify-center mb-4;
+}
+
+.emptyIcon svg {
+  @apply text-gray-400;
+}
+
+.noQuery .emptyIcon svg {
+  @apply text-blue-400;
+}
+
+.noResults .emptyIcon svg {
+  @apply text-gray-400;
+}
+
+.noResultsWithFilters .emptyIcon svg {
+  @apply text-orange-400;
+}
+
+.searchError .emptyIcon svg {
+  @apply text-red-400;
+}
+
+.initialState .emptyIcon svg {
+  @apply text-green-400;
+}
+
+/* Text Content */
+.emptyText {
+  @apply space-y-3;
+}
+
+.emptyTitle {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.emptyMessage {
+  @apply text-gray-600 leading-relaxed;
+}
+
+/* Actions */
+.actions {
+  @apply flex flex-col sm:flex-row sm:justify-center space-y-2 sm:space-y-0 sm:space-x-3;
+}
+
+.primaryAction {
+  @apply inline-flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white
+         font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 
+         focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+.secondaryAction {
+  @apply inline-flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700
+         font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 
+         focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+/* Suggestions */
+.suggestions {
+  @apply text-left;
+}
+
+.suggestionsTitle {
+  @apply flex items-center space-x-2 text-sm font-medium text-gray-700 mb-3;
+}
+
+.suggestionsList {
+  @apply space-y-2;
+}
+
+.suggestionItem {
+  @apply text-sm;
+}
+
+.suggestionButton {
+  @apply text-blue-600 hover:text-blue-800 underline focus:outline-none 
+         focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded;
+}
+
+.suggestionText {
+  @apply text-gray-600;
+}
+
+/* Variant-specific styling */
+.noQuery {
+  @apply bg-blue-50;
+}
+
+.noResults {
+  @apply bg-gray-50;
+}
+
+.noResultsWithFilters {
+  @apply bg-orange-50;
+}
+
+.searchError {
+  @apply bg-red-50;
+}
+
+.initialState {
+  @apply bg-green-50;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .searchEmpty {
+    @apply p-6 min-h-[300px];
+  }
+  
+  .emptyContent {
+    @apply max-w-sm;
+  }
+  
+  .emptyTitle {
+    @apply text-lg;
+  }
+  
+  .actions {
+    @apply flex-col space-x-0 space-y-2;
+  }
+  
+  .primaryAction,
+  .secondaryAction {
+    @apply w-full;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .emptyTitle {
+    @apply text-gray-100;
+  }
+  
+  .emptyMessage {
+    @apply text-gray-400;
+  }
+  
+  .suggestionsTitle {
+    @apply text-gray-300;
+  }
+  
+  .suggestionText {
+    @apply text-gray-400;
+  }
+  
+  .suggestionButton {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+  
+  .primaryAction {
+    @apply bg-blue-600 hover:bg-blue-700;
+  }
+  
+  .secondaryAction {
+    @apply bg-gray-700 text-gray-300 hover:bg-gray-600;
+  }
+  
+  /* Dark variant backgrounds */
+  .noQuery {
+    @apply bg-blue-900 bg-opacity-20;
+  }
+  
+  .noResults {
+    @apply bg-gray-800 bg-opacity-50;
+  }
+  
+  .noResultsWithFilters {
+    @apply bg-orange-900 bg-opacity-20;
+  }
+  
+  .searchError {
+    @apply bg-red-900 bg-opacity-20;
+  }
+  
+  .initialState {
+    @apply bg-green-900 bg-opacity-20;
+  }
+}

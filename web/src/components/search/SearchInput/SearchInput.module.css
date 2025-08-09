@@ -1,0 +1,139 @@
+/* SearchInput Component Styles */
+
+.searchInputContainer {
+  @apply relative w-full;
+}
+
+.searchInputWrapper {
+  @apply relative flex items-center;
+}
+
+.searchInput {
+  @apply w-full px-4 py-3 pl-12 pr-12 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+}
+
+.searchInput:disabled {
+  @apply bg-gray-50 text-gray-500 cursor-not-allowed;
+}
+
+.searchInput.error {
+  @apply border-red-300 focus:ring-red-500;
+}
+
+.searchInput.loading {
+  @apply pr-16;
+}
+
+.searchIcon {
+  @apply absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400;
+}
+
+.searchIconActive {
+  @apply text-blue-500;
+}
+
+.clearButton {
+  @apply absolute right-4 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-150;
+}
+
+.clearButton.loading {
+  @apply right-12;
+}
+
+.loadingSpinner {
+  @apply absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-blue-500;
+}
+
+.shortcutHint {
+  @apply absolute right-4 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs text-gray-400 bg-gray-100 border border-gray-200 rounded font-mono;
+}
+
+.shortcutHintHidden {
+  @apply opacity-0 pointer-events-none;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .searchInput {
+    @apply bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-blue-400;
+  }
+
+  .searchInput:disabled {
+    @apply bg-gray-700 text-gray-500;
+  }
+
+  .searchIcon {
+    @apply text-gray-500;
+  }
+
+  .searchIconActive {
+    @apply text-blue-400;
+  }
+
+  .clearButton {
+    @apply text-gray-500 hover:text-gray-300 focus:text-gray-300;
+  }
+
+  .loadingSpinner {
+    @apply text-blue-400;
+  }
+
+  .shortcutHint {
+    @apply text-gray-500 bg-gray-700 border-gray-600;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .searchInput {
+    @apply px-3 py-2 pl-10 text-base;
+  }
+
+  .searchIcon {
+    @apply left-3 w-4 h-4;
+  }
+
+  .clearButton {
+    @apply right-3;
+  }
+
+  .clearButton.loading {
+    @apply right-10;
+  }
+
+  .loadingSpinner {
+    @apply right-3 w-4 h-4;
+  }
+
+  .shortcutHint {
+    @apply hidden;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .searchInput {
+    @apply border-2 border-black;
+  }
+
+  .searchInput:focus {
+    @apply ring-4 ring-blue-600;
+  }
+
+  .searchIcon,
+  .clearButton {
+    @apply text-black;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .searchInput,
+  .clearButton {
+    @apply transition-none;
+  }
+
+  .loadingSpinner {
+    @apply animate-none;
+  }
+}

@@ -1,0 +1,386 @@
+/* SearchResultCard Component Styles */
+
+.resultCard {
+  @apply bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer;
+}
+
+.resultCard.selected {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.resultCard:hover {
+  @apply border-gray-300;
+}
+
+.resultCard.selected:hover {
+  @apply border-blue-600;
+}
+
+.resultHeader {
+  @apply flex items-start justify-between mb-3;
+}
+
+.resultInfo {
+  @apply flex-1 min-w-0;
+}
+
+.resultTitle {
+  @apply text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-150 line-clamp-2;
+}
+
+.resultTitle.selected {
+  @apply text-blue-700;
+}
+
+.resultMeta {
+  @apply flex items-center mt-1 text-sm text-gray-500 space-x-3;
+}
+
+.contentTypeIcon {
+  @apply w-4 h-4 mr-1 flex-shrink-0;
+}
+
+.contentTypeIcon.scraped_page {
+  @apply text-green-500;
+}
+
+.contentTypeIcon.wiki_page {
+  @apply text-blue-500;
+}
+
+.contentTypeIcon.kanban_card {
+  @apply text-purple-500;
+}
+
+.contentTypeIcon.memory_thought {
+  @apply text-orange-500;
+}
+
+.contentTypeIcon.code_file {
+  @apply text-gray-600;
+}
+
+.contentTypeIcon.code_chunk {
+  @apply text-gray-500;
+}
+
+.contentType {
+  @apply flex items-center font-medium;
+}
+
+.dateInfo {
+  @apply flex items-center;
+}
+
+.authorInfo {
+  @apply flex items-center;
+}
+
+.resultActions {
+  @apply flex items-center space-x-2 flex-shrink-0 ml-4;
+}
+
+.selectCheckbox {
+  @apply w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2;
+}
+
+.scoreIndicator {
+  @apply flex items-center text-xs text-gray-500;
+}
+
+.scoreBar {
+  @apply w-16 h-2 bg-gray-200 rounded-full overflow-hidden ml-2;
+}
+
+.scoreFill {
+  @apply h-full transition-all duration-300;
+}
+
+.scoreFill.high {
+  @apply bg-green-500;
+}
+
+.scoreFill.medium {
+  @apply bg-yellow-500;
+}
+
+.scoreFill.low {
+  @apply bg-red-500;
+}
+
+.resultPreview {
+  @apply mt-3 text-sm text-gray-700 leading-relaxed;
+}
+
+.previewText {
+  @apply line-clamp-3;
+}
+
+.highlight {
+  @apply bg-yellow-200 font-semibold px-1 rounded;
+}
+
+.resultFooter {
+  @apply mt-4 pt-3 border-t border-gray-100 flex items-center justify-between;
+}
+
+.tagsList {
+  @apply flex items-center flex-wrap gap-1;
+}
+
+.tag {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700;
+}
+
+.tag.selected {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.relationships {
+  @apply mt-3 pt-3 border-t border-gray-100;
+}
+
+.relationshipsTitle {
+  @apply text-sm font-medium text-gray-700 mb-2;
+}
+
+.relationshipsList {
+  @apply flex flex-wrap gap-2;
+}
+
+.relationshipItem {
+  @apply inline-flex items-center px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors duration-150;
+}
+
+.relationshipIcon {
+  @apply w-3 h-3 mr-1;
+}
+
+.qualityBadge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.qualityBadge.high {
+  @apply bg-green-100 text-green-800;
+}
+
+.qualityBadge.medium {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.qualityBadge.low {
+  @apply bg-red-100 text-red-800;
+}
+
+.languageBadge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800;
+}
+
+.repositoryBadge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800;
+}
+
+.lineRange {
+  @apply text-xs text-gray-500 font-mono;
+}
+
+.expandButton {
+  @apply text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer focus:outline-none focus:underline ml-2;
+}
+
+.collapsedView {
+  @apply p-3;
+}
+
+.collapsedView .resultTitle {
+  @apply text-base line-clamp-1;
+}
+
+.collapsedView .resultMeta {
+  @apply mt-0.5;
+}
+
+.collapsedView .resultPreview {
+  @apply mt-2 line-clamp-2;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .resultCard {
+    @apply bg-gray-800 border-gray-700;
+  }
+
+  .resultCard.selected {
+    @apply border-blue-400 bg-blue-900;
+  }
+
+  .resultCard:hover {
+    @apply border-gray-600;
+  }
+
+  .resultTitle {
+    @apply text-gray-100 hover:text-blue-400;
+  }
+
+  .resultTitle.selected {
+    @apply text-blue-300;
+  }
+
+  .resultMeta {
+    @apply text-gray-400;
+  }
+
+  .selectCheckbox {
+    @apply bg-gray-700 border-gray-600;
+  }
+
+  .scoreIndicator {
+    @apply text-gray-400;
+  }
+
+  .scoreBar {
+    @apply bg-gray-700;
+  }
+
+  .resultPreview {
+    @apply text-gray-300;
+  }
+
+  .highlight {
+    @apply bg-yellow-600 text-gray-900;
+  }
+
+  .resultFooter {
+    @apply border-gray-700;
+  }
+
+  .tag {
+    @apply bg-gray-700 text-gray-300;
+  }
+
+  .tag.selected {
+    @apply bg-blue-800 text-blue-200;
+  }
+
+  .relationships {
+    @apply border-gray-700;
+  }
+
+  .relationshipsTitle {
+    @apply text-gray-300;
+  }
+
+  .relationshipItem {
+    @apply bg-gray-700 text-gray-300 hover:bg-gray-600;
+  }
+
+  .qualityBadge.high {
+    @apply bg-green-900 text-green-200;
+  }
+
+  .qualityBadge.medium {
+    @apply bg-yellow-900 text-yellow-200;
+  }
+
+  .qualityBadge.low {
+    @apply bg-red-900 text-red-200;
+  }
+
+  .languageBadge {
+    @apply bg-purple-900 text-purple-200;
+  }
+
+  .repositoryBadge {
+    @apply bg-indigo-900 text-indigo-200;
+  }
+
+  .lineRange {
+    @apply text-gray-400;
+  }
+
+  .expandButton {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .resultCard {
+    @apply p-3;
+  }
+
+  .resultHeader {
+    @apply flex-col items-start space-y-2;
+  }
+
+  .resultActions {
+    @apply ml-0 self-end;
+  }
+
+  .resultMeta {
+    @apply flex-col items-start space-y-1 space-x-0;
+  }
+
+  .resultFooter {
+    @apply flex-col items-start space-y-2;
+  }
+
+  .tagsList {
+    @apply w-full;
+  }
+
+  .relationshipsList {
+    @apply flex-col gap-1;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .resultCard {
+    @apply border-2 border-black;
+  }
+
+  .resultCard.selected {
+    @apply border-4 border-blue-600;
+  }
+
+  .resultTitle,
+  .resultMeta,
+  .resultPreview {
+    @apply text-black;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .resultCard {
+    @apply transition-none;
+  }
+
+  .resultTitle {
+    @apply transition-none;
+  }
+
+  .scoreFill {
+    @apply transition-none;
+  }
+
+  .relationshipItem {
+    @apply transition-none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .resultCard {
+    @apply shadow-none border border-gray-400 break-inside-avoid;
+  }
+
+  .resultActions {
+    @apply hidden;
+  }
+
+  .expandButton {
+    @apply hidden;
+  }
+}

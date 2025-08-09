@@ -1,0 +1,322 @@
+/**
+ * SearchAnalytics Component Styles
+ */
+
+.searchAnalytics {
+  @apply space-y-6;
+}
+
+/* Loading and Error States */
+.loadingState,
+.errorState {
+  @apply flex items-center justify-center space-x-2 p-8 text-gray-600;
+}
+
+.errorMessage {
+  @apply text-red-600 font-medium;
+}
+
+.retryButton {
+  @apply flex items-center space-x-1 px-3 py-1 bg-red-50 text-red-600 rounded-md
+         hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500
+         transition-colors duration-200;
+}
+
+/* Header */
+.analyticsHeader {
+  @apply flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0
+         pb-6 border-b border-gray-200;
+}
+
+.headerTitle {
+  @apply flex items-center space-x-2;
+}
+
+.headerTitle h2 {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.headerActions {
+  @apply flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4;
+}
+
+/* Date Range Picker */
+.dateRangePicker {
+  @apply flex items-center space-x-4;
+}
+
+.dateInputGroup {
+  @apply flex items-center space-x-2;
+}
+
+.dateLabel {
+  @apply text-sm font-medium text-gray-700 whitespace-nowrap;
+}
+
+.dateInput {
+  @apply border border-gray-300 rounded-md px-3 py-1 text-sm
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+/* Action Buttons */
+.refreshButton {
+  @apply flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900
+         hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500
+         transition-colors duration-200;
+}
+
+.refreshButton:disabled {
+  @apply text-gray-400 cursor-not-allowed hover:text-gray-400 hover:bg-transparent;
+}
+
+.exportButtons {
+  @apply flex space-x-2;
+}
+
+.exportButton {
+  @apply flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 text-gray-700
+         hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500
+         transition-colors duration-200;
+}
+
+/* Content */
+.analyticsContent {
+  @apply space-y-8;
+}
+
+/* Metrics Grid */
+.metricsGrid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+
+.metricCard {
+  @apply bg-white border border-gray-200 rounded-lg p-6 shadow-sm;
+}
+
+.metricHeader {
+  @apply flex items-center space-x-3 mb-3;
+}
+
+.metricIcon {
+  @apply flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-lg;
+}
+
+.metricTitle {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.metricValue {
+  @apply text-2xl font-bold text-gray-900 mb-1;
+}
+
+.metricChange {
+  @apply text-sm font-medium;
+}
+
+/* Analytics Grid */
+.analyticsGrid {
+  @apply grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6;
+}
+
+.analyticsSection {
+  @apply bg-white border border-gray-200 rounded-lg p-6 shadow-sm;
+}
+
+.sectionTitle {
+  @apply text-lg font-semibold text-gray-900 mb-4;
+}
+
+/* Popular Queries */
+.queriesList {
+  @apply space-y-3;
+}
+
+.queryItem {
+  @apply flex items-center space-x-3 p-3 bg-gray-50 rounded-lg;
+}
+
+.queryRank {
+  @apply flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-bold rounded-full;
+}
+
+.queryText {
+  @apply flex-1 font-medium text-gray-900;
+}
+
+.queryStats {
+  @apply flex flex-col items-end text-xs text-gray-600 space-y-1;
+}
+
+.queryCount {
+  @apply font-medium;
+}
+
+.queryResults {
+  @apply text-gray-500;
+}
+
+/* Type Distribution */
+.typesList {
+  @apply space-y-3;
+}
+
+.typeItem {
+  @apply space-y-2;
+}
+
+.typeName {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.typeBar {
+  @apply w-full bg-gray-200 rounded-full h-2;
+}
+
+.typeBarFill {
+  @apply bg-blue-500 h-2 rounded-full transition-all duration-300;
+}
+
+.typeStats {
+  @apply flex justify-between text-xs text-gray-600;
+}
+
+/* Tags */
+.tagsList {
+  @apply flex flex-wrap gap-2;
+}
+
+.tagItem {
+  @apply flex items-center space-x-2 px-3 py-1 bg-gray-100 text-gray-700 rounded-full;
+}
+
+.tagName {
+  @apply text-sm font-medium;
+}
+
+.tagCount {
+  @apply text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .analyticsHeader {
+    @apply space-y-4;
+  }
+  
+  .headerActions {
+    @apply flex-col space-y-2;
+  }
+  
+  .dateRangePicker {
+    @apply flex-col space-x-0 space-y-2;
+  }
+  
+  .exportButtons {
+    @apply flex-col space-x-0 space-y-1;
+  }
+  
+  .metricsGrid {
+    @apply grid-cols-1;
+  }
+  
+  .analyticsGrid {
+    @apply grid-cols-1;
+  }
+  
+  .queryItem {
+    @apply flex-col items-start space-x-0 space-y-2;
+  }
+  
+  .queryStats {
+    @apply flex-row items-center space-y-0 space-x-4;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .analyticsHeader {
+    @apply border-gray-700;
+  }
+  
+  .headerTitle h2 {
+    @apply text-gray-100;
+  }
+  
+  .dateLabel {
+    @apply text-gray-300;
+  }
+  
+  .dateInput {
+    @apply bg-gray-800 border-gray-600 text-gray-200;
+  }
+  
+  .refreshButton {
+    @apply text-gray-400 hover:text-gray-200 hover:bg-gray-800;
+  }
+  
+  .exportButton {
+    @apply bg-gray-800 text-gray-300 hover:bg-gray-700;
+  }
+  
+  .metricCard,
+  .analyticsSection {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .metricIcon {
+    @apply bg-blue-900 text-blue-300;
+  }
+  
+  .metricTitle {
+    @apply text-gray-400;
+  }
+  
+  .metricValue {
+    @apply text-gray-100;
+  }
+  
+  .sectionTitle {
+    @apply text-gray-100;
+  }
+  
+  .queryItem {
+    @apply bg-gray-700;
+  }
+  
+  .queryRank {
+    @apply bg-blue-900 text-blue-300;
+  }
+  
+  .queryText {
+    @apply text-gray-100;
+  }
+  
+  .queryStats,
+  .queryCount {
+    @apply text-gray-400;
+  }
+  
+  .queryResults {
+    @apply text-gray-500;
+  }
+  
+  .typeName {
+    @apply text-gray-100;
+  }
+  
+  .typeBar {
+    @apply bg-gray-700;
+  }
+  
+  .typeStats {
+    @apply text-gray-400;
+  }
+  
+  .tagItem {
+    @apply bg-gray-700 text-gray-300;
+  }
+  
+  .tagCount {
+    @apply bg-gray-600 text-gray-400;
+  }
+}

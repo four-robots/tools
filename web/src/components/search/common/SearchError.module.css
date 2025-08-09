@@ -1,0 +1,247 @@
+/**
+ * SearchError Component Styles
+ */
+
+.searchError {
+  @apply flex items-center justify-center p-8 min-h-[400px];
+}
+
+.errorContent {
+  @apply text-center max-w-lg space-y-6;
+}
+
+/* Icon Styles */
+.errorIcon {
+  @apply flex justify-center mb-4;
+}
+
+.errorIcon svg {
+  @apply text-gray-400;
+}
+
+.network .errorIcon svg {
+  @apply text-orange-500;
+}
+
+.server .errorIcon svg {
+  @apply text-red-500;
+}
+
+.validation .errorIcon svg {
+  @apply text-yellow-500;
+}
+
+.timeout .errorIcon svg {
+  @apply text-blue-500;
+}
+
+.generic .errorIcon svg {
+  @apply text-gray-500;
+}
+
+.results .errorIcon svg,
+.suggestions .errorIcon svg,
+.analytics .errorIcon svg {
+  @apply text-red-400;
+}
+
+/* Text Content */
+.errorText {
+  @apply space-y-3;
+}
+
+.errorTitle {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.errorMessage {
+  @apply text-gray-600 leading-relaxed;
+}
+
+/* Actions */
+.actions {
+  @apply flex flex-col sm:flex-row sm:justify-center space-y-2 sm:space-y-0 sm:space-x-3;
+}
+
+.primaryAction {
+  @apply inline-flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white
+         font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 
+         focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+.secondaryAction {
+  @apply inline-flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700
+         font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 
+         focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+/* Suggestions */
+.suggestions {
+  @apply text-left bg-gray-50 rounded-lg p-4;
+}
+
+.suggestionsTitle {
+  @apply text-sm font-semibold text-gray-700 mb-3;
+}
+
+.suggestionsList {
+  @apply space-y-2 text-sm text-gray-600;
+}
+
+.suggestionItem {
+  @apply flex items-start space-x-2;
+}
+
+.suggestionItem::before {
+  content: "•";
+  @apply text-gray-400 font-bold;
+}
+
+/* Error Details */
+.errorDetails {
+  @apply text-left bg-gray-50 rounded-lg overflow-hidden;
+}
+
+.errorDetailsSummary {
+  @apply cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100
+         focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-inset;
+}
+
+.errorDetailsContent {
+  @apply px-4 pb-4 space-y-3 border-t border-gray-200;
+}
+
+.errorDetailsSection {
+  @apply space-y-1;
+}
+
+.errorDetailsSection strong {
+  @apply text-sm font-semibold text-gray-700;
+}
+
+.errorDetailsText {
+  @apply text-xs text-gray-600 bg-gray-100 p-2 rounded font-mono overflow-x-auto;
+}
+
+/* Variant-specific backgrounds */
+.network {
+  @apply bg-orange-50;
+}
+
+.server {
+  @apply bg-red-50;
+}
+
+.validation {
+  @apply bg-yellow-50;
+}
+
+.timeout {
+  @apply bg-blue-50;
+}
+
+.generic,
+.results,
+.suggestions,
+.analytics {
+  @apply bg-gray-50;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .searchError {
+    @apply p-6 min-h-[300px];
+  }
+  
+  .errorContent {
+    @apply max-w-sm;
+  }
+  
+  .errorTitle {
+    @apply text-lg;
+  }
+  
+  .actions {
+    @apply flex-col space-x-0 space-y-2;
+  }
+  
+  .primaryAction,
+  .secondaryAction {
+    @apply w-full;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .errorTitle {
+    @apply text-gray-100;
+  }
+  
+  .errorMessage {
+    @apply text-gray-400;
+  }
+  
+  .primaryAction {
+    @apply bg-red-600 hover:bg-red-700;
+  }
+  
+  .secondaryAction {
+    @apply bg-gray-700 text-gray-300 hover:bg-gray-600;
+  }
+  
+  .suggestions {
+    @apply bg-gray-800;
+  }
+  
+  .suggestionsTitle {
+    @apply text-gray-300;
+  }
+  
+  .suggestionsList {
+    @apply text-gray-400;
+  }
+  
+  .errorDetails {
+    @apply bg-gray-800;
+  }
+  
+  .errorDetailsSummary {
+    @apply text-gray-300 hover:bg-gray-700;
+  }
+  
+  .errorDetailsContent {
+    @apply border-gray-700;
+  }
+  
+  .errorDetailsSection strong {
+    @apply text-gray-300;
+  }
+  
+  .errorDetailsText {
+    @apply text-gray-400 bg-gray-700;
+  }
+  
+  /* Dark variant backgrounds */
+  .network {
+    @apply bg-orange-900 bg-opacity-20;
+  }
+  
+  .server {
+    @apply bg-red-900 bg-opacity-20;
+  }
+  
+  .validation {
+    @apply bg-yellow-900 bg-opacity-20;
+  }
+  
+  .timeout {
+    @apply bg-blue-900 bg-opacity-20;
+  }
+  
+  .generic,
+  .results,
+  .suggestions,
+  .analytics {
+    @apply bg-gray-800 bg-opacity-50;
+  }
+}

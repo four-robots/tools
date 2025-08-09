@@ -1,0 +1,212 @@
+/**
+ * SearchLoading Component Styles
+ */
+
+/* Base skeleton styles */
+.skeleton {
+  @apply bg-gray-200 animate-pulse rounded;
+}
+
+/* Spinner Loading */
+.spinnerContainer {
+  @apply flex flex-col items-center justify-center p-8 space-y-2;
+}
+
+.spinner {
+  @apply animate-spin text-blue-500;
+}
+
+.spinnerMessage {
+  @apply text-sm text-gray-600 font-medium;
+}
+
+.spinnerSm {
+  @apply p-4;
+}
+
+.spinnerMd {
+  @apply p-8;
+}
+
+.spinnerLg {
+  @apply p-12;
+}
+
+/* Skeleton Input */
+.skeletonInput {
+  @apply space-y-2;
+}
+
+.skeletonInputBar {
+  @apply h-10 w-full;
+}
+
+/* Skeleton Suggestions */
+.skeletonSuggestions {
+  @apply space-y-2 p-4 bg-white border border-gray-200 rounded-lg shadow-sm;
+}
+
+.skeletonSuggestion {
+  @apply flex items-center justify-between py-2;
+}
+
+.skeletonSuggestionText {
+  @apply h-4 flex-1;
+}
+
+.skeletonSuggestionCount {
+  @apply h-4 w-8 ml-2;
+}
+
+/* Skeleton Card */
+.skeletonCard {
+  @apply border border-gray-200 rounded-lg p-6 space-y-4 bg-white;
+}
+
+.skeletonHeader {
+  @apply flex items-start justify-between;
+}
+
+.skeletonTitle {
+  @apply h-6 w-3/4;
+}
+
+.skeletonBadge {
+  @apply h-5 w-12;
+}
+
+.skeletonContent {
+  @apply space-y-3;
+}
+
+.skeletonLine {
+  @apply h-4 w-full;
+}
+
+.skeletonLineShort {
+  @apply h-4 w-2/3;
+}
+
+.skeletonFooter {
+  @apply flex space-x-2;
+}
+
+.skeletonTag {
+  @apply h-6 w-16 rounded-full;
+}
+
+/* Skeleton Results */
+.skeletonResults {
+  @apply space-y-6;
+}
+
+.skeletonResultsGrid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+/* Skeleton Filters */
+.skeletonFilters {
+  @apply space-y-6 p-4;
+}
+
+.skeletonFilterGroup {
+  @apply space-y-3;
+}
+
+.skeletonFilterTitle {
+  @apply h-5 w-20;
+}
+
+.skeletonFilterOptions {
+  @apply space-y-2;
+}
+
+.skeletonFilterOption {
+  @apply h-4 w-24;
+}
+
+/* Skeleton Analytics */
+.skeletonAnalytics {
+  @apply space-y-6;
+}
+
+.skeletonMetrics {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+
+.skeletonMetric {
+  @apply border border-gray-200 rounded-lg p-6 space-y-3;
+}
+
+.skeletonMetricIcon {
+  @apply h-10 w-10 rounded-lg;
+}
+
+.skeletonMetricValue {
+  @apply h-8 w-16;
+}
+
+.skeletonCharts {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
+}
+
+.skeletonChart {
+  @apply h-64 border border-gray-200 rounded-lg;
+}
+
+/* Skeleton Pagination */
+.skeletonPagination {
+  @apply flex items-center justify-between;
+}
+
+.skeletonPageInfo {
+  @apply h-4 w-32;
+}
+
+.skeletonPageButtons {
+  @apply flex space-x-2;
+}
+
+.skeletonPageButton {
+  @apply h-8 w-8 rounded;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .skeletonResultsGrid {
+    @apply grid-cols-1;
+  }
+  
+  .skeletonMetrics {
+    @apply grid-cols-1;
+  }
+  
+  .skeletonCharts {
+    @apply grid-cols-1;
+  }
+  
+  .skeletonPagination {
+    @apply flex-col space-y-4 items-start;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    @apply bg-gray-700;
+  }
+  
+  .spinnerMessage {
+    @apply text-gray-400;
+  }
+  
+  .skeletonSuggestions,
+  .skeletonCard,
+  .skeletonMetric {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .skeletonChart {
+    @apply border-gray-700;
+  }
+}
