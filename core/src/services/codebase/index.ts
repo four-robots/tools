@@ -82,6 +82,29 @@ export { CodeParserService } from './code-parser-service.js';
 export { CodeChunkingService } from './code-chunking-service.js';
 export type { LanguageChunker } from './code-chunking-service.js';
 
+// Code Embeddings Service
+export { CodeEmbeddingsService } from './code-embeddings-service.js';
+export type {
+  EmbeddingGenerationResult,
+  InvalidationCriteria
+} from './code-embeddings-service.js';
+
+// Embedding Models and Managers
+export {
+  EmbeddingModelManager,
+  CodeBertModel,
+  GraphCodeBertModel,
+  UniXcoderModel,
+  OpenAIModel,
+  LocalModel
+} from './embeddings/index.js';
+export type {
+  EmbeddingConfig,
+  ModelMetadata,
+  ModelInfo,
+  EmbeddingResult
+} from './embeddings/index.js';
+
 // Language Parsers
 export { 
   ParserFactory,
@@ -171,5 +194,31 @@ export type {
   ChunkSearchResult,
   ChunkingStats,
   OptimizationResult,
-  ChunkingStrategyConfig
+  ChunkingStrategyConfig,
+  // Code embeddings and semantic search types
+  QueryType,
+  EmbeddingModelType,
+  CrossLanguageMappingType,
+  ConfidenceLevel,
+  CodeEmbedding,
+  EmbeddingModel,
+  CodeSearchQuery,
+  SimilarChunk,
+  SemanticSearchResult,
+  CrossLanguageMapping,
+  CrossLanguageSearchResult,
+  EmbeddingOptions,
+  BatchEmbeddingResult,
+  SearchFilters,
+  NaturalLanguageSearch,
+  StructuralSearchPattern,
+  IntentSearch,
+  HybridSearchQuery,
+  SearchAnalytics,
+  EmbeddingStats,
+  SearchOptimizationResult,
+  EmbeddingModelInterface,
+  SemanticSearchInterface,
+  ASTPattern,
+  SearchContext
 } from '../../shared/types/codebase.js';

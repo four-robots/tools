@@ -749,3 +749,429 @@ export interface LanguageParser {
    */
   canParse(content: string): boolean;
 }
+
+// ===================
+// CODE EMBEDDINGS & SEMANTIC SEARCH TYPES
+// ===================
+
+/**
+ * Query types for semantic search
+ */
+export enum QueryType {
+  CODE = 'code',
+  NATURAL_LANGUAGE = 'natural_language', 
+  STRUCTURAL = 'structural',
+  INTENT = 'intent',
+  PATTERN = 'pattern',
+  CROSS_LANGUAGE = 'cross_language'
+}
+
+/**
+ * Embedding model types
+ */
+export enum EmbeddingModelType {
+  CODEBERT = 'codebert',
+  GRAPHCODEBERT = 'graphcodebert',
+  UNIXCODER = 'unixcoder',
+  OPENAI = 'openai',
+  CUSTOM = 'custom'
+}
+
+/**
+ * Cross-language mapping types
+ */
+export enum CrossLanguageMappingType {
+  EQUIVALENT = 'equivalent',
+  SIMILAR = 'similar',
+  TRANSLATED = 'translated'
+}
+
+/**
+ * Confidence levels for mappings
+ */
+export enum ConfidenceLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high'
+}
+
+// ===================
+// CODE EMBEDDINGS SCHEMAS
+// ===================
+
+/**
+ * Enhanced code embedding schema with confidence and metadata
+ */
+export const codeEmbeddingSchema = z.object({
+  id: z.string().uuid(),
+  chunkId: z.string().uuid(),
+  modelName: z.string(),
+  modelVersion: z.string(),
+  embeddingVector: z.array(z.number()),
+  embeddingMetadata: z.record(z.unknown()).default({}),
+  confidenceScore: z.number().min(0).max(1).default(0.0),
+  createdAt: z.date(),
+  updatedAt: z.date()
+});
+
+/**
+ * Embedding model configuration schema
+ */
+export const embeddingModelSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  displayName: z.string(),
+  description: z.string().optional(),
+  modelType: z.nativeEnum(EmbeddingModelType),
+  embeddingDimension: z.number().int().positive(),
+  supportedLanguages: z.array(z.nativeEnum(SupportedLanguage)),
+  modelConfig: z.record(z.unknown()).default({}),
+  apiEndpoint: z.string().optional(),
+  localPath: z.string().optional(),
+  isActive: z.boolean().default(true),
+  isDefault: z.boolean().default(false),
+  performanceMetrics: z.record(z.unknown()).default({}),
+  createdAt: z.date(),
+  updatedAt: z.date()
+});
+
+/**
+ * Code search query schema
+ */
+export const codeSearchQuerySchema = z.object({
+  query: z.string(),
+  queryType: z.nativeEnum(QueryType),
+  language: z.nativeEnum(SupportedLanguage).optional(),
+  repositoryIds: z.array(z.string().uuid()).optional(),
+  fileTypes: z.array(z.string()).optional(),
+  maxResults: z.number().int().positive().default(50),
+  similarityThreshold: z.number().min(0).max(1).default(0.7),
+  includeContext: z.boolean().default(false),
+  searchFilters: z.record(z.unknown()).default({})
+});
+
+/**
+ * Similar chunk result schema
+ */
+export const similarChunkSchema = z.object({
+  chunk: codeChunkSchema,
+  similarity: z.number().min(0).max(1),
+  explanation: z.string().optional(),
+  highlightedContent: z.string().optional(),
+  contextChunks: z.array(codeChunkSchema).optional()
+});
+
+/**
+ * Semantic search result schema
+ */
+export const semanticSearchResultSchema = z.object({
+  results: z.array(similarChunkSchema),
+  totalResults: z.number().int().min(0),
+  searchTime: z.number().min(0),
+  modelUsed: z.string(),
+  queryProcessed: z.string(),
+  suggestions: z.array(z.string()).optional()
+});
+
+/**
+ * Cross-language mapping schema
+ */
+export const crossLanguageMappingSchema = z.object({
+  id: z.string().uuid(),
+  sourceChunkId: z.string().uuid(),
+  targetChunkId: z.string().uuid(),
+  sourceLanguage: z.nativeEnum(SupportedLanguage),
+  targetLanguage: z.nativeEnum(SupportedLanguage),
+  similarityScore: z.number().min(0).max(1),
+  mappingType: z.nativeEnum(CrossLanguageMappingType),
+  confidenceLevel: z.nativeEnum(ConfidenceLevel),
+  verifiedByHuman: z.boolean().default(false),
+  modelUsed: z.string(),
+  createdAt: z.date()
+});
+
+/**
+ * Cross-language search result schema
+ */
+export const crossLanguageSearchResultSchema = z.object({
+  sourceChunk: codeChunkSchema,
+  equivalents: z.array(z.object({
+    chunk: codeChunkSchema,
+    mapping: crossLanguageMappingSchema,
+    similarity: z.number().min(0).max(1)
+  })),
+  totalEquivalents: z.number().int().min(0)
+});
+
+/**
+ * Embedding options schema
+ */
+export const embeddingOptionsSchema = z.object({
+  modelName: z.string(),
+  batchSize: z.number().int().positive().default(32),
+  parallel: z.boolean().default(true),
+  includeContext: z.boolean().default(true),
+  filterLanguages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  skipExisting: z.boolean().default(true),
+  forceRegenerate: z.boolean().default(false)
+});
+
+/**
+ * Batch embedding result schema
+ */
+export const batchEmbeddingResultSchema = z.object({
+  repositoryId: z.string().uuid(),
+  totalChunks: z.number().int().min(0),
+  embeddingsGenerated: z.number().int().min(0),
+  embeddingsSkipped: z.number().int().min(0),
+  errors: z.array(z.object({
+    chunkId: z.string().uuid(),
+    error: z.string(),
+    details: z.string().optional()
+  })).default([]),
+  modelUsed: z.string(),
+  processingTime: z.number().min(0),
+  averageConfidence: z.number().min(0).max(1)
+});
+
+/**
+ * Search filters schema
+ */
+export const searchFiltersSchema = z.object({
+  languages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  chunkTypes: z.array(z.nativeEnum(ChunkType)).optional(),
+  symbolTypes: z.array(z.nativeEnum(SymbolType)).optional(),
+  repositories: z.array(z.string().uuid()).optional(),
+  dateRange: z.object({
+    start: z.date(),
+    end: z.date()
+  }).optional(),
+  minConfidence: z.number().min(0).max(1).optional(),
+  maxResults: z.number().int().positive().default(50)
+});
+
+/**
+ * Natural language search query schema
+ */
+export const naturalLanguageSearchSchema = z.object({
+  query: z.string(),
+  intent: z.string().optional(),
+  context: z.string().optional(),
+  targetLanguages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  searchScope: z.enum(['functions', 'classes', 'all']).default('all'),
+  includeExamples: z.boolean().default(true),
+  maxResults: z.number().int().positive().default(20)
+});
+
+/**
+ * Structural search pattern schema
+ */
+export const structuralSearchPatternSchema = z.object({
+  pattern: z.string(),
+  language: z.nativeEnum(SupportedLanguage),
+  patternType: z.enum(['ast', 'regex', 'semantic']).default('ast'),
+  variables: z.record(z.string()).default({}),
+  constraints: z.array(z.string()).default([])
+});
+
+/**
+ * Intent search schema
+ */
+export const intentSearchSchema = z.object({
+  intent: z.string(),
+  context: z.string().optional(),
+  domain: z.string().optional(),
+  targetLanguages: z.array(z.nativeEnum(SupportedLanguage)).optional(),
+  includeDocumentation: z.boolean().default(true),
+  confidenceThreshold: z.number().min(0).max(1).default(0.6)
+});
+
+/**
+ * Hybrid search query schema combining multiple search types
+ */
+export const hybridSearchQuerySchema = z.object({
+  codeQuery: z.string().optional(),
+  naturalLanguageQuery: z.string().optional(),
+  structuralPattern: structuralSearchPatternSchema.optional(),
+  intent: z.string().optional(),
+  weights: z.object({
+    semantic: z.number().min(0).max(1).default(0.4),
+    structural: z.number().min(0).max(1).default(0.3),
+    textual: z.number().min(0).max(1).default(0.3)
+  }),
+  combineMethod: z.enum(['weighted_average', 'rank_fusion', 'cascade']).default('weighted_average'),
+  filters: searchFiltersSchema.optional()
+});
+
+/**
+ * Search analytics schema
+ */
+export const searchAnalyticsSchema = z.object({
+  id: z.string().uuid(),
+  searchSession: z.string().uuid(),
+  queryText: z.string(),
+  queryType: z.nativeEnum(QueryType),
+  modelUsed: z.string(),
+  resultCount: z.number().int().min(0),
+  searchTimeMs: z.number().int().min(0),
+  userId: z.string().uuid().optional(),
+  repositoryId: z.string().uuid().optional(),
+  filtersApplied: z.record(z.unknown()).default({}),
+  clickedResults: z.array(z.string().uuid()).default([]),
+  searchSuccess: z.boolean().default(true),
+  createdAt: z.date()
+});
+
+/**
+ * Embedding stats schema
+ */
+export const embeddingStatsSchema = z.object({
+  repositoryId: z.string().uuid().optional(),
+  totalEmbeddings: z.number().int().min(0),
+  embeddingsByModel: z.record(z.number().int()),
+  embeddingsByLanguage: z.record(z.number().int()),
+  averageConfidence: z.number().min(0).max(1),
+  latestEmbedding: z.date().optional(),
+  storageSize: z.number().min(0), // in bytes
+  indexingStatus: z.enum(['pending', 'in_progress', 'completed', 'failed'])
+});
+
+/**
+ * Search optimization result schema
+ */
+export const searchOptimizationResultSchema = z.object({
+  indexesOptimized: z.number().int().min(0),
+  cacheHitRateImprovement: z.number().min(0),
+  averageSearchTimeImprovement: z.number(),
+  memoryUsageReduction: z.number().min(0),
+  recommendations: z.array(z.string()).default([])
+});
+
+// ===================
+// TYPESCRIPT INFERENCE TYPES
+// ===================
+
+export type CodeEmbedding = z.infer<typeof codeEmbeddingSchema>;
+export type EmbeddingModel = z.infer<typeof embeddingModelSchema>;
+export type CodeSearchQuery = z.infer<typeof codeSearchQuerySchema>;
+export type SimilarChunk = z.infer<typeof similarChunkSchema>;
+export type SemanticSearchResult = z.infer<typeof semanticSearchResultSchema>;
+export type CrossLanguageMapping = z.infer<typeof crossLanguageMappingSchema>;
+export type CrossLanguageSearchResult = z.infer<typeof crossLanguageSearchResultSchema>;
+export type EmbeddingOptions = z.infer<typeof embeddingOptionsSchema>;
+export type BatchEmbeddingResult = z.infer<typeof batchEmbeddingResultSchema>;
+export type SearchFilters = z.infer<typeof searchFiltersSchema>;
+export type NaturalLanguageSearch = z.infer<typeof naturalLanguageSearchSchema>;
+export type StructuralSearchPattern = z.infer<typeof structuralSearchPatternSchema>;
+export type IntentSearch = z.infer<typeof intentSearchSchema>;
+export type HybridSearchQuery = z.infer<typeof hybridSearchQuerySchema>;
+export type SearchAnalytics = z.infer<typeof searchAnalyticsSchema>;
+export type EmbeddingStats = z.infer<typeof embeddingStatsSchema>;
+export type SearchOptimizationResult = z.infer<typeof searchOptimizationResultSchema>;
+
+// ===================
+// ADVANCED SEARCH INTERFACES
+// ===================
+
+/**
+ * Interface for embedding model implementations
+ */
+export interface EmbeddingModelInterface {
+  readonly name: string;
+  readonly modelType: EmbeddingModelType;
+  readonly dimension: number;
+  readonly supportedLanguages: SupportedLanguage[];
+  
+  /**
+   * Generate embedding for code content
+   */
+  generateEmbedding(content: string, metadata?: Record<string, any>): Promise<number[]>;
+  
+  /**
+   * Generate embeddings for multiple code contents in batch
+   */
+  batchGenerateEmbeddings(contents: string[], metadata?: Record<string, any>[]): Promise<number[][]>;
+  
+  /**
+   * Initialize the model (load from disk, connect to API, etc.)
+   */
+  initialize(): Promise<void>;
+  
+  /**
+   * Cleanup model resources
+   */
+  cleanup(): Promise<void>;
+  
+  /**
+   * Check if model is ready for inference
+   */
+  isReady(): boolean;
+  
+  /**
+   * Get model information and capabilities
+   */
+  getModelInfo(): {
+    name: string;
+    version: string;
+    dimension: number;
+    maxTokens: number;
+    supportedLanguages: SupportedLanguage[];
+  };
+}
+
+/**
+ * Interface for semantic search implementations
+ */
+export interface SemanticSearchInterface {
+  /**
+   * Search for similar code chunks
+   */
+  searchSimilarChunks(query: CodeSearchQuery): Promise<SemanticSearchResult>;
+  
+  /**
+   * Find cross-language equivalents
+   */
+  findCrossLanguageEquivalents(chunkId: string): Promise<CrossLanguageSearchResult>;
+  
+  /**
+   * Natural language to code search
+   */
+  naturalLanguageSearch(query: NaturalLanguageSearch): Promise<SemanticSearchResult>;
+  
+  /**
+   * Structural pattern search
+   */
+  structuralSearch(pattern: StructuralSearchPattern): Promise<SemanticSearchResult>;
+  
+  /**
+   * Intent-based search
+   */
+  intentSearch(intent: IntentSearch): Promise<SemanticSearchResult>;
+  
+  /**
+   * Hybrid search combining multiple approaches
+   */
+  hybridSearch(query: HybridSearchQuery): Promise<SemanticSearchResult>;
+}
+
+/**
+ * AST pattern for structural search
+ */
+export interface ASTPattern {
+  nodeType: string;
+  properties: Record<string, any>;
+  children?: ASTPattern[];
+  constraints?: string[];
+  variables?: Record<string, string>;
+}
+
+/**
+ * Search context for intent-based search
+ */
+export interface SearchContext {
+  domain?: string;
+  previousQueries?: string[];
+  userPreferences?: Record<string, any>;
+  currentFile?: string;
+  projectContext?: string;
+}
