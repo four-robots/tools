@@ -134,3 +134,25 @@ export {
   parseSearchFilters,
   validateSearchQuery
 } from './utils';
+
+// ============================================================================
+// Saved Searches Components
+// ============================================================================
+
+export {
+  SaveSearchDialog,
+  SavedSearchCard,
+  SavedSearchesManager,
+  SearchCollectionTree
+} from './saved-searches';
+
+// ============================================================================
+// Search Alerts Components
+// ============================================================================
+
+export {
+  AlertDefinitionForm,
+  AlertsList,
+  AlertCard,
+  AlertAnalyticsDashboard
+} from './alerts';

@@ -49,3 +49,6 @@ export * from './filter-builder.js';
 
 // Saved search management types
 export * from './saved-search.js';
+
+// Search alerts and notifications types
+export * from './search-alerts.js';

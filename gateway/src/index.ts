@@ -36,6 +36,7 @@ import aiSummariesRoutes from './routes/ai-summaries.routes.js';
 import dynamicFacetsRoutes from './routes/dynamic-facets.routes.js';
 import filterBuilderRoutes from './routes/filter-builder.routes.js';
 import savedSearchRoutes from './routes/saved-search.routes.js';
+import { createSearchAlertsRoutes } from './routes/search-alerts.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -309,6 +310,7 @@ async function createApp() {
   app.use('/api/v1/scraper', scraperRoutes);
   app.use('/api/v1/search', searchRoutes);
   app.use('/api/v1/saved-searches', savedSearchRoutes);
+  app.use('/api/v1/search-alerts', createSearchAlertsRoutes(pgPool));
   app.use('/api/v1/ai-summaries', aiSummariesRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
