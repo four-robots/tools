@@ -58,3 +58,6 @@ export * from './user-behavior.js';
 
 // Personalization and adaptive search experience types
 export * from './personalization.js';
+
+// Real-time collaboration and WebSocket infrastructure types
+export * from './collaboration.js';

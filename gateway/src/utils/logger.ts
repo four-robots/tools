@@ -23,3 +23,6 @@ export class Logger {
     console.error(`[${new Date().toISOString()}] [${this.component}] ERROR: ${message}`, error, data || '');
   }
 }
+
+// Create a default logger instance for collaboration services
+export const logger = new Logger('Collaboration');

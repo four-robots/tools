@@ -38,6 +38,7 @@ import filterBuilderRoutes from './routes/filter-builder.routes.js';
 import savedSearchRoutes from './routes/saved-search.routes.js';
 import { createSearchAlertsRoutes } from './routes/search-alerts.routes.js';
 import userBehaviorRoutes from './routes/user-behavior.routes.js';
+import { createCollaborationRoutes } from './routes/collaboration.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -50,9 +51,12 @@ import { createAnalyticsMiddleware, createErrorTrackingMiddleware } from './midd
 import { KanbanService, KanbanDatabase } from '@mcp-tools/core/kanban';
 import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
 import { ScraperService, ScraperDatabaseManager, ScrapingEngine } from '@mcp-tools/core/scraper';
-import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager } from '@mcp-tools/core';
+import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager, CollaborationSessionService, EventBroadcastingService, PresenceService } from '@mcp-tools/core';
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
+import { WebSocketCollaborationGateway } from './collaboration/websocket-gateway.js';
+import { ConnectionManager } from './collaboration/connection-manager.js';
+import { RateLimiter } from './collaboration/rate-limiter.js';
 import { Pool } from 'pg';
 import Redis from 'ioredis';
 
@@ -272,6 +276,13 @@ async function createApp() {
   } catch (error) {
     console.warn('⚠️  AISummaryService initialization failed, continuing without service:', error.message);
   }
+
+  // Initialize collaboration services
+  console.log('🔄 Initializing Collaboration Services...');
+  const collaborationSessionService = new CollaborationSessionService(pgPool);
+  const eventBroadcastingService = new EventBroadcastingService(pgPool);
+  const presenceService = new PresenceService(pgPool);
+  console.log('✅ Collaboration services created and initialized');
   
   // Store services in app locals for access in routes
   app.locals.kanbanService = kanbanService;
@@ -280,6 +291,9 @@ async function createApp() {
   app.locals.analyticsService = analyticsService;
   app.locals.apiDocumentationDiscovery = apiDocumentationDiscovery;
   app.locals.aiSummaryService = aiSummaryService;
+  app.locals.collaborationSessionService = collaborationSessionService;
+  app.locals.eventBroadcastingService = eventBroadcastingService;
+  app.locals.presenceService = presenceService;
   app.locals.pgPool = pgPool;
   app.locals.redis = redis;
   app.locals.db = pgPool; // Add db reference for saved search services
@@ -319,6 +333,8 @@ async function createApp() {
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
+  
+  // Collaboration routes will be added after WebSocket gateway is initialized
   
   // Root endpoint
   app.get('/', (req, res) => {
@@ -367,49 +383,59 @@ async function startServer() {
     
     setupWebSocket(io, app.locals.kanbanService, app.locals.analyticsService);
     
-    // Setup standard WebSocket server for real-time features
-    const wsServer = new WebSocketServer({ 
-      server,
-      path: '/ws',
-      perMessageDeflate: false
+    // Setup WebSocket Collaboration Gateway
+    console.log('🔄 Initializing WebSocket Collaboration Gateway...');
+    const connectionManager = new ConnectionManager(app.locals.pgPool, app.locals.redis);
+    const rateLimiter = new RateLimiter(app.locals.redis, {
+      maxMessagesPerSecond: 10,
+      burstAllowance: 20,
+      penaltyDuration: 5000,
+      windowSize: 60,
+      maxConnectionsPerUser: 10,
+      maxConnectionsPerIP: 100
     });
     
-    wsServer.on('connection', (ws, request) => {
-      console.log('Standard WebSocket connection established');
-      
-      ws.on('message', (data) => {
-        try {
-          const message = JSON.parse(data.toString());
-          console.log('Received WebSocket message:', message);
-          
-          // Echo back for now - can be extended for real-time features
-          ws.send(JSON.stringify({
-            type: 'echo',
-            payload: message,
-            timestamp: new Date().toISOString(),
-            id: Math.random().toString(36).substring(2, 9)
-          }));
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+    const collaborationGateway = new WebSocketCollaborationGateway(
+      server,
+      app.locals.pgPool,
+      app.locals.redis,
+      app.locals.collaborationSessionService,
+      app.locals.eventBroadcastingService,
+      app.locals.presenceService,
+      config.jwtSecret,
+      {
+        heartbeatInterval: 30000,
+        connectionTimeout: 60000,
+        maxConnections: 10000,
+        maxRoomsPerConnection: 50,
+        enableRateLimiting: true,
+        rateLimitConfig: {
+          maxMessagesPerSecond: 10,
+          burstAllowance: 20,
+          penaltyDuration: 5000
         }
-      });
-      
-      ws.on('close', () => {
-        console.log('Standard WebSocket connection closed');
-      });
-      
-      ws.on('error', (error) => {
-        console.error('Standard WebSocket error:', error);
-      });
-      
-      // Send welcome message
-      ws.send(JSON.stringify({
-        type: 'connected',
-        payload: { message: 'WebSocket connection established' },
-        timestamp: new Date().toISOString(),
-        id: Math.random().toString(36).substring(2, 9)
-      }));
-    });
+      }
+    );
+    
+    console.log('✅ WebSocket Collaboration Gateway initialized');
+    
+    // Store collaboration components in app locals for routes access
+    app.locals.connectionManager = connectionManager;
+    app.locals.rateLimiter = rateLimiter;
+    app.locals.collaborationGateway = collaborationGateway;
+    
+    // Add collaboration routes now that all components are initialized
+    console.log('🔄 Setting up collaboration API routes...');
+    const collaborationRoutes = createCollaborationRoutes(
+      app.locals.collaborationSessionService,
+      app.locals.eventBroadcastingService,
+      app.locals.presenceService,
+      collaborationGateway,
+      connectionManager,
+      rateLimiter
+    );
+    app.use('/api/v1/collaboration', collaborationRoutes);
+    console.log('✅ Collaboration API routes configured');
     
     // Start server
     server.listen(config.port, () => {
@@ -435,6 +461,11 @@ async function startServer() {
         }
         if (app.locals.scraperService) {
           await scrapingEngine.close();
+        }
+        
+        // Shutdown collaboration services
+        if (collaborationGateway) {
+          await collaborationGateway.shutdown();
         }
         
         process.exit(0);
