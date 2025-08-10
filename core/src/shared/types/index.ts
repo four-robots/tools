@@ -46,3 +46,6 @@ export * from './dynamic-facets.js';
 
 // Custom filter builder types
 export * from './filter-builder.js';
+
+// Saved search management types
+export * from './saved-search.js';

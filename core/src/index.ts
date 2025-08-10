@@ -17,6 +17,7 @@ export * from './services/nlp/index.js';
 export * from './services/ai-summaries/index.js';
 export * from './services/dynamic-facets/index.js';
 export * from './services/filter-builder/index.js';
+export * from './services/saved-search/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 
@@ -34,5 +35,13 @@ export {
   ValidationError as CoreValidationError,
   validateInput 
 } from './utils/validation.js';
+
+// Export database connection pool utilities
+export {
+  DatabaseConnectionPool,
+  getGlobalDatabasePool,
+  closeGlobalDatabasePool,
+  createDatabasePool,
+} from './utils/database-pool.js';
 
 // Note: shared types are exported separately to avoid naming conflicts
