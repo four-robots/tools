@@ -1,0 +1,60 @@
+/* ConfidenceIndicator Styles */
+
+.confidenceIndicator {
+  @apply flex items-center space-x-4 p-3 bg-gray-50 rounded-lg;
+}
+
+.confidenceSection,
+.qualitySection {
+  @apply flex items-center space-x-2;
+}
+
+.confidenceIcon,
+.qualityIcon {
+  @apply flex-shrink-0;
+}
+
+.confidenceContent,
+.qualityContent {
+  @apply space-y-1;
+}
+
+.confidenceLabel,
+.qualityLabel {
+  @apply text-xs font-medium text-gray-600;
+}
+
+.confidenceValue,
+.qualityValue {
+  @apply flex items-center space-x-2;
+}
+
+.confidenceBar,
+.qualityBar {
+  @apply w-16 h-2;
+}
+
+.confidenceBar.high {
+  @apply bg-green-500;
+}
+
+.confidenceBar.medium {
+  @apply bg-yellow-500;
+}
+
+.confidenceBar.low {
+  @apply bg-red-500;
+}
+
+.confidenceText,
+.qualityText {
+  @apply text-xs font-bold text-gray-700;
+}
+
+.riskSection {
+  @apply flex-shrink-0;
+}
+
+.riskBadge {
+  @apply text-xs capitalize;
+}

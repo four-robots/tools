@@ -37,3 +37,6 @@ export * from './codebase.js';
 
 // NLP and query processing types
 export * from './nlp.js';
+
+// AI-powered summaries and content generation types
+export * from './ai-summaries.js';

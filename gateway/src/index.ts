@@ -32,6 +32,7 @@ import healthRoutes from './routes/health.routes.js';
 import qualityRoutes from './routes/quality.routes.js';
 import { createAnalyticsRoutes } from './routes/analytics.routes.js';
 import apiDocumentationRecommendationsRoutes from './routes/api-documentation-recommendations.routes.js';
+import aiSummariesRoutes from './routes/ai-summaries.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -44,7 +45,7 @@ import { createAnalyticsMiddleware, createErrorTrackingMiddleware } from './midd
 import { KanbanService, KanbanDatabase } from '@mcp-tools/core/kanban';
 import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
 import { ScraperService, ScraperDatabaseManager, ScrapingEngine } from '@mcp-tools/core/scraper';
-import { APIDocumentationDiscoveryService, createDatabaseConfig } from '@mcp-tools/core';
+import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager } from '@mcp-tools/core';
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
 import { Pool } from 'pg';
@@ -224,6 +225,48 @@ async function createApp() {
   } catch (error) {
     console.warn('⚠️  APIDocumentationDiscoveryService initialization failed, continuing without service:', error.message);
   }
+
+  // Initialize AI Summary Service
+  console.log('🔄 Initializing AI Summary Service...');
+  let aiSummaryService = null;
+  try {
+    // Initialize LLM service
+    const llmService = new LLMService(new DatabaseManager({
+      type: 'postgresql',
+      connectionString: config.database.postgres
+    }), [
+      {
+        provider: 'openai',
+        model: 'gpt-4',
+        apiKey: process.env.OPENAI_API_KEY,
+        temperature: 0.1,
+        maxTokens: 2000,
+        timeout: 30000,
+        retryAttempts: 3
+      }
+    ]);
+
+    // Initialize AI Summary Service
+    aiSummaryService = new AISummaryService(
+      llmService,
+      new DatabaseManager({
+        type: 'postgresql', 
+        connectionString: config.database.postgres
+      }),
+      {
+        enableCaching: true,
+        enableFactChecking: true,
+        enableHallucinationCheck: true,
+        maxProcessingTimeMs: 60000,
+        minConfidenceThreshold: 0.7,
+        defaultLLMProvider: 'openai',
+        cacheTtlMs: 5 * 60 * 1000
+      }
+    );
+    console.log('✅ AISummaryService created and initialized');
+  } catch (error) {
+    console.warn('⚠️  AISummaryService initialization failed, continuing without service:', error.message);
+  }
   
   // Store services in app locals for access in routes
   app.locals.kanbanService = kanbanService;
@@ -231,6 +274,7 @@ async function createApp() {
   app.locals.scraperService = scraperService;
   app.locals.analyticsService = analyticsService;
   app.locals.apiDocumentationDiscovery = apiDocumentationDiscovery;
+  app.locals.aiSummaryService = aiSummaryService;
   app.locals.pgPool = pgPool;
   app.locals.redis = redis;
   
@@ -260,6 +304,7 @@ async function createApp() {
   app.use('/api/v1/wiki', wikiRoutes);
   app.use('/api/v1/scraper', scraperRoutes);
   app.use('/api/v1/search', searchRoutes);
+  app.use('/api/v1/ai-summaries', aiSummariesRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
   app.use('/api', apiDocumentationRecommendationsRoutes);

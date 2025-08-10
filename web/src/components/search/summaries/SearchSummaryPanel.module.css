@@ -1,0 +1,400 @@
+/* SearchSummaryPanel Styles */
+
+.summaryPanel {
+  @apply w-full max-w-4xl mx-auto space-y-4;
+}
+
+/* Prompt Card Styles */
+.promptCard {
+  @apply p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200;
+}
+
+.promptContent {
+  @apply flex items-start space-x-4 mb-6;
+}
+
+.promptIcon {
+  @apply flex-shrink-0;
+}
+
+.promptText {
+  @apply flex-1 min-w-0;
+}
+
+.promptTitle {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.promptDescription {
+  @apply text-gray-600 text-sm leading-relaxed;
+}
+
+.promptControls {
+  @apply w-full;
+}
+
+.promptWarning {
+  @apply mt-4 border-amber-200 bg-amber-50 text-amber-800;
+}
+
+/* Loading State Styles */
+.loadingCard {
+  @apply p-6 bg-blue-50 border-blue-200;
+}
+
+.loadingContent {
+  @apply flex items-start space-x-4;
+}
+
+.loadingIcon {
+  @apply flex-shrink-0;
+}
+
+.loadingText {
+  @apply flex-1 min-w-0;
+}
+
+.loadingTitle {
+  @apply text-lg font-semibold text-gray-900 mb-2;
+}
+
+.loadingDescription {
+  @apply text-gray-600 text-sm mb-4;
+}
+
+.loadingSteps {
+  @apply space-y-2;
+}
+
+.loadingStep {
+  @apply flex items-center space-x-2 text-sm;
+}
+
+/* Summary Card Styles */
+.summaryCard {
+  @apply bg-white border-gray-200 shadow-sm;
+}
+
+/* Summary Header */
+.summaryHeader {
+  @apply p-6 border-b border-gray-100 flex items-start justify-between;
+}
+
+.summaryTitleRow {
+  @apply flex items-start space-x-3 flex-1 min-w-0;
+}
+
+.summaryTypeIcon {
+  @apply flex-shrink-0 mt-1;
+}
+
+.summaryTitleContent {
+  @apply flex-1 min-w-0;
+}
+
+.summaryTitle {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.summaryMeta {
+  @apply flex items-center space-x-3 text-sm;
+}
+
+.processingTime {
+  @apply flex items-center space-x-1 text-gray-600;
+}
+
+.sourceCount {
+  @apply flex items-center space-x-1 text-gray-600;
+}
+
+.headerConfidence {
+  @apply flex-shrink-0 ml-4;
+}
+
+/* Tabs Styles */
+.summaryTabs {
+  @apply flex-1;
+}
+
+.tabsList {
+  @apply border-b border-gray-100 bg-transparent px-6;
+}
+
+.tabTrigger {
+  @apply flex items-center space-x-2 px-3 py-2 border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600;
+}
+
+.tabContent {
+  @apply p-6;
+}
+
+/* Summary Content */
+.summaryText {
+  @apply space-y-4;
+}
+
+.summaryContent {
+  @apply prose prose-sm max-w-none text-gray-900 leading-relaxed;
+}
+
+.summaryContent p {
+  @apply mb-4 last:mb-0;
+}
+
+.summaryContent h1, 
+.summaryContent h2, 
+.summaryContent h3, 
+.summaryContent h4 {
+  @apply font-semibold text-gray-900 mt-6 mb-3 first:mt-0;
+}
+
+.summaryContent h1 {
+  @apply text-xl;
+}
+
+.summaryContent h2 {
+  @apply text-lg;
+}
+
+.summaryContent h3 {
+  @apply text-base;
+}
+
+.summaryContent ul, 
+.summaryContent ol {
+  @apply ml-4 space-y-1;
+}
+
+.summaryContent li {
+  @apply text-gray-900;
+}
+
+.summaryContent strong {
+  @apply font-semibold text-gray-900;
+}
+
+.summaryContent em {
+  @apply italic;
+}
+
+.summaryContent code {
+  @apply px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-mono;
+}
+
+.summaryContent blockquote {
+  @apply border-l-4 border-blue-200 pl-4 italic text-gray-700;
+}
+
+.qualityAlert {
+  @apply border-amber-200 bg-amber-50 text-amber-800;
+}
+
+/* Key Points List */
+.keyPointsList {
+  @apply w-full;
+}
+
+/* Answer Card */
+.answerCard {
+  @apply w-full;
+}
+
+/* Sources List */
+.sourcesList {
+  @apply w-full;
+}
+
+/* Quality Section */
+.qualitySection {
+  @apply space-y-6;
+}
+
+.qualityMetrics {
+  @apply space-y-4;
+}
+
+.qualityTitle {
+  @apply text-lg font-semibold text-gray-900 mb-3;
+}
+
+.metricsGrid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+}
+
+.metric {
+  @apply space-y-2;
+}
+
+.metricLabel {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.metricProgress {
+  @apply w-full;
+}
+
+.metricValue {
+  @apply text-sm font-semibold text-gray-900;
+}
+
+/* Fact Checks */
+.factChecks {
+  @apply space-y-4;
+}
+
+.factChecksList {
+  @apply space-y-3;
+}
+
+.factCheck {
+  @apply flex items-start space-x-3 p-3 bg-gray-50 rounded-lg;
+}
+
+.factCheckIcon {
+  @apply flex-shrink-0 mt-0.5;
+}
+
+.factCheckContent {
+  @apply flex-1 min-w-0;
+}
+
+.factCheckClaim {
+  @apply text-sm text-gray-900 font-medium mb-1;
+}
+
+.factCheckStatus {
+  @apply text-xs text-gray-600 capitalize;
+}
+
+/* Summary Actions */
+.summaryActions {
+  @apply p-6 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0;
+}
+
+.actionButtons {
+  @apply flex-1 min-w-0;
+}
+
+.regenerateControls {
+  @apply w-full sm:w-auto;
+}
+
+.feedbackSection {
+  @apply flex items-center space-x-4;
+}
+
+.feedbackButtons {
+  @apply flex items-center space-x-2;
+}
+
+.feedbackButton {
+  @apply flex items-center space-x-2;
+}
+
+.feedbackConfirmation {
+  @apply flex items-center space-x-2 text-sm text-green-600 font-medium;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .summaryPanel {
+    @apply mx-4;
+  }
+  
+  .summaryHeader {
+    @apply flex-col space-y-4 items-start;
+  }
+  
+  .headerConfidence {
+    @apply w-full ml-0;
+  }
+  
+  .summaryMeta {
+    @apply flex-wrap gap-2;
+  }
+  
+  .tabsList {
+    @apply px-4;
+  }
+  
+  .tabContent {
+    @apply px-4;
+  }
+  
+  .metricsGrid {
+    @apply grid-cols-1;
+  }
+  
+  .summaryActions {
+    @apply space-y-4;
+  }
+  
+  .feedbackSection {
+    @apply w-full justify-center;
+  }
+}
+
+/* Animation Classes */
+.fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slideDown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus and Hover States */
+.tabTrigger:hover {
+  @apply bg-gray-50;
+}
+
+.tabTrigger:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+.feedbackButton:hover {
+  @apply bg-gray-50;
+}
+
+.feedbackButton:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Print Styles */
+@media print {
+  .summaryActions,
+  .tabsList {
+    @apply hidden;
+  }
+  
+  .summaryCard {
+    @apply shadow-none border-gray-300;
+  }
+  
+  .summaryContent {
+    @apply text-black;
+  }
+}

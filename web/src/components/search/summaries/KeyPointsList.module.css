@@ -1,0 +1,61 @@
+/* KeyPointsList Styles */
+
+.keyPointsList {
+  @apply space-y-4;
+}
+
+.keyPointsHeader {
+  @apply flex items-center space-x-2 mb-4;
+}
+
+.keyPointsTitle {
+  @apply text-lg font-semibold text-gray-900;
+}
+
+.keyPointsContainer {
+  @apply space-y-3;
+}
+
+.keyPointItem {
+  @apply bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow;
+}
+
+.keyPointHeader {
+  @apply flex items-center justify-between mb-3 flex-wrap gap-2;
+}
+
+.keyPointRank {
+  @apply flex items-center space-x-2;
+}
+
+.rankNumber {
+  @apply text-sm font-bold text-gray-700;
+}
+
+.categoryBadge {
+  @apply text-xs capitalize;
+}
+
+.importanceIndicator {
+  @apply flex items-center space-x-2;
+}
+
+.importanceBar {
+  @apply w-16 h-2;
+}
+
+.importanceText {
+  @apply text-xs font-medium text-gray-700;
+}
+
+.keyPointText {
+  @apply text-gray-900 leading-relaxed mb-2;
+}
+
+.keyPointFooter {
+  @apply flex items-center justify-between text-xs text-gray-600;
+}
+
+.confidence {
+  @apply font-medium;
+}

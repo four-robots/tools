@@ -1,0 +1,134 @@
+/* GeneratedAnswerCard Styles */
+
+.answerCard {
+  @apply bg-white border border-gray-200 rounded-lg shadow-sm;
+}
+
+.answerHeader {
+  @apply p-4 border-b border-gray-100 space-y-3;
+}
+
+.questionSection {
+  @apply flex items-start space-x-3;
+}
+
+.questionIcon {
+  @apply flex-shrink-0 mt-1;
+}
+
+.question {
+  @apply text-lg font-semibold text-gray-900 leading-tight;
+}
+
+.answerMeta {
+  @apply flex items-center justify-between flex-wrap gap-3;
+}
+
+.answerTypeBadge {
+  @apply text-xs;
+}
+
+.qualityIndicators {
+  @apply flex items-center space-x-4 text-sm;
+}
+
+.confidenceIndicator,
+.completenessIndicator {
+  @apply flex items-center space-x-2;
+}
+
+.confidenceLabel {
+  @apply flex items-center space-x-1 text-gray-600;
+}
+
+.confidenceValue,
+.completenessValue {
+  @apply flex items-center space-x-2;
+}
+
+.confidenceBar,
+.completenessBar {
+  @apply w-16 h-2;
+}
+
+.confidenceBar.high,
+.completenessBar.high {
+  @apply bg-green-500;
+}
+
+.confidenceBar.medium,
+.completenessBar.medium {
+  @apply bg-yellow-500;
+}
+
+.confidenceBar.low,
+.completenessBar.low {
+  @apply bg-red-500;
+}
+
+.confidenceText,
+.completenessText {
+  @apply text-xs font-medium text-gray-700;
+}
+
+.answerContent {
+  @apply p-4;
+}
+
+.answerText {
+  @apply prose prose-sm max-w-none text-gray-900 leading-relaxed;
+}
+
+.followUpSection,
+.caveatsSection {
+  @apply px-4 py-3 border-t border-gray-100;
+}
+
+.followUpToggle,
+.caveatsToggle {
+  @apply flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded;
+}
+
+.followUpList,
+.caveatsList {
+  @apply mt-3 space-y-2;
+}
+
+.followUpQuestion {
+  @apply flex items-center space-x-2 w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition-colors;
+}
+
+.caveatItem {
+  @apply flex items-start space-x-2 text-sm text-amber-800 bg-amber-50 p-2 rounded;
+}
+
+.caveatIcon {
+  @apply flex-shrink-0 mt-0.5;
+}
+
+.caveatText {
+  @apply flex-1;
+}
+
+.answerActions {
+  @apply px-4 py-3 border-t border-gray-100 flex items-center space-x-2;
+}
+
+.actionButton {
+  @apply flex items-center space-x-2;
+}
+
+.slideDown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
