@@ -36,6 +36,19 @@ export { default as SearchAnalyticsDefault } from './SearchAnalytics';
 export { SearchPage } from './SearchPage';
 
 // ============================================================================
+// Filter Builder Components
+// ============================================================================
+
+export {
+  FilterBuilder,
+  FilterNode,
+  FilterGroup,
+  FilterPreview,
+  FilterTemplates,
+  FilterShareDialog
+} from './filter-builder';
+
+// ============================================================================
 // Common Components
 // ============================================================================
 

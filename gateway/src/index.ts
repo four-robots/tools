@@ -33,6 +33,8 @@ import qualityRoutes from './routes/quality.routes.js';
 import { createAnalyticsRoutes } from './routes/analytics.routes.js';
 import apiDocumentationRecommendationsRoutes from './routes/api-documentation-recommendations.routes.js';
 import aiSummariesRoutes from './routes/ai-summaries.routes.js';
+import dynamicFacetsRoutes from './routes/dynamic-facets.routes.js';
+import filterBuilderRoutes from './routes/filter-builder.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -307,6 +309,8 @@ async function createApp() {
   app.use('/api/v1/ai-summaries', aiSummariesRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
+  app.use('/api/v1/facets', dynamicFacetsRoutes);
+  app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
   
   // Root endpoint
