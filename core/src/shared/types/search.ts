@@ -264,7 +264,9 @@ export const UnifiedSearchResponseSchema = z.object({
     query: z.string(),
     type: z.enum(['spelling', 'completion', 'related']),
     confidence: z.number().min(0).max(1)
-  })).optional()
+  })).optional(),
+  /** Dynamic facets collection (if enabled) */
+  facets: z.any().optional() // Will be FacetCollection from dynamic-facets.ts
 });
 
 export type UnifiedSearchResponse = z.infer<typeof UnifiedSearchResponseSchema>;

@@ -15,6 +15,7 @@ import { QueryProcessor, type ProcessedQuery } from './QueryProcessor.js';
 import { ResultMerger, type SearchSourceResult } from './ResultMerger.js';
 import { SearchAnalytics } from './SearchAnalytics.js';
 import { CacheService } from './CacheService.js';
+import { DynamicFacetService } from '../dynamic-facets/dynamic-facet-service.js';
 
 import type {
   UnifiedSearchRequest,
@@ -26,6 +27,10 @@ import type {
   SearchFilters,
   UnifiedSearchRequestSchema
 } from '../../shared/types/search.js';
+import type {
+  FacetCollection,
+  FacetFilter
+} from '../../shared/types/dynamic-facets.js';
 
 /**
  * Configuration for the unified search service
@@ -35,6 +40,8 @@ export interface UnifiedSearchConfig {
   enableCaching: boolean;
   /** Enable search analytics tracking */
   enableAnalytics: boolean;
+  /** Enable dynamic facet generation */
+  enableFacets: boolean;
   /** Maximum search timeout in milliseconds */
   maxSearchTimeoutMs: number;
   /** Maximum results to return per page */
@@ -45,6 +52,12 @@ export interface UnifiedSearchConfig {
   cacheConfig?: {
     maxEntries: number;
     defaultTtl: number;
+  };
+  /** Dynamic facet configuration overrides */
+  facetConfig?: {
+    maxFacets: number;
+    minQualityScore: number;
+    enableCaching: boolean;
   };
 }
 
@@ -85,6 +98,7 @@ export class UnifiedSearchService {
   private resultMerger: ResultMerger;
   private searchAnalytics?: SearchAnalytics;
   private cacheService?: CacheService;
+  private facetService?: DynamicFacetService;
 
   constructor(
     private memoryService: MemoryService,
@@ -114,6 +128,14 @@ export class UnifiedSearchService {
         defaultTtl: config.cacheConfig?.defaultTtl || 5 * 60 * 1000, // 5 minutes
         cleanupInterval: 60 * 1000, // 1 minute
         enableStats: true
+      });
+    }
+
+    if (config.enableFacets) {
+      this.facetService = new DynamicFacetService({
+        cacheEnabled: config.facetConfig?.enableCaching !== false,
+        performanceTracking: config.enableAnalytics,
+        maxProcessingTime: 5000
       });
     }
   }
@@ -167,6 +189,27 @@ export class UnifiedSearchService {
       // Step 6: Generate aggregations and facets
       const aggregations = this.resultMerger.generateAggregations(finalResults);
 
+      // Step 6.5: Generate dynamic facets if enabled
+      let facetCollection: FacetCollection | undefined;
+      if (this.facetService && this.config.enableFacets && finalResults.length > 0) {
+        try {
+          facetCollection = await this.facetService.generateFacets(
+            finalResults,
+            validatedRequest.query,
+            {
+              maxFacets: this.config.facetConfig?.maxFacets || 10,
+              minQualityScore: this.config.facetConfig?.minQualityScore || 0.5,
+              includeRanges: true,
+              includeHierarchical: true,
+              includeDates: true
+            }
+          );
+          console.log(`🎛️ Generated ${facetCollection.facets.length} dynamic facets`);
+        } catch (error) {
+          console.error('⚠️ Failed to generate dynamic facets:', error);
+        }
+      }
+
       // Step 7: Apply pagination
       const paginatedResults = this.applyPagination(finalResults, validatedRequest);
 
@@ -181,7 +224,8 @@ export class UnifiedSearchService {
         finalResults.length,
         aggregations,
         context,
-        suggestions
+        suggestions,
+        facetCollection
       );
 
       // Step 10: Cache results if enabled
@@ -255,6 +299,123 @@ export class UnifiedSearchService {
     if (this.cacheService) {
       await this.cacheService.clear();
     }
+  }
+
+  /**
+   * Search with facet filters applied
+   */
+  async searchWithFacets(
+    request: UnifiedSearchRequest,
+    facetFilters: FacetFilter[] = [],
+    userId?: string,
+    sessionId?: string
+  ): Promise<UnifiedSearchResponse> {
+    // First perform the regular search
+    const searchResponse = await this.searchAcrossSystem(request, userId, sessionId);
+    
+    // If no facet filters specified, return as-is
+    if (facetFilters.length === 0 || !this.facetService) {
+      return searchResponse;
+    }
+
+    // Apply facet filters to the results
+    try {
+      const filteredResults = await this.facetService.applyFacetFilters(
+        searchResponse.results,
+        facetFilters
+      );
+
+      // Update the response with filtered results
+      const filteredResponse = {
+        ...searchResponse,
+        results: filteredResults,
+        total_count: filteredResults.length,
+        pagination: {
+          ...searchResponse.pagination,
+          total_pages: Math.ceil(filteredResults.length / searchResponse.pagination.per_page)
+        }
+      };
+
+      // Regenerate facets based on filtered results if facets were included
+      if (searchResponse.facets && filteredResults.length > 0) {
+        try {
+          const updatedFacets = await this.facetService.generateFacets(
+            filteredResults,
+            request.query,
+            {
+              maxFacets: this.config.facetConfig?.maxFacets || 10,
+              minQualityScore: this.config.facetConfig?.minQualityScore || 0.5
+            }
+          );
+          filteredResponse.facets = updatedFacets;
+        } catch (error) {
+          console.error('⚠️ Failed to regenerate facets after filtering:', error);
+        }
+      }
+
+      console.log(`🎛️ Applied ${facetFilters.length} facet filters, ${filteredResults.length} results remain`);
+      return filteredResponse;
+
+    } catch (error) {
+      console.error('❌ Failed to apply facet filters:', error);
+      return searchResponse; // Return original results on filter error
+    }
+  }
+
+  /**
+   * Get available facets for a search query without executing full search
+   */
+  async getFacetsForQuery(
+    query: string,
+    contentTypes?: ContentType[],
+    limit: number = 100
+  ): Promise<FacetCollection | null> {
+    if (!this.facetService || !this.config.enableFacets) {
+      return null;
+    }
+
+    try {
+      // Execute a limited search to get sample results for facet generation
+      const sampleRequest: UnifiedSearchRequest = {
+        query,
+        filters: contentTypes ? { content_types: contentTypes } : undefined,
+        pagination: { page: 1, limit },
+        use_semantic: true,
+        use_fuzzy: true,
+        include_preview: false,
+        include_highlights: false
+      };
+
+      const sampleResults = await this.searchAcrossSystem(sampleRequest);
+      
+      if (sampleResults.results.length === 0) {
+        return null;
+      }
+
+      const facetCollection = await this.facetService.generateFacets(
+        sampleResults.results,
+        query,
+        {
+          maxFacets: this.config.facetConfig?.maxFacets || 15,
+          minQualityScore: this.config.facetConfig?.minQualityScore || 0.4,
+          includeRanges: true,
+          includeHierarchical: true,
+          includeDates: true
+        }
+      );
+
+      return facetCollection;
+    } catch (error) {
+      console.error('❌ Failed to get facets for query:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get facet service for direct access (if enabled)
+   */
+  getFacetService(): DynamicFacetService | undefined {
+    return this.facetService;
   }
 
   /**
@@ -660,13 +821,14 @@ export class UnifiedSearchService {
     totalCount: number,
     aggregations: SearchAggregations,
     context: SearchContext,
-    suggestions: Array<{ query: string; type: string; confidence: number }>
+    suggestions: Array<{ query: string; type: string; confidence: number }>,
+    facetCollection?: FacetCollection
   ): UnifiedSearchResponse {
     const { request, startTime } = context;
     const { page = 1, limit = 20 } = request.pagination;
     const totalPages = Math.ceil(totalCount / limit);
 
-    return {
+    const response: UnifiedSearchResponse = {
       results: paginatedResults,
       total_count: totalCount,
       pagination: {
@@ -687,6 +849,13 @@ export class UnifiedSearchService {
         confidence: s.confidence
       }))
     };
+
+    // Add facets if available
+    if (facetCollection) {
+      response.facets = facetCollection;
+    }
+
+    return response;
   }
 
   /**

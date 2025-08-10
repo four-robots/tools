@@ -40,3 +40,6 @@ export * from './nlp.js';
 
 // AI-powered summaries and content generation types
 export * from './ai-summaries.js';
+
+// Dynamic facet generation and filtering types
+export * from './dynamic-facets.js';
