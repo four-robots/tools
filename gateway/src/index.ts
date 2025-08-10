@@ -37,6 +37,7 @@ import dynamicFacetsRoutes from './routes/dynamic-facets.routes.js';
 import filterBuilderRoutes from './routes/filter-builder.routes.js';
 import savedSearchRoutes from './routes/saved-search.routes.js';
 import { createSearchAlertsRoutes } from './routes/search-alerts.routes.js';
+import userBehaviorRoutes from './routes/user-behavior.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -316,6 +317,7 @@ async function createApp() {
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
   app.use('/api/v1/facets', dynamicFacetsRoutes);
   app.use('/api/v1/filters', filterBuilderRoutes);
+  app.use('/api/v1/behavior', userBehaviorRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
   
   // Root endpoint

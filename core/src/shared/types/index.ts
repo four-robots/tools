@@ -52,3 +52,6 @@ export * from './saved-search.js';
 
 // Search alerts and notifications types
 export * from './search-alerts.js';
+
+// User behavior learning and analytics types
+export * from './user-behavior.js';

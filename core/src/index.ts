@@ -18,11 +18,13 @@ export * from './services/ai-summaries/index.js';
 export * from './services/dynamic-facets/index.js';
 export * from './services/filter-builder/index.js';
 export * from './services/saved-search/index.js';
+export * from './services/user-behavior/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 
 // Export shared types
 export * from './shared/types/index.js';
+export * from './shared/utils/index.js';
 
 // Export shared utilities with explicit naming to avoid conflicts
 export type { 

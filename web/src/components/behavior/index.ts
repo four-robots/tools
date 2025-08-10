@@ -1,0 +1,12 @@
+export { BehaviorTracker } from './BehaviorTracker.js';
+export { EventCollector } from './EventCollector.js';
+export { SessionManager } from './SessionManager.js';
+export { PrivacyConsentModal } from './PrivacyConsentModal.js';
+export { BehaviorDashboard } from './BehaviorDashboard.js';
+export { SearchPatternAnalytics } from './SearchPatternAnalytics.js';
+export { UserJourneyMap } from './UserJourneyMap.js';
+export { BehaviorInsightsPanel } from './BehaviorInsightsPanel.js';
+export { SearchHeatmap } from './SearchHeatmap.js';
+export { TopicClusterVisualization } from './TopicClusterVisualization.js';
+export { TemporalPatternChart } from './TemporalPatternChart.js';
+export { EngagementMetrics } from './EngagementMetrics.js';
