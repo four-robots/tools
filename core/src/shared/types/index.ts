@@ -55,3 +55,6 @@ export * from './search-alerts.js';
 
 // User behavior learning and analytics types
 export * from './user-behavior.js';
+
+// Personalization and adaptive search experience types
+export * from './personalization.js';
