@@ -61,3 +61,6 @@ export * from './personalization.js';
 
 // Real-time collaboration and WebSocket infrastructure types
 export * from './collaboration.js';
+
+// Live search collaboration types
+export * from './live-search-collaboration.js';

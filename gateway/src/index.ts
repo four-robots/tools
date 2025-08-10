@@ -39,6 +39,7 @@ import savedSearchRoutes from './routes/saved-search.routes.js';
 import { createSearchAlertsRoutes } from './routes/search-alerts.routes.js';
 import userBehaviorRoutes from './routes/user-behavior.routes.js';
 import { createCollaborationRoutes } from './routes/collaboration.routes.js';
+import { createSearchCollaborationRoutes } from './routes/search-collaboration.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -51,7 +52,7 @@ import { createAnalyticsMiddleware, createErrorTrackingMiddleware } from './midd
 import { KanbanService, KanbanDatabase } from '@mcp-tools/core/kanban';
 import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
 import { ScraperService, ScraperDatabaseManager, ScrapingEngine } from '@mcp-tools/core/scraper';
-import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager, CollaborationSessionService, EventBroadcastingService, PresenceService } from '@mcp-tools/core';
+import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager, CollaborationSessionService, EventBroadcastingService, PresenceService, LiveSearchCollaborationService } from '@mcp-tools/core';
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
 import { WebSocketCollaborationGateway } from './collaboration/websocket-gateway.js';
@@ -67,11 +68,23 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration
+// Configuration with security requirements
 const config = {
   port: parseInt(process.env.PORT || '8193'),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('❌ FATAL: JWT_SECRET environment variable is required for production');
+      console.error('   Please set JWT_SECRET to a secure random string (minimum 32 characters)');
+      process.exit(1);
+    }
+    if (secret.length < 32) {
+      console.error('❌ FATAL: JWT_SECRET must be at least 32 characters long');
+      process.exit(1);
+    }
+    return secret;
+  })(),
   database: {
     postgres: process.env.DATABASE_URL || 'postgresql://mcp_user:mcp_password@localhost:5432/mcp_tools',
     redis: process.env.REDIS_URL || 'redis://localhost:6379'
@@ -282,6 +295,7 @@ async function createApp() {
   const collaborationSessionService = new CollaborationSessionService(pgPool);
   const eventBroadcastingService = new EventBroadcastingService(pgPool);
   const presenceService = new PresenceService(pgPool);
+  const liveSearchCollaborationService = new LiveSearchCollaborationService(pgPool);
   console.log('✅ Collaboration services created and initialized');
   
   // Store services in app locals for access in routes
@@ -294,6 +308,7 @@ async function createApp() {
   app.locals.collaborationSessionService = collaborationSessionService;
   app.locals.eventBroadcastingService = eventBroadcastingService;
   app.locals.presenceService = presenceService;
+  app.locals.liveSearchCollaborationService = liveSearchCollaborationService;
   app.locals.pgPool = pgPool;
   app.locals.redis = redis;
   app.locals.db = pgPool; // Add db reference for saved search services
@@ -333,6 +348,7 @@ async function createApp() {
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
+  app.use('/api/search-collaboration', createSearchCollaborationRoutes(liveSearchCollaborationService));
   
   // Collaboration routes will be added after WebSocket gateway is initialized
   

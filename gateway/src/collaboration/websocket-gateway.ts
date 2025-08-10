@@ -18,7 +18,10 @@ import {
   WebSocketCollaborationGateway as IWebSocketCollaborationGateway,
   CollaborationSessionService,
   EventBroadcastingService,
-  PresenceService
+  PresenceService,
+  LiveSearchCollaborationService,
+  SearchCollaborationMessage,
+  SearchCollaborationMessageSchema
 } from '@mcp-tools/core';
 import { ConnectionManager } from './connection-manager.js';
 import { RedisClusterManager } from './redis-cluster-manager.js';
@@ -35,6 +38,7 @@ import {
   toCollaborationError,
   isCollaborationError
 } from './errors.js';
+import { SearchWebSocketHandler } from './search-websocket-handler.js';
 import { logger } from '../utils/logger.js';
 import crypto from 'crypto';
 import { URL } from 'url';
@@ -54,6 +58,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
   private connectionManager: ConnectionManager;
   private redisClusterManager: RedisClusterManager;
   private rateLimiter: RateLimiter;
+  private searchHandler: SearchWebSocketHandler;
   private connections: Map<string, AuthenticatedWebSocket> = new Map();
   private rooms: Map<string, Set<string>> = new Map(); // roomId -> connectionIds
   private heartbeatInterval: NodeJS.Timeout;
@@ -66,6 +71,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
     private sessionService: CollaborationSessionService,
     private eventService: EventBroadcastingService,
     private presenceService: PresenceService,
+    private searchService: LiveSearchCollaborationService,
     private jwtSecret: string = process.env.JWT_SECRET || 'your-secret-key',
     private config: {
       heartbeatInterval: number;
@@ -112,6 +118,10 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
     this.connectionManager = new ConnectionManager(this.db, this.redis);
     this.redisClusterManager = new RedisClusterManager(this.redis);
     this.rateLimiter = new RateLimiter(this.redis, this.config.rateLimitConfig);
+    this.searchHandler = new SearchWebSocketHandler(
+      this.searchService,
+      this.broadcastToSession.bind(this)
+    );
 
     this.setupWebSocketServer();
     this.setupRedisSubscriptions();
@@ -382,6 +392,24 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
 
       // Parse message
       const rawMessage = JSON.parse(data.toString());
+      
+      // Check if this is a search collaboration message
+      if (this.isSearchCollaborationMessage(rawMessage.type)) {
+        const searchMessage = SearchCollaborationMessageSchema.parse({
+          ...rawMessage,
+          userId: ws.userId,
+          timestamp: new Date(rawMessage.timestamp),
+          messageId: rawMessage.messageId || crypto.randomUUID()
+        });
+
+        ws.messageCount++;
+        ws.lastHeartbeat = new Date();
+
+        await this.searchHandler.handleSearchMessage(searchMessage);
+        return;
+      }
+
+      // Handle regular collaboration messages
       const message = CollaborationMessageSchema.parse({
         ...rawMessage,
         userId: ws.userId,
@@ -996,6 +1024,28 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
   }
 
   /**
+   * Checks if a message type is a search collaboration message
+   */
+  private isSearchCollaborationMessage(messageType: string): boolean {
+    const searchMessageTypes = [
+      'search_join',
+      'search_leave',
+      'search_query_update',
+      'search_filter_update',
+      'search_result_highlight',
+      'search_annotation',
+      'search_cursor_update',
+      'search_selection_change',
+      'search_bookmark',
+      'search_state_sync',
+      'search_conflict_resolution',
+      'search_session_update'
+    ];
+
+    return searchMessageTypes.includes(messageType);
+  }
+
+  /**
    * Shuts down the WebSocket gateway
    */
   async shutdown(): Promise<void> {
@@ -1020,6 +1070,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
     // Shutdown components
     await this.connectionManager.shutdown();
     await this.redisClusterManager.shutdown();
+    await this.searchHandler.shutdown();
 
     logger.info('WebSocket Collaboration Gateway shut down complete');
   }

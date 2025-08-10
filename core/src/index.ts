@@ -19,6 +19,7 @@ export * from './services/dynamic-facets/index.js';
 export * from './services/filter-builder/index.js';
 export * from './services/saved-search/index.js';
 export * from './services/user-behavior/index.js';
+export * from './services/collaboration/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 
