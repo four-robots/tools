@@ -13,6 +13,8 @@ import * as unifiedSearchFoundation from '../migrations/003_unified_search_found
 import { apiDocumentationDiscovery } from '../migrations/011_api_documentation_discovery.js';
 import { codeRepositoryManagement } from '../migrations/012_code_repository_management.js';
 import { codeAnalysis } from '../migrations/013_code_analysis.js';
+import { multiTenantInfrastructure } from '../migrations/029_multi_tenant_infrastructure.js';
+import { federationProtocolImplementation } from '../migrations/030_federation_protocol_implementation.js';
 
 /**
  * Migration registry that maps migration names to their implementations
@@ -26,7 +28,9 @@ const MIGRATION_REGISTRY: Record<string, Migration> = {
   '003_unified_search_foundation': unifiedSearchFoundation,
   '011_api_documentation_discovery': apiDocumentationDiscovery,
   '012_code_repository_management': codeRepositoryManagement,
-  '013_code_analysis': codeAnalysis
+  '013_code_analysis': codeAnalysis,
+  '029_multi_tenant_infrastructure': multiTenantInfrastructure,
+  '030_federation_protocol_implementation': federationProtocolImplementation
 };
 
 /**

@@ -15,7 +15,7 @@ import { TenantContext, RESOURCE_TYPES } from '../../shared/types/multi-tenant.j
 import { TenantResourceService } from './tenant-resource-service.js';
 import { TenantAuthenticationService } from './tenant-authentication-service.js';
 import { logger } from '../../utils/logger.js';
-import { DatabasePool } from '../../utils/database-pool.js';
+import { DatabaseConnectionPool } from '../../utils/database-pool.js';
 
 /**
  * Wrapper interface for tenant-aware services
@@ -34,12 +34,12 @@ export abstract class TenantAwareServiceWrapper<T> implements TenantAwareService
   protected crossTenantTargets: string[] = [];
   protected resourceService: TenantResourceService;
   protected authService: TenantAuthenticationService;
-  protected db: DatabasePool;
+  protected db: DatabaseConnectionPool;
 
   constructor() {
     this.resourceService = new TenantResourceService();
     this.authService = new TenantAuthenticationService();
-    this.db = new DatabasePool();
+    this.db = new DatabaseConnectionPool();
   }
 
   /**
@@ -450,5 +450,4 @@ export const getCrossTenantService = <T>(
   );
 };
 
-// Export for initialization
-export { TenantServiceFactory };
+// TenantServiceFactory is already exported above as a class declaration

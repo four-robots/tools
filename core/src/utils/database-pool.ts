@@ -8,7 +8,7 @@ import { Kysely, PostgresDialect } from 'kysely';
  * and resource efficiency. Provides connection pool monitoring and health checks.
  */
 
-interface DatabasePoolConfig extends PoolConfig {
+interface DatabaseConnectionPoolConfig extends PoolConfig {
   // Custom configuration options
   healthCheckInterval?: number;
   connectionTimeout?: number;
@@ -29,11 +29,11 @@ interface PoolStats {
  */
 export class DatabaseConnectionPool {
   private pool: Pool;
-  private config: DatabasePoolConfig;
+  private config: DatabaseConnectionPoolConfig;
   private healthCheckInterval: NodeJS.Timer | null = null;
   private stats: PoolStats;
 
-  constructor(config: DatabasePoolConfig = {}) {
+  constructor(config: DatabaseConnectionPoolConfig = {}) {
     // Optimized default configuration for saved search workloads
     this.config = {
       // Connection limits
@@ -317,7 +317,7 @@ let globalPool: DatabaseConnectionPool | null = null;
 /**
  * Get or create the global database pool
  */
-export function getGlobalDatabasePool(config?: DatabasePoolConfig): DatabaseConnectionPool {
+export function getGlobalDatabaseConnectionPool(config?: DatabaseConnectionPoolConfig): DatabaseConnectionPool {
   if (!globalPool) {
     globalPool = new DatabaseConnectionPool(config);
   }
@@ -327,7 +327,7 @@ export function getGlobalDatabasePool(config?: DatabasePoolConfig): DatabaseConn
 /**
  * Close the global database pool
  */
-export async function closeGlobalDatabasePool(): Promise<void> {
+export async function closeGlobalDatabaseConnectionPool(): Promise<void> {
   if (globalPool) {
     await globalPool.close();
     globalPool = null;
@@ -337,6 +337,6 @@ export async function closeGlobalDatabasePool(): Promise<void> {
 /**
  * Create a new isolated database pool (for testing or special use cases)
  */
-export function createDatabasePool(config?: DatabasePoolConfig): DatabaseConnectionPool {
+export function createDatabaseConnectionPool(config?: DatabaseConnectionPoolConfig): DatabaseConnectionPool {
   return new DatabaseConnectionPool(config);
 }

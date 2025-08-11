@@ -20,6 +20,8 @@ export * from './services/filter-builder/index.js';
 export * from './services/saved-search/index.js';
 export * from './services/user-behavior/index.js';
 export * from './services/collaboration/index.js';
+export * from './services/multi-tenant/index.js';
+export * from './services/federation/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 
@@ -42,9 +44,9 @@ export {
 // Export database connection pool utilities
 export {
   DatabaseConnectionPool,
-  getGlobalDatabasePool,
-  closeGlobalDatabasePool,
-  createDatabasePool,
+  getGlobalDatabaseConnectionPool,
+  closeGlobalDatabaseConnectionPool,
+  createDatabaseConnectionPool,
 } from './utils/database-pool.js';
 
 // Note: shared types are exported separately to avoid naming conflicts
