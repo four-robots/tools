@@ -6,8 +6,12 @@
 
 import { Router } from 'express';
 import { MCPClientService } from '../services/MCPClientService.js';
+import eventSourcingHealthRoutes from './event-sourcing-health.routes';
 
 const router = Router();
+
+// Mount event sourcing health routes
+router.use('/event-sourcing', eventSourcingHealthRoutes);
 
 // Basic health check
 router.get('/', (req, res: any) => {

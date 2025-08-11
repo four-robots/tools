@@ -73,3 +73,7 @@ export * from './federation.js';
 
 // Conflict resolution and merge strategy types
 export * from './conflict-resolution.js';
+
+// Event sourcing and collaboration event types
+export * from './event-sourcing.js';
+export * from './collaboration-events.js';

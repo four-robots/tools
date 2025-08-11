@@ -627,7 +627,7 @@ export class FederationSecurityManager {
       const algorithm = 'aes-256-gcm';
       const iv = crypto.randomBytes(12); // 96-bit IV for GCM
       
-      const cipher = crypto.createCipherGCM(algorithm, encryptionKey);
+      const cipher = crypto.createCipheriv(algorithm, encryptionKey, iv);
       cipher.setAAD(Buffer.from(`federation-payload:${tenantId}:${targetNodeId}`)); // Additional authenticated data
       
       const payloadString = JSON.stringify(payload);
@@ -679,13 +679,13 @@ export class FederationSecurityManager {
       // Get decryption key
       const decryptionKey = await this.getEncryptionKey(tenantId, sourceNodeId);
       
-      const decipher = crypto.createDecipherGCM(
+      const decipher = crypto.createDecipheriv(
         encryptionMetadata.algorithm,
-        decryptionKey
+        decryptionKey,
+        Buffer.from(encryptionMetadata.iv, 'base64')
       );
       
-      // Set IV and auth tag
-      decipher.setIV(Buffer.from(encryptionMetadata.iv, 'base64'));
+      // Set auth tag and additional authenticated data
       decipher.setAuthTag(Buffer.from(encryptionMetadata.auth_tag, 'base64'));
       decipher.setAAD(Buffer.from(`federation-payload:${sourceNodeId}:${tenantId}`));
       
