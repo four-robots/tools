@@ -30,7 +30,7 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
-  // Webpack configuration for shared types
+  // Webpack configuration for shared types and tldraw
   webpack: (config, { isServer }) => {
     // Allow importing TypeScript files from shared types
     config.resolve.alias = {
@@ -38,6 +38,29 @@ const nextConfig = {
       '@mcp-tools/core': require('path').resolve(__dirname, '../core/dist'),
       '@mcp-tools/core/shared': require('path').resolve(__dirname, '../core/dist/shared'),
     };
+
+    // Support for tldraw - handle ESM modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    // Transpile tldraw ESM modules
+    config.module.rules.push({
+      test: /\.m?js$/,
+      include: /node_modules\/@tldraw/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['next/babel'],
+          plugins: []
+        }
+      }
+    });
     
     return config;
   },
