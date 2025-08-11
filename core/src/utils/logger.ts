@@ -23,3 +23,32 @@ export const logger = {
     console.error(`[${new Date().toISOString()}] [ERROR] ${message}`, error, data || '');
   }
 };
+
+/**
+ * Logger class for service instances
+ */
+export class Logger {
+  private prefix: string;
+
+  constructor(prefix: string) {
+    this.prefix = prefix;
+  }
+
+  info(message: string, data?: any) {
+    console.log(`[${new Date().toISOString()}] [INFO] [${this.prefix}] ${message}`, data || '');
+  }
+
+  debug(message: string, data?: any) {
+    if (process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV === 'test') {
+      console.log(`[${new Date().toISOString()}] [DEBUG] [${this.prefix}] ${message}`, data || '');
+    }
+  }
+
+  warn(message: string, data?: any) {
+    console.warn(`[${new Date().toISOString()}] [WARN] [${this.prefix}] ${message}`, data || '');
+  }
+
+  error(message: string, error?: any, data?: any) {
+    console.error(`[${new Date().toISOString()}] [ERROR] [${this.prefix}] ${message}`, error, data || '');
+  }
+}

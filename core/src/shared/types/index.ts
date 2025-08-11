@@ -77,3 +77,6 @@ export * from './conflict-resolution.js';
 // Event sourcing and collaboration event types
 export * from './event-sourcing.js';
 export * from './collaboration-events.js';
+
+// Collaborative workspace types
+export * from './workspace.js';

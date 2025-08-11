@@ -42,6 +42,7 @@ import userBehaviorRoutes from './routes/user-behavior.routes.js';
 import { createCollaborationRoutes } from './routes/collaboration.routes.js';
 import { createSearchCollaborationRoutes } from './routes/search-collaboration.routes.js';
 import { federationRoutes } from './routes/federation.routes.js';
+import workspaceRoutes from './routes/workspace.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -55,6 +56,14 @@ import { KanbanService, KanbanDatabase } from '@mcp-tools/core/kanban';
 import { MemoryService, MemoryDatabaseManager, VectorEngine } from '@mcp-tools/core/memory';
 import { ScraperService, ScraperDatabaseManager, ScrapingEngine } from '@mcp-tools/core/scraper';
 import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryService, LLMService, DatabaseManager, CollaborationSessionService, EventBroadcastingService, PresenceService, LiveSearchCollaborationService } from '@mcp-tools/core';
+import { 
+  WorkspaceService, 
+  WorkspaceMembershipService, 
+  WorkspaceSessionService, 
+  WorkspaceActivityService,
+  WorkspaceTemplateService,
+  WorkspaceIntegrationService 
+} from '@mcp-tools/core';
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
 import { WebSocketCollaborationGateway } from './collaboration/websocket-gateway.js';
@@ -300,6 +309,22 @@ async function createApp() {
   const presenceService = new PresenceService(pgPool);
   const liveSearchCollaborationService = new LiveSearchCollaborationService(pgPool);
   console.log('✅ Collaboration services created and initialized');
+
+  // Initialize workspace services
+  console.log('🔄 Initializing Workspace Services...');
+  const workspaceService = new WorkspaceService(pgPool);
+  const workspaceMembershipService = new WorkspaceMembershipService(pgPool);
+  const workspaceSessionService = new WorkspaceSessionService(pgPool);
+  const workspaceActivityService = new WorkspaceActivityService(pgPool);
+  const workspaceTemplateService = new WorkspaceTemplateService(pgPool);
+  const workspaceIntegrationService = new WorkspaceIntegrationService(
+    pgPool,
+    kanbanService,
+    memoryService,
+    scraperService, // Wiki service will be added when available
+    workspaceActivityService
+  );
+  console.log('✅ Workspace services created and initialized');
   
   // Store services in app locals for access in routes
   app.locals.kanbanService = kanbanService;
@@ -312,6 +337,13 @@ async function createApp() {
   app.locals.eventBroadcastingService = eventBroadcastingService;
   app.locals.presenceService = presenceService;
   app.locals.liveSearchCollaborationService = liveSearchCollaborationService;
+  // Workspace services
+  app.locals.workspaceService = workspaceService;
+  app.locals.workspaceMembershipService = workspaceMembershipService;
+  app.locals.workspaceSessionService = workspaceSessionService;
+  app.locals.workspaceActivityService = workspaceActivityService;
+  app.locals.workspaceTemplateService = workspaceTemplateService;
+  app.locals.workspaceIntegrationService = workspaceIntegrationService;
   app.locals.pgPool = pgPool;
   app.locals.redis = redis;
   app.locals.db = pgPool; // Add db reference for saved search services
@@ -352,6 +384,7 @@ async function createApp() {
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
   app.use('/api/v1/federation', federationRoutes);
+  app.use('/api/v1/workspaces', workspaceRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
   app.use('/api/search-collaboration', createSearchCollaborationRoutes(liveSearchCollaborationService));
   
@@ -402,7 +435,11 @@ async function startServer() {
       }
     });
     
-    setupWebSocket(io, app.locals.kanbanService, app.locals.analyticsService);
+    setupWebSocket(io, app.locals.kanbanService, app.locals.analyticsService, {
+      workspaceSessionService: app.locals.workspaceSessionService,
+      workspaceActivityService: app.locals.workspaceActivityService,
+      workspaceMembershipService: app.locals.workspaceMembershipService,
+    });
     
     // Setup Analytics WebSocket handler
     console.log('🔄 Initializing Analytics WebSocket handler...');
