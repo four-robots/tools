@@ -24,6 +24,14 @@ import {
 import { getGlobalRateLimiter } from './rate-limiter.js';
 import { LRUCache, createLRUCache } from './lru-cache.js';
 import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard-cursor-service';
+import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboard-presence-service';
+import {
+  validateUserInfo,
+  validateActivityInfo,
+  validateWhiteboardId,
+  validateSessionId,
+  validatePresenceUpdateRequest
+} from '@mcp-tools/core/utils/input-validation';
 
 interface WhiteboardAuthenticatedSocket extends AuthenticatedSocket {
   whiteboardSession?: {
@@ -109,6 +117,19 @@ export function setupWhiteboardWebSocket(
   // User color assignments for presence with LRU eviction
   const userColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FFB347'];
   const assignedColors = createLRUCache<string, string>('colors');
+  
+  // Rate limiting warning tracking to prevent spam
+  const lastCursorRateWarning = new Map<string, number>();
+  
+  // Initialize presence service
+  const presenceService = getPresenceService({
+    idleTimeoutMs: 5 * 60 * 1000, // 5 minutes
+    awayTimeoutMs: 15 * 60 * 1000, // 15 minutes
+    offlineTimeoutMs: 30 * 60 * 1000, // 30 minutes
+    enableActivityAwareness: true,
+    enableAvatars: true,
+    presenceUpdateThrottleMs: 1000,
+  }, logger);
   
   logger.info('Whiteboard WebSocket initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
@@ -222,46 +243,89 @@ export function setupWhiteboardWebSocket(
         activeWhiteboardSessions.set(socket.id, whiteboardSession);
 
         // Initialize canvas version if not exists
-        if (!canvasVersions.has(whiteboardId)) {
-          canvasVersions.set(whiteboardId, 1);
+        if (!canvasVersions.has(sanitizedWhiteboardId)) {
+          canvasVersions.set(sanitizedWhiteboardId, 1);
         }
 
         // Join whiteboard rooms
-        socket.join(`whiteboard:${whiteboardId}`);
-        socket.join(`whiteboard:${whiteboardId}:presence`);
-        socket.join(`whiteboard:${whiteboardId}:comments`);
+        socket.join(`whiteboard:${sanitizedWhiteboardId}`);
+        socket.join(`whiteboard:${sanitizedWhiteboardId}:presence`);
+        socket.join(`whiteboard:${sanitizedWhiteboardId}:comments`);
+
+        // Validate input data before processing
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+        
+        const userInfoValidation = validateUserInfo({
+          userName: socket.user.name,
+          userEmail: socket.user.email,
+          avatar: socket.user.avatar
+        });
+        
+        if (!userInfoValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid user information',
+            details: userInfoValidation.errors.join(', ')
+          });
+          return;
+        }
+        
+        // Use sanitized data
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+        const sanitizedUserInfo = userInfoValidation.sanitizedData;
+        
+        // Update whiteboard session with sanitized ID
+        socket.whiteboardSession.whiteboardId = sanitizedWhiteboardId;
+        whiteboardSession.whiteboardId = sanitizedWhiteboardId;
+        
+        // Register with presence service using sanitized data
+        const presenceState = await presenceService.joinWhiteboard(
+          socket.user.id,
+          sanitizedWhiteboardId,
+          whiteboardSession.sessionToken,
+          {
+            userName: sanitizedUserInfo.userName,
+            userEmail: sanitizedUserInfo.userEmail,
+            avatar: sanitizedUserInfo.avatar,
+            connectionId: socket.id,
+          }
+        );
 
         // Emit session started
         socket.emit('whiteboard:session_started', {
           sessionId: whiteboardSession.sessionToken,
-          whiteboardId,
+          whiteboardId: sanitizedWhiteboardId,
           workspaceId,
           permissions: whiteboardSession.permissions,
-          canvasVersion: canvasVersions.get(whiteboardId),
+          canvasVersion: canvasVersions.get(sanitizedWhiteboardId),
+          presenceState,
         });
 
-        // Broadcast user joined to other participants
-        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:user_joined', {
+        // Broadcast user joined to other participants with presence info
+        socket.to(`whiteboard:${sanitizedWhiteboardId}`).emit('whiteboard:user_joined', {
           user: {
             id: socket.user.id,
-            name: socket.user.name,
+            name: sanitizedUserInfo.userName,
+            avatar: sanitizedUserInfo.avatar,
           },
-          presence: whiteboardSession.presence,
+          presenceState,
           timestamp: new Date().toISOString(),
         });
 
         // Send current presence information to new user
-        const currentPresences = activeWhiteboardSessions.values()
-          .filter(session => 
-            session.whiteboardId === whiteboardId && 
-            session.socketId !== socket.id
-          )
-          .map(session => session.presence);
-
-        socket.emit('whiteboard:presence_list', currentPresences);
+        const allPresences = presenceService.getWhiteboardPresence(sanitizedWhiteboardId);
+        socket.emit('whiteboard:presence_list', allPresences);
 
         logger.info('User joined whiteboard', { 
-          whiteboardId, 
+          whiteboardId: sanitizedWhiteboardId, 
           workspaceId,
           userId: socket.user.id,
           sessionToken: whiteboardSession.sessionToken
@@ -308,13 +372,24 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Check rate limiting for canvas changes
+        // Check rate limiting for canvas changes with comprehensive feedback
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:canvas_change');
         if (!rateLimitCheck.allowed) {
           socket.emit('whiteboard:canvas_ack', {
             operationId: data.operation.elementId,
             success: false,
             error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please slow down canvas operations to maintain performance for all users'
+          });
+          
+          // Also emit a general rate limit notification
+          socket.emit('whiteboard:rate_limit_warning', {
+            operation: 'canvas_change',
+            message: 'Canvas operations are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
           });
           return;
         }
@@ -394,10 +469,16 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Check rate limiting for sync requests
+        // Check rate limiting for sync requests with detailed feedback
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:request_sync');
         if (!rateLimitCheck.allowed) {
-          socket.emit('error', rateLimitCheck.error);
+          socket.emit('whiteboard:sync_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Sync requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please wait before requesting another sync',
+            timestamp: new Date().toISOString()
+          });
           return;
         }
 
@@ -456,14 +537,22 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Check rate limiting for presence updates
+        // Check rate limiting for presence updates with user feedback
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:presence');
         if (!rateLimitCheck.allowed) {
-          // For presence updates, we silently drop them rather than error
-          // to avoid disrupting the user experience
-          logger.debug('Presence update rate limited', {
+          // Implement backpressure with user notification
+          socket.emit('whiteboard:presence_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Presence updates are being rate limited to maintain performance',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please reduce the frequency of presence updates',
+            timestamp: new Date().toISOString()
+          });
+          
+          logger.warn('Presence update rate limited with user notification', {
             userId: socket.user.id,
-            socketId: socket.id
+            socketId: socket.id,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs
           });
           return;
         }
@@ -506,6 +595,182 @@ export function setupWhiteboardWebSocket(
       }
     });
 
+    // ==================== ENHANCED PRESENCE INDICATORS ====================
+
+    // Update presence status (active/idle/away/busy)
+    socket.on('whiteboard:presence_status', async (data: {
+      status: 'online' | 'idle' | 'away' | 'busy';
+      customStatus?: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId } = socket.whiteboardSession;
+        const { status, customStatus } = data;
+
+        // Update presence status
+        const presenceState = await presenceService.updatePresenceStatus(
+          socket.user.id,
+          whiteboardId,
+          status,
+          customStatus
+        );
+
+        if (presenceState) {
+          // Broadcast status update to other participants
+          socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:presence_status_updated', {
+            userId: socket.user.id,
+            status,
+            customStatus,
+            presenceState,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.debug('Presence status updated', { 
+          userId: socket.user.id, 
+          whiteboardId, 
+          status,
+          customStatus 
+        });
+
+      } catch (error) {
+        logger.error('Failed to update presence status', { error, data });
+      }
+    });
+
+    // Update activity awareness (drawing, typing, selecting, etc.)
+    socket.on('whiteboard:activity', async (data: {
+      type: 'drawing' | 'typing' | 'selecting' | 'commenting' | 'idle';
+      elementId?: string;
+      description?: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId } = socket.whiteboardSession;
+        const activity = {
+          ...data,
+          timestamp: Date.now(),
+        };
+
+        // Update activity in presence service
+        const presenceState = await presenceService.updateActivity(
+          socket.user.id,
+          whiteboardId,
+          activity
+        );
+
+        if (presenceState) {
+          // Broadcast activity update to other participants
+          socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:activity_updated', {
+            userId: socket.user.id,
+            userName: socket.user.name,
+            activity,
+            presenceState,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.debug('Activity updated', { 
+          userId: socket.user.id, 
+          whiteboardId, 
+          activity: activity.type 
+        });
+
+      } catch (error) {
+        logger.error('Failed to update activity', { error, data });
+      }
+    });
+
+    // Send heartbeat to maintain presence
+    socket.on('whiteboard:heartbeat', async () => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, sessionId } = socket.whiteboardSession;
+
+        // Send heartbeat to presence service
+        await presenceService.sendHeartbeat(socket.user.id, whiteboardId, sessionId);
+
+        // Respond with heartbeat acknowledgment
+        socket.emit('whiteboard:heartbeat_ack', {
+          timestamp: new Date().toISOString(),
+        });
+
+      } catch (error) {
+        logger.error('Failed to handle heartbeat', { error });
+      }
+    });
+
+    // Request current presence information
+    socket.on('whiteboard:request_presence', async (data: {
+      whiteboardId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          return;
+        }
+
+        const whiteboardId = data.whiteboardId || socket.whiteboardSession?.whiteboardId;
+        if (!whiteboardId) {
+          return;
+        }
+
+        // Get all presence information for the whiteboard
+        const allPresences = presenceService.getWhiteboardPresence(whiteboardId);
+        
+        socket.emit('whiteboard:presence_list', allPresences);
+
+        logger.debug('Presence list requested', { 
+          userId: socket.user.id, 
+          whiteboardId,
+          presenceCount: allPresences.length
+        });
+
+      } catch (error) {
+        logger.error('Failed to get presence list', { error, data });
+      }
+    });
+
+    // Get user activity history
+    socket.on('whiteboard:request_activity_history', async (data: {
+      userId?: string;
+      whiteboardId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          return;
+        }
+
+        const whiteboardId = data.whiteboardId || socket.whiteboardSession?.whiteboardId;
+        const targetUserId = data.userId || socket.user.id;
+        
+        if (!whiteboardId) {
+          return;
+        }
+
+        // Get activity history for the user
+        const activityHistory = presenceService.getUserActivityHistory(targetUserId, whiteboardId);
+        
+        socket.emit('whiteboard:activity_history', {
+          userId: targetUserId,
+          whiteboardId,
+          activities: activityHistory,
+          timestamp: new Date().toISOString(),
+        });
+
+      } catch (error) {
+        logger.error('Failed to get activity history', { error, data });
+      }
+    });
+
     // ==================== LIVE CURSOR TRACKING ====================
 
     // Cursor enter (user starts tracking)
@@ -523,37 +788,75 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Check rate limiting for cursor events
+        // Check rate limiting for cursor events with user feedback
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:cursor_enter');
         if (!rateLimitCheck.allowed) {
-          return; // Silently drop to avoid disrupting UX
+          socket.emit('whiteboard:cursor_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Cursor operations are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please wait before attempting cursor operations',
+            timestamp: new Date().toISOString()
+          });
+          return;
         }
 
         const { whiteboardId, sessionId, userInfo } = data;
-        const cursorService = getCursorService(logger);
-
-        // Initialize cursor tracking for this user
-        await cursorService.updateCursorPosition(
-          userInfo.userId,
-          whiteboardId,
-          {
-            x: 0,
-            y: 0,
-            canvasX: 0,
-            canvasY: 0,
-            timestamp: Date.now(),
-            interpolated: false,
-          },
-          {
-            userId: userInfo.userId,
-            userName: userInfo.userName,
-            userColor: userInfo.userColor,
-            sessionId,
-            whiteboardId,
-            lastSeen: Date.now(),
-            isActive: true,
+        
+        // Get cursor service with proper error handling
+        let cursorService;
+        try {
+          cursorService = getCursorService(logger);
+          if (!cursorService) {
+            throw new Error('Cursor service unavailable');
           }
-        );
+        } catch (error) {
+          logger.error('Failed to get cursor service', { error, whiteboardId, sessionId });
+          socket.emit('whiteboard:cursor_service_error', {
+            code: 'CURSOR_SERVICE_UNAVAILABLE',
+            message: 'Cursor tracking service is temporarily unavailable',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Initialize cursor tracking for this user with error boundary
+        try {
+          await cursorService.updateCursorPosition(
+            userInfo.userId,
+            whiteboardId,
+            {
+              x: 0,
+              y: 0,
+              canvasX: 0,
+              canvasY: 0,
+              timestamp: Date.now(),
+              interpolated: false,
+            },
+            {
+              userId: userInfo.userId,
+              userName: userInfo.userName,
+              userColor: userInfo.userColor,
+              sessionId,
+              whiteboardId,
+              lastSeen: Date.now(),
+              isActive: true,
+            }
+          );
+        } catch (error) {
+          logger.error('Failed to initialize cursor tracking', {
+            error,
+            userId: userInfo.userId,
+            whiteboardId,
+            sessionId
+          });
+          // Continue without cursor tracking rather than failing completely
+          socket.emit('whiteboard:cursor_tracking_degraded', {
+            code: 'CURSOR_INIT_FAILED',
+            message: 'Cursor tracking initialization failed, continuing without cursor features',
+            timestamp: new Date().toISOString()
+          });
+        }
 
         // Broadcast cursor enter to other participants
         socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_updated', {
@@ -598,31 +901,76 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Aggressive rate limiting for cursor moves (60 FPS max)
+        // Aggressive rate limiting for cursor moves (60 FPS max) with backpressure
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:cursor_move');
         if (!rateLimitCheck.allowed) {
-          return; // Silently drop high-frequency updates
+          // For high-frequency cursor moves, emit warning less frequently to avoid spam
+          const warningKey = `cursor_warning_${socket.user.id}`;
+          const lastWarning = lastCursorRateWarning.get(warningKey) || 0;
+          const now = Date.now();
+          
+          if (now - lastWarning > 5000) { // Warn at most every 5 seconds
+            socket.emit('whiteboard:cursor_rate_limited', {
+              code: 'RATE_LIMITED',
+              message: 'Cursor updates are being throttled for optimal performance',
+              guidance: 'High-frequency updates are automatically managed',
+              timestamp: new Date().toISOString()
+            });
+            
+            lastCursorRateWarning.set(warningKey, now);
+          }
+          
+          return; // Drop high-frequency updates but inform user occasionally
         }
 
         const { whiteboardId, position, timestamp, sessionId } = data;
-        const cursorService = getCursorService(logger);
-
-        // Update cursor position with interpolation
-        const cursorState = await cursorService.updateCursorPosition(
-          socket.user.id,
-          whiteboardId,
-          {
-            ...position,
-            timestamp,
-            interpolated: false,
+        
+        // Get cursor service with error handling
+        let cursorService;
+        let cursorState = null;
+        
+        try {
+          cursorService = getCursorService(logger);
+          if (!cursorService) {
+            throw new Error('Cursor service unavailable');
           }
-        );
+          
+          // Update cursor position with interpolation
+          cursorState = await cursorService.updateCursorPosition(
+            socket.user.id,
+            whiteboardId,
+            {
+              ...position,
+              timestamp,
+              interpolated: false,
+            }
+          );
+        } catch (error) {
+          // Log but don't fail cursor tracking - continue with degraded functionality
+          logger.debug('Cursor service error during move, continuing with degraded functionality', {
+            error: error instanceof Error ? error.message : String(error),
+            userId: socket.user.id,
+            whiteboardId
+          });
+          
+          // Create minimal cursor state for broadcast
+          cursorState = {
+            userId: socket.user.id,
+            userName: socket.user.name,
+            userColor: assignedColors.get(socket.user.id) || userColors[0],
+            position,
+            timestamp,
+            sessionId,
+            isActive: true,
+            lastSeen: Date.now()
+          };
+        }
 
         // Broadcast cursor position to other participants
         socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_updated', {
           userId: socket.user.id,
           userName: socket.user.name,
-          userColor: cursorState.userColor,
+          userColor: cursorState?.userColor || assignedColors.get(socket.user.id) || userColors[0],
           position,
           timestamp,
           sessionId,
@@ -646,10 +994,23 @@ export function setupWhiteboardWebSocket(
         }
 
         const { whiteboardId, sessionId, userId } = data;
-        const cursorService = getCursorService(logger);
-
-        // Remove cursor tracking
-        await cursorService.removeCursor(userId, whiteboardId, 'leave');
+        
+        // Remove cursor tracking with error handling
+        try {
+          const cursorService = getCursorService(logger);
+          if (cursorService) {
+            await cursorService.removeCursor(userId, whiteboardId, 'leave');
+          } else {
+            logger.warn('Cursor service unavailable during cursor leave', { userId, whiteboardId });
+          }
+        } catch (error) {
+          logger.warn('Failed to remove cursor tracking', {
+            error: error instanceof Error ? error.message : String(error),
+            userId,
+            whiteboardId
+          });
+          // Continue with disconnect even if cursor removal fails
+        }
 
         // Broadcast cursor disconnect to other participants
         socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
@@ -1068,25 +1429,69 @@ export function setupWhiteboardWebSocket(
     // ==================== DISCONNECT HANDLING ====================
 
     socket.on('disconnect', async (reason: string) => {
-      try {
-        if (socket.whiteboardSession) {
-          await handleWhiteboardLeave(socket, socket.whiteboardSession.whiteboardId, reason);
-        }
-
-        // Clean up session storage
-        await sessionStorage.delete(socket.id);
-        activeWhiteboardSessions.delete(socket.id);
-
-        logger.info('Whiteboard socket disconnected', { 
+      const disconnectKey = `disconnect:${socket.id}`;
+      
+      // Prevent concurrent disconnect handling
+      if (cleanupOperations.has(disconnectKey)) {
+        logger.debug('Disconnect cleanup already in progress', { 
           socketId: socket.id, 
           userId: socket.user?.id,
           reason 
         });
-
-      } catch (error) {
-        logger.error('Failed to handle whiteboard disconnect', { error, reason });
+        return;
+      }
+      
+      const disconnectCleanup = performDisconnectCleanup(socket, reason);
+      cleanupOperations.set(disconnectKey, disconnectCleanup);
+      
+      try {
+        await disconnectCleanup;
+      } finally {
+        cleanupOperations.delete(disconnectKey);
       }
     });
+    
+  async function performDisconnectCleanup(
+    socket: WhiteboardAuthenticatedSocket,
+    reason: string
+  ): Promise<void> {
+    try {
+      // Handle whiteboard leave with atomic cleanup
+      if (socket.whiteboardSession) {
+        await handleWhiteboardLeave(socket, socket.whiteboardSession.whiteboardId, reason);
+      }
+
+      // Additional session cleanup (defensive - should be done in handleWhiteboardLeave)
+      try {
+        await sessionStorage.delete(socket.id);
+        activeWhiteboardSessions.delete(socket.id);
+      } catch (sessionError) {
+        logger.warn('Additional session cleanup error during disconnect', {
+          error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+          socketId: socket.id
+        });
+      }
+      
+      // Clean up rate limiting warning cache
+      const warningKey = `cursor_warning_${socket.user?.id}`;
+      lastCursorRateWarning.delete(warningKey);
+
+      logger.info('Whiteboard socket disconnect cleanup completed', { 
+        socketId: socket.id, 
+        userId: socket.user?.id,
+        reason 
+      });
+
+    } catch (error) {
+      logger.error('Failed to handle whiteboard disconnect cleanup', {
+        error: error instanceof Error ? error.message : String(error),
+        socketId: socket.id,
+        userId: socket.user?.id,
+        reason
+      });
+      // Don't throw - we want disconnect to complete even if cleanup fails
+    }
+  }
 
     // ==================== ERROR HANDLING ====================
 
@@ -1171,6 +1576,9 @@ export function setupWhiteboardWebSocket(
     return { allowed: true };
   }
 
+  // Atomic cleanup operations state
+  const cleanupOperations = new Map<string, Promise<void>>();
+  
   async function handleWhiteboardLeave(
     socket: WhiteboardAuthenticatedSocket, 
     whiteboardId: string, 
@@ -1180,48 +1588,134 @@ export function setupWhiteboardWebSocket(
       return;
     }
 
-    try {
-      // Clean up cursor tracking
-      const cursorService = getCursorService(logger);
-      await cursorService.removeCursor(socket.user.id, whiteboardId, 'disconnect');
+    const cleanupKey = `${socket.id}:${whiteboardId}`;
+    
+    // Prevent concurrent cleanup operations for the same socket/whiteboard
+    if (cleanupOperations.has(cleanupKey)) {
+      logger.debug('Cleanup already in progress, waiting for completion', { 
+        socketId: socket.id, 
+        whiteboardId, 
+        userId: socket.user.id 
+      });
+      await cleanupOperations.get(cleanupKey);
+      return;
+    }
 
-      // Broadcast cursor disconnect to other participants
+    // Create atomic cleanup operation
+    const cleanupPromise = performAtomicCleanup(socket, whiteboardId, reason);
+    cleanupOperations.set(cleanupKey, cleanupPromise);
+
+    try {
+      await cleanupPromise;
+    } finally {
+      cleanupOperations.delete(cleanupKey);
+    }
+  }
+  
+  async function performAtomicCleanup(
+    socket: WhiteboardAuthenticatedSocket,
+    whiteboardId: string,
+    reason?: string
+  ): Promise<void> {
+    const userId = socket.user!.id;
+    const sessionId = socket.whiteboardSession!.sessionId;
+    const cleanupErrors: string[] = [];
+    
+    logger.debug('Starting atomic cleanup', { userId, whiteboardId, sessionId, reason });
+
+    // Step 1: Clean up cursor tracking (non-critical)
+    try {
+      const cursorService = getCursorService(logger);
+      if (cursorService) {
+        await cursorService.removeCursor(userId, whiteboardId, 'disconnect');
+        logger.debug('Cursor cleanup completed', { userId, whiteboardId });
+      } else {
+        logger.warn('Cursor service unavailable during cleanup', { userId, whiteboardId });
+      }
+    } catch (cursorError) {
+      const errorMsg = `Cursor cleanup failed: ${cursorError instanceof Error ? cursorError.message : String(cursorError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.warn('Cursor cleanup error (non-critical)', { userId, whiteboardId, error: errorMsg });
+      // Continue with other cleanup operations
+    }
+
+    // Step 2: Clean up presence tracking (critical)
+    try {
+      await presenceService.leaveWhiteboard(userId, whiteboardId, sessionId, socket.id);
+      logger.debug('Presence cleanup completed', { userId, whiteboardId, sessionId });
+    } catch (presenceError) {
+      const errorMsg = `Presence cleanup failed: ${presenceError instanceof Error ? presenceError.message : String(presenceError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.error('Presence cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
+      // Continue despite error - we need to complete other cleanup
+    }
+
+    // Step 3: Leave rooms (critical for preventing memory leaks)
+    try {
+      socket.leave(`whiteboard:${whiteboardId}`);
+      socket.leave(`whiteboard:${whiteboardId}:presence`);
+      socket.leave(`whiteboard:${whiteboardId}:comments`);
+      logger.debug('Room cleanup completed', { userId, whiteboardId });
+    } catch (roomError) {
+      const errorMsg = `Room cleanup failed: ${roomError instanceof Error ? roomError.message : String(roomError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.error('Room cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
+    }
+
+    // Step 4: Clean up session data (critical for memory management)
+    try {
+      socket.whiteboardSession = undefined;
+      activeWhiteboardSessions.delete(socket.id);
+      await sessionStorage.delete(socket.id);
+      logger.debug('Session cleanup completed', { userId, whiteboardId, sessionId });
+    } catch (sessionError) {
+      const errorMsg = `Session cleanup failed: ${sessionError instanceof Error ? sessionError.message : String(sessionError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.error('Session cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
+    }
+
+    // Step 5: Broadcast notifications (best effort)
+    try {
+      // Broadcast cursor disconnect
       socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
-        userId: socket.user.id,
-        sessionId: socket.whiteboardSession.sessionId,
+        userId,
+        sessionId,
         timestamp: Date.now(),
         reason: reason === 'inactivity_timeout' ? 'timeout' : 'disconnect',
       });
 
-      // Leave whiteboard rooms
-      socket.leave(`whiteboard:${whiteboardId}`);
-      socket.leave(`whiteboard:${whiteboardId}:presence`);
-      socket.leave(`whiteboard:${whiteboardId}:comments`);
-
-      // Broadcast user left to other participants
+      // Broadcast user left
       socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:user_left', {
         user: {
-          id: socket.user.id,
-          name: socket.user.name,
+          id: userId,
+          name: socket.user!.name,
         },
         reason,
         timestamp: new Date().toISOString(),
       });
+      
+      logger.debug('Broadcast notifications completed', { userId, whiteboardId });
+    } catch (broadcastError) {
+      const errorMsg = `Broadcast cleanup failed: ${broadcastError instanceof Error ? broadcastError.message : String(broadcastError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.warn('Broadcast cleanup error (non-critical)', { userId, whiteboardId, error: errorMsg });
+    }
 
-      // Clean up session info
-      socket.whiteboardSession = undefined;
-      activeWhiteboardSessions.delete(socket.id);
-      await sessionStorage.delete(socket.id);
-
-      logger.info('User left whiteboard', { 
+    // Log cleanup completion with any errors
+    if (cleanupErrors.length > 0) {
+      logger.warn('Atomic cleanup completed with errors', { 
+        userId, 
         whiteboardId, 
-        userId: socket.user.id,
+        reason, 
+        errors: cleanupErrors,
+        errorCount: cleanupErrors.length
+      });
+    } else {
+      logger.info('Atomic cleanup completed successfully', { 
+        userId, 
+        whiteboardId, 
         reason 
       });
-
-    } catch (error) {
-      logger.error('Failed to handle whiteboard leave', { error, whiteboardId, reason });
-      throw error;
     }
   }
 
@@ -1247,14 +1741,25 @@ export function setupWhiteboardWebSocket(
   // Cleanup inactive sessions with enhanced monitoring
   const cleanupInterval = setInterval(enhancedCleanup, 5 * 60 * 1000); // Run every 5 minutes
 
-  // Enhanced cleanup with memory monitoring
+  // Enhanced cleanup with memory monitoring and atomic operations
+  let isGlobalCleanupRunning = false;
+  
   const enhancedCleanup = async () => {
+    // Prevent concurrent global cleanups
+    if (isGlobalCleanupRunning) {
+      logger.debug('Global whiteboard cleanup already running, skipping');
+      return;
+    }
+    
+    isGlobalCleanupRunning = true;
+    
     try {
       const now = new Date();
       const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
       let cleanedSessions = 0;
+      const cleanupPromises: Promise<void>[] = [];
 
-      // Clean up inactive sessions from LRU caches
+      // Clean up inactive sessions from LRU caches with atomic operations
       for (const socketId of activeWhiteboardSessions.keys()) {
         const session = activeWhiteboardSessions.get(socketId);
         if (!session) continue;
@@ -1262,26 +1767,65 @@ export function setupWhiteboardWebSocket(
         const timeSinceActivity = now.getTime() - session.lastActivity.getTime();
         
         if (timeSinceActivity > inactiveThreshold) {
-          const socket = io.sockets.sockets.get(socketId);
-          if (socket) {
-            await handleWhiteboardLeave(
-              socket as WhiteboardAuthenticatedSocket, 
-              session.whiteboardId, 
-              'inactivity_timeout'
-            );
-          } else {
-            // Socket doesn't exist, clean up directly
-            activeWhiteboardSessions.delete(socketId);
-            await sessionStorage.delete(socketId);
+          const cleanupPromise = (async () => {
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              try {
+                await handleWhiteboardLeave(
+                  socket as WhiteboardAuthenticatedSocket, 
+                  session.whiteboardId, 
+                  'inactivity_timeout'
+                );
+                cleanedSessions++;
+              } catch (error) {
+                logger.error('Failed to cleanup inactive session', {
+                  error: error instanceof Error ? error.message : String(error),
+                  socketId,
+                  whiteboardId: session.whiteboardId
+                });
+              }
+            } else {
+              // Socket doesn't exist, clean up directly
+              try {
+                activeWhiteboardSessions.delete(socketId);
+                await sessionStorage.delete(socketId);
+                cleanedSessions++;
+              } catch (error) {
+                logger.error('Failed to cleanup orphaned session', {
+                  error: error instanceof Error ? error.message : String(error),
+                  socketId
+                });
+              }
+            }
+          })();
+          
+          cleanupPromises.push(cleanupPromise);
+          
+          // Limit concurrent cleanup operations to prevent overwhelming the system
+          if (cleanupPromises.length >= 10) {
+            await Promise.allSettled(cleanupPromises);
+            cleanupPromises.length = 0;
           }
-          cleanedSessions++;
         }
+      }
+      
+      // Wait for remaining cleanup operations
+      if (cleanupPromises.length > 0) {
+        await Promise.allSettled(cleanupPromises);
       }
 
       // Run LRU cache cleanup
       const expiredSessions = activeWhiteboardSessions.cleanup();
       const expiredVersions = canvasVersions.cleanup();
       const expiredColors = assignedColors.cleanup();
+      
+      // Clean up rate limiting warning cache
+      const warningCutoff = now.getTime() - (10 * 60 * 1000); // 10 minutes
+      for (const [key, timestamp] of lastCursorRateWarning.entries()) {
+        if (timestamp < warningCutoff) {
+          lastCursorRateWarning.delete(key);
+        }
+      }
 
       // Log memory statistics
       const sessionStats = activeWhiteboardSessions.getStats();
@@ -1294,6 +1838,8 @@ export function setupWhiteboardWebSocket(
           expiredSessions,
           expiredVersions,
           expiredColors,
+          warningCacheSize: lastCursorRateWarning.size,
+          activeCleanupOperations: cleanupOperations.size,
           memoryStats: {
             sessions: `${sessionStats.size}/${sessionStats.maxSize}`,
             versions: `${versionStats.size}/${versionStats.maxSize}`,
@@ -1303,7 +1849,11 @@ export function setupWhiteboardWebSocket(
       }
 
     } catch (error) {
-      logger.error('Failed to perform enhanced whiteboard cleanup', { error });
+      logger.error('Failed to perform enhanced whiteboard cleanup', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      isGlobalCleanupRunning = false;
     }
   };
 
