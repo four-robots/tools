@@ -772,3 +772,173 @@ export const WhiteboardAnalytics = z.object({
   })),
 });
 export type WhiteboardAnalytics = z.infer<typeof WhiteboardAnalytics>;
+
+// Cross-service integration types
+
+/**
+ * Cross-service resource types supported by whiteboard integration
+ */
+export const ResourceType = z.enum(['kanban_card', 'wiki_page', 'memory_node']);
+export type ResourceType = z.infer<typeof ResourceType>;
+
+/**
+ * Sync status for resource attachments
+ */
+export const SyncStatus = z.enum(['active', 'broken', 'outdated', 'conflict']);
+export type SyncStatus = z.infer<typeof SyncStatus>;
+
+/**
+ * Integration event types for tracking cross-service interactions
+ */
+export const IntegrationEventType = z.enum([
+  'search', 'attach', 'detach', 'sync', 'create_from_whiteboard', 'update_from_source', 'conflict_detected'
+]);
+export type IntegrationEventType = z.infer<typeof IntegrationEventType>;
+
+/**
+ * Unified search result from cross-service queries
+ */
+export const UnifiedSearchResult = z.object({
+  id: z.string().uuid(),
+  type: ResourceType,
+  title: z.string(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).default({}),
+  score: z.number().min(0).max(1).default(0), // Relevance score
+  service: z.string(), // Source service identifier
+  lastModified: z.string().datetime(),
+  author: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  attachable: z.boolean().default(true), // Whether this can be attached to whiteboard
+  thumbnail: z.string().optional(), // Preview image or icon
+});
+export type UnifiedSearchResult = z.infer<typeof UnifiedSearchResult>;
+
+/**
+ * Search request parameters
+ */
+export const UnifiedSearchRequest = z.object({
+  query: z.string().min(1).max(500),
+  services: z.array(z.string()).default(['kanban', 'wiki', 'memory']), // Services to search
+  filters: z.record(z.string(), z.any()).default({}), // Service-specific filters
+  limit: z.number().min(1).max(50).default(20),
+  includeContent: z.boolean().default(false), // Whether to include full content
+});
+export type UnifiedSearchRequest = z.infer<typeof UnifiedSearchRequest>;
+
+/**
+ * Resource attachment data
+ */
+export const ResourceAttachment = z.object({
+  id: z.string().uuid(),
+  whiteboardId: z.string().uuid(),
+  elementId: z.string().uuid(),
+  resourceType: ResourceType,
+  resourceId: z.string().uuid(),
+  resourceMetadata: z.record(z.string(), z.any()).default({}),
+  attachmentMetadata: z.record(z.string(), z.any()).default({}),
+  syncStatus: SyncStatus,
+  lastSyncAt: z.string().datetime(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type ResourceAttachment = z.infer<typeof ResourceAttachment>;
+
+/**
+ * Integration event for tracking
+ */
+export const IntegrationEvent = z.object({
+  id: z.string().uuid(),
+  whiteboardId: z.string().uuid(),
+  userId: z.string().uuid(),
+  eventType: IntegrationEventType,
+  serviceType: z.string(),
+  resourceId: z.string().uuid(),
+  elementId: z.string().uuid().optional(),
+  eventData: z.record(z.string(), z.any()).default({}),
+  success: z.boolean(),
+  errorMessage: z.string().optional(),
+  processingTimeMs: z.number().optional(),
+  createdAt: z.string().datetime(),
+});
+export type IntegrationEvent = z.infer<typeof IntegrationEvent>;
+
+/**
+ * Request to attach a resource to a whiteboard element
+ */
+export const AttachResourceRequest = z.object({
+  resourceType: ResourceType,
+  resourceId: z.string().uuid(),
+  elementId: z.string().uuid(),
+  attachmentMetadata: z.record(z.string(), z.any()).default({}),
+  syncEnabled: z.boolean().default(true),
+});
+export type AttachResourceRequest = z.infer<typeof AttachResourceRequest>;
+
+/**
+ * Extended element types for cross-service integration
+ */
+export const KanbanCardElementData = BaseElementData.extend({
+  cardId: z.string().uuid(),
+  title: z.string(),
+  description: z.string().optional(),
+  status: z.string(),
+  assignee: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  dueDate: z.string().datetime().optional(),
+  syncEnabled: z.boolean().default(true),
+});
+export type KanbanCardElementData = z.infer<typeof KanbanCardElementData>;
+
+export const WikiPageElementData = BaseElementData.extend({
+  pageId: z.string().uuid(),
+  title: z.string(),
+  excerpt: z.string().optional(),
+  contentPreview: z.string().optional(),
+  lastModified: z.string().datetime(),
+  author: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  syncEnabled: z.boolean().default(true),
+  showFullContent: z.boolean().default(false),
+});
+export type WikiPageElementData = z.infer<typeof WikiPageElementData>;
+
+export const MemoryNodeElementData = BaseElementData.extend({
+  nodeId: z.string().uuid(),
+  title: z.string(),
+  content: z.string().optional(),
+  nodeType: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  connections: z.array(z.object({
+    targetNodeId: z.string().uuid(),
+    relationship: z.string(),
+    strength: z.number().min(0).max(1).default(0.5),
+  })).default([]),
+  syncEnabled: z.boolean().default(true),
+  showConnections: z.boolean().default(true),
+});
+export type MemoryNodeElementData = z.infer<typeof MemoryNodeElementData>;
+
+/**
+ * Extended element data union including cross-service elements
+ */
+export const ExtendedWhiteboardElementData = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('rectangle'), data: RectangleElementData }),
+  z.object({ type: z.literal('ellipse'), data: EllipseElementData }),
+  z.object({ type: z.literal('text'), data: TextElementData }),
+  z.object({ type: z.literal('image'), data: ImageElementData }),
+  z.object({ type: z.literal('line'), data: LineElementData }),
+  z.object({ type: z.literal('arrow'), data: ArrowElementData }),
+  z.object({ type: z.literal('freehand'), data: FreehandElementData }),
+  z.object({ type: z.literal('sticky_note'), data: StickyNoteElementData }),
+  z.object({ type: z.literal('frame'), data: FrameElementData }),
+  // Cross-service integration elements
+  z.object({ type: z.literal('kanban_card'), data: KanbanCardElementData }),
+  z.object({ type: z.literal('wiki_page'), data: WikiPageElementData }),
+  z.object({ type: z.literal('memory_node'), data: MemoryNodeElementData }),
+  // Generic fallback for custom elements
+  z.object({ type: z.string(), data: z.record(z.string(), z.any()) }),
+]);
+export type ExtendedWhiteboardElementData = z.infer<typeof ExtendedWhiteboardElementData>;

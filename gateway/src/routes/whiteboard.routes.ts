@@ -9,7 +9,8 @@ import {
   WhiteboardService,
   WhiteboardElementService,
   WhiteboardPermissionService,
-  WhiteboardCollaborationService 
+  WhiteboardCollaborationService,
+  WhiteboardIntegrationService 
 } from '@mcp-tools/core';
 import {
   CreateWhiteboardRequest,
@@ -19,6 +20,8 @@ import {
   GrantPermissionRequest,
   WhiteboardFilter,
   WhiteboardSort,
+  UnifiedSearchRequest,
+  AttachResourceRequest,
 } from '@shared/types/whiteboard.js';
 
 const router = express.Router();
@@ -95,6 +98,23 @@ const ResolveCommentSchema = z.object({
   resolved: z.boolean(),
 });
 
+// Cross-service integration schemas
+const UnifiedSearchSchema = z.object({
+  query: z.string().min(1).max(500),
+  services: z.array(z.string()).default(['kanban', 'wiki', 'memory']),
+  filters: z.record(z.any()).default({}),
+  limit: z.number().min(1).max(50).default(20),
+  includeContent: z.boolean().default(false),
+});
+
+const AttachResourceSchema = z.object({
+  resourceType: z.enum(['kanban_card', 'wiki_page', 'memory_node']),
+  resourceId: z.string().uuid(),
+  elementId: z.string().uuid(),
+  attachmentMetadata: z.record(z.any()).default({}),
+  syncEnabled: z.boolean().default(true),
+});
+
 /**
  * Initialize whiteboard routes
  */
@@ -103,6 +123,7 @@ export function createWhiteboardRoutes(db: DatabasePool): express.Router {
   const elementService = new WhiteboardElementService(db, logger);
   const permissionService = new WhiteboardPermissionService(db, logger);
   const collaborationService = new WhiteboardCollaborationService(db);
+  const integrationService = new WhiteboardIntegrationService(db, logger);
 
   // Apply authentication middleware to all routes
   router.use(authMiddleware);
@@ -1251,6 +1272,447 @@ export function createWhiteboardRoutes(db: DatabasePool): express.Router {
           });
         }
 
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  // ==================== CROSS-SERVICE INTEGRATION ROUTES ====================
+
+  /**
+   * POST /api/v1/whiteboards/:id/search
+   * Unified search across Kanban, Wiki, and Memory services
+   */
+  router.post(
+    '/v1/whiteboards/:id/search',
+    validateRequest({ body: UnifiedSearchSchema }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const searchRequest = req.body as UnifiedSearchRequest;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const searchResult = await integrationService.unifiedSearch(
+          id,
+          userId,
+          searchRequest
+        );
+
+        res.json({
+          success: true,
+          data: searchResult,
+          message: 'Search completed successfully'
+        });
+      } catch (error) {
+        logger.error('Unified search error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/whiteboards/:id/attachments
+   * Get all resource attachments for a whiteboard
+   */
+  router.get(
+    '/v1/whiteboards/:id/attachments',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const attachments = await integrationService.getWhiteboardAttachments(id, userId);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            attachments,
+            total: attachments.length
+          },
+          message: 'Attachments retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get attachments error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/attachments
+   * Attach a resource from another service to a whiteboard element
+   */
+  router.post(
+    '/v1/whiteboards/:id/attachments',
+    validateRequest({ body: AttachResourceSchema }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const attachRequest = req.body as AttachResourceRequest;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const attachment = await integrationService.attachResource(
+          id,
+          userId,
+          attachRequest
+        );
+
+        res.status(201).json({
+          success: true,
+          data: attachment,
+          message: 'Resource attached successfully'
+        });
+      } catch (error) {
+        logger.error('Attach resource error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        if (error instanceof Error && error.message.includes('NOT_FOUND')) {
+          return res.status(404).json({
+            success: false,
+            error: 'Resource or element not found'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/v1/whiteboards/:id/attachments/:attachmentId
+   * Detach a resource from a whiteboard element
+   */
+  router.delete(
+    '/v1/whiteboards/:id/attachments/:attachmentId',
+    async (req: any, res) => {
+      try {
+        const { id, attachmentId } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        await integrationService.detachResource(id, attachmentId, userId);
+
+        res.json({
+          success: true,
+          message: 'Resource detached successfully'
+        });
+      } catch (error) {
+        logger.error('Detach resource error', { error, whiteboardId: req.params.id, attachmentId: req.params.attachmentId });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        if (error instanceof Error && error.message.includes('not found')) {
+          return res.status(404).json({
+            success: false,
+            error: 'Attachment not found'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/sync
+   * Sync all resource attachments with their source services
+   */
+  router.post(
+    '/v1/whiteboards/:id/sync',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const syncResult = await integrationService.syncResourceAttachments(id, userId);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            ...syncResult
+          },
+          message: 'Resource synchronization completed'
+        });
+      } catch (error) {
+        logger.error('Sync resources error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/kanban/cards
+   * Attach a Kanban card to the whiteboard
+   */
+  router.post(
+    '/v1/whiteboards/:id/kanban/cards',
+    validateRequest({ 
+      body: z.object({
+        cardId: z.string().uuid(),
+        elementId: z.string().uuid(),
+        position: z.object({
+          x: z.number(),
+          y: z.number(),
+        }),
+        size: z.object({
+          width: z.number(),
+          height: z.number(),
+        }).optional(),
+      })
+    }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const { cardId, elementId, position, size } = req.body;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const attachRequest: AttachResourceRequest = {
+          resourceType: 'kanban_card',
+          resourceId: cardId,
+          elementId,
+          attachmentMetadata: { position, size },
+          syncEnabled: true,
+        };
+
+        const attachment = await integrationService.attachResource(id, userId, attachRequest);
+
+        res.status(201).json({
+          success: true,
+          data: attachment,
+          message: 'Kanban card attached successfully'
+        });
+      } catch (error) {
+        logger.error('Attach Kanban card error', { error, whiteboardId: req.params.id });
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/wiki/pages
+   * Attach a Wiki page to the whiteboard
+   */
+  router.post(
+    '/v1/whiteboards/:id/wiki/pages',
+    validateRequest({ 
+      body: z.object({
+        pageId: z.string().uuid(),
+        elementId: z.string().uuid(),
+        showFullContent: z.boolean().default(false),
+        position: z.object({
+          x: z.number(),
+          y: z.number(),
+        }),
+        size: z.object({
+          width: z.number(),
+          height: z.number(),
+        }).optional(),
+      })
+    }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const { pageId, elementId, showFullContent, position, size } = req.body;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const attachRequest: AttachResourceRequest = {
+          resourceType: 'wiki_page',
+          resourceId: pageId,
+          elementId,
+          attachmentMetadata: { position, size, showFullContent },
+          syncEnabled: true,
+        };
+
+        const attachment = await integrationService.attachResource(id, userId, attachRequest);
+
+        res.status(201).json({
+          success: true,
+          data: attachment,
+          message: 'Wiki page attached successfully'
+        });
+      } catch (error) {
+        logger.error('Attach Wiki page error', { error, whiteboardId: req.params.id });
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/memory/nodes
+   * Attach a Memory node to the whiteboard
+   */
+  router.post(
+    '/v1/whiteboards/:id/memory/nodes',
+    validateRequest({ 
+      body: z.object({
+        nodeId: z.string().uuid(),
+        elementId: z.string().uuid(),
+        showConnections: z.boolean().default(true),
+        position: z.object({
+          x: z.number(),
+          y: z.number(),
+        }),
+        size: z.object({
+          width: z.number(),
+          height: z.number(),
+        }).optional(),
+      })
+    }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const { nodeId, elementId, showConnections, position, size } = req.body;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const attachRequest: AttachResourceRequest = {
+          resourceType: 'memory_node',
+          resourceId: nodeId,
+          elementId,
+          attachmentMetadata: { position, size, showConnections },
+          syncEnabled: true,
+        };
+
+        const attachment = await integrationService.attachResource(id, userId, attachRequest);
+
+        res.status(201).json({
+          success: true,
+          data: attachment,
+          message: 'Memory node attached successfully'
+        });
+      } catch (error) {
+        logger.error('Attach Memory node error', { error, whiteboardId: req.params.id });
         res.status(500).json({
           success: false,
           error: error instanceof Error ? error.message : 'Internal server error'

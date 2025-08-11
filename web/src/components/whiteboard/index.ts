@@ -4,6 +4,12 @@ export { default as WhiteboardEditor } from './WhiteboardEditor';
 export { default as WhiteboardToolbar } from './WhiteboardToolbar';
 export { default as WhiteboardList } from './WhiteboardList';
 
+// Cross-service integration components
+export { default as UnifiedSearchModal } from './search/UnifiedSearchModal';
+export { default as KanbanCardElement } from './elements/KanbanCardElement';
+export { default as WikiPageElement } from './elements/WikiPageElement';
+export { default as MemoryNodeElement } from './elements/MemoryNodeElement';
+
 // Context and providers
 export { 
   WhiteboardProvider,
@@ -19,6 +25,10 @@ export {
 export { useWhiteboard } from './hooks/useWhiteboard';
 export { useWhiteboardCanvas } from './hooks/useWhiteboardCanvas';
 export { useWhiteboardPersistence } from './hooks/useWhiteboardPersistence';
+
+// Integration hooks
+export { useUnifiedSearch } from './hooks/useUnifiedSearch';
+export { useWhiteboardIntegration } from './hooks/useWhiteboardIntegration';
 
 // Utilities
 export * from './utils/tldraw-serialization';

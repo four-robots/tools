@@ -579,6 +579,244 @@ export function setupWhiteboardWebSocket(
       }
     });
 
+    // ==================== CROSS-SERVICE INTEGRATION EVENTS ====================
+
+    // Resource attachment notification
+    socket.on('whiteboard:resource_attached', async (data: {
+      whiteboardId: string;
+      elementId: string;
+      resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+      resourceId: string;
+      resourceMetadata: any;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, elementId, resourceType, resourceId, resourceMetadata } = data;
+
+        // Broadcast resource attachment to other participants
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_attached', {
+          elementId,
+          resourceType,
+          resourceId,
+          resourceMetadata,
+          attachedBy: {
+            id: socket.user.id,
+            name: socket.user.name,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info('Resource attached to whiteboard', {
+          whiteboardId,
+          elementId,
+          resourceType,
+          resourceId,
+          userId: socket.user.id,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast resource attachment', { error, data });
+      }
+    });
+
+    // Resource detachment notification
+    socket.on('whiteboard:resource_detached', async (data: {
+      whiteboardId: string;
+      elementId: string;
+      resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+      resourceId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, elementId, resourceType, resourceId } = data;
+
+        // Broadcast resource detachment to other participants
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_detached', {
+          elementId,
+          resourceType,
+          resourceId,
+          detachedBy: {
+            id: socket.user.id,
+            name: socket.user.name,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info('Resource detached from whiteboard', {
+          whiteboardId,
+          elementId,
+          resourceType,
+          resourceId,
+          userId: socket.user.id,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast resource detachment', { error, data });
+      }
+    });
+
+    // Resource synchronization notification
+    socket.on('whiteboard:resource_synced', async (data: {
+      whiteboardId: string;
+      elementId: string;
+      resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+      resourceId: string;
+      resourceMetadata: any;
+      changes?: any;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, elementId, resourceType, resourceId, resourceMetadata, changes } = data;
+
+        // Broadcast resource sync update to other participants
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_synced', {
+          elementId,
+          resourceType,
+          resourceId,
+          resourceMetadata,
+          changes,
+          syncedBy: {
+            id: socket.user.id,
+            name: socket.user.name,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('Resource synced in whiteboard', {
+          whiteboardId,
+          elementId,
+          resourceType,
+          resourceId,
+          hasChanges: !!changes,
+          userId: socket.user.id,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast resource sync', { error, data });
+      }
+    });
+
+    // Resource external update notification (from source service)
+    socket.on('whiteboard:resource_updated_external', async (data: {
+      whiteboardId: string;
+      elementId: string;
+      resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+      resourceId: string;
+      resourceMetadata: any;
+      updateSource: string; // 'kanban', 'wiki', 'memory'
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, elementId, resourceType, resourceId, resourceMetadata, updateSource } = data;
+
+        // Broadcast external resource update to all participants
+        io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_updated_external', {
+          elementId,
+          resourceType,
+          resourceId,
+          resourceMetadata,
+          updateSource,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('External resource update broadcast', {
+          whiteboardId,
+          elementId,
+          resourceType,
+          resourceId,
+          updateSource,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast external resource update', { error, data });
+      }
+    });
+
+    // Unified search initiated (for awareness)
+    socket.on('whiteboard:search_initiated', async (data: {
+      whiteboardId: string;
+      query: string;
+      services: string[];
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, query, services } = data;
+
+        // Broadcast search activity to other participants (optional awareness feature)
+        socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_activity', {
+          searchedBy: {
+            id: socket.user.id,
+            name: socket.user.name,
+          },
+          query,
+          services,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('Search initiated in whiteboard', {
+          whiteboardId,
+          query,
+          services,
+          userId: socket.user.id,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast search activity', { error, data });
+      }
+    });
+
+    // Bulk resource synchronization status
+    socket.on('whiteboard:bulk_sync_status', async (data: {
+      whiteboardId: string;
+      syncResult: {
+        synced: number;
+        failed: number;
+        conflicts: number;
+      };
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, syncResult } = data;
+
+        // Broadcast bulk sync completion to other participants
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:bulk_sync_completed', {
+          syncResult,
+          syncedBy: {
+            id: socket.user.id,
+            name: socket.user.name,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info('Bulk sync completed in whiteboard', {
+          whiteboardId,
+          syncResult,
+          userId: socket.user.id,
+        });
+
+      } catch (error) {
+        logger.error('Failed to broadcast bulk sync status', { error, data });
+      }
+    });
+
     // ==================== DISCONNECT HANDLING ====================
 
     socket.on('disconnect', async (reason: string) => {
@@ -771,6 +1009,128 @@ export function broadcastCommentUpdate(
   data: any
 ): void {
   io.to(`whiteboard:${whiteboardId}:comments`).emit(`whiteboard:${event}`, {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+// ==================== CROSS-SERVICE INTEGRATION BROADCAST UTILITIES ====================
+
+/**
+ * Broadcast resource attachment to whiteboard participants
+ */
+export function broadcastResourceAttachment(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    elementId: string;
+    resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+    resourceId: string;
+    resourceMetadata: any;
+    attachedBy: { id: string; name: string };
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_attached', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast resource detachment to whiteboard participants
+ */
+export function broadcastResourceDetachment(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    elementId: string;
+    resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+    resourceId: string;
+    detachedBy: { id: string; name: string };
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_detached', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast resource synchronization to whiteboard participants
+ */
+export function broadcastResourceSync(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    elementId: string;
+    resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+    resourceId: string;
+    resourceMetadata: any;
+    changes?: any;
+    syncedBy?: { id: string; name: string };
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_synced', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast external resource update to whiteboard participants
+ * This is called when a resource is updated in its source service (Kanban, Wiki, Memory)
+ */
+export function broadcastExternalResourceUpdate(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    elementId: string;
+    resourceType: 'kanban_card' | 'wiki_page' | 'memory_node';
+    resourceId: string;
+    resourceMetadata: any;
+    updateSource: string;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:resource_updated_external', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast search activity to whiteboard participants (for awareness)
+ */
+export function broadcastSearchActivity(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    searchedBy: { id: string; name: string };
+    query: string;
+    services: string[];
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_activity', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast bulk synchronization completion to whiteboard participants
+ */
+export function broadcastBulkSyncCompleted(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    syncResult: {
+      synced: number;
+      failed: number;
+      conflicts: number;
+    };
+    syncedBy: { id: string; name: string };
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:bulk_sync_completed', {
     ...data,
     timestamp: new Date().toISOString(),
   });
