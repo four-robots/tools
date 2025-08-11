@@ -9,6 +9,12 @@ import jwt from 'jsonwebtoken';
 import { KanbanService } from '@mcp-tools/core/kanban';
 import { AnalyticsService } from '../services/AnalyticsService.js';
 import { setupAnalyticsWebSocket } from './analytics.websocket.js';
+import { setupWorkspaceWebSocket } from './workspace-socket.js';
+import {
+  WorkspaceSessionService,
+  WorkspaceActivityService,
+  WorkspaceMembershipService,
+} from '@mcp-tools/core/services/workspace';
 
 interface AuthenticatedSocket {
   id: string;
@@ -24,7 +30,16 @@ interface AuthenticatedSocket {
   disconnect: () => void;
 }
 
-export function setupWebSocket(io: SocketIOServer, kanbanService: KanbanService, analyticsService?: AnalyticsService): void {
+export function setupWebSocket(
+  io: SocketIOServer, 
+  kanbanService: KanbanService, 
+  analyticsService?: AnalyticsService,
+  workspaceServices?: {
+    workspaceSessionService: WorkspaceSessionService;
+    workspaceActivityService: WorkspaceActivityService;
+    workspaceMembershipService: WorkspaceMembershipService;
+  }
+): void {
   // Authentication middleware
   io.use(async (socket: any, next) => {
     try {
@@ -227,6 +242,11 @@ export function setupWebSocket(io: SocketIOServer, kanbanService: KanbanService,
   // Set up analytics WebSocket if service is provided
   if (analyticsService) {
     setupAnalyticsWebSocket(io, analyticsService);
+  }
+
+  // Set up workspace WebSocket if services are provided
+  if (workspaceServices) {
+    setupWorkspaceWebSocket(io, workspaceServices);
   }
   
   // Example: Memory updates could be broadcast here

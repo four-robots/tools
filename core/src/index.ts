@@ -23,6 +23,7 @@ export * from './services/collaboration/index.js';
 export * from './services/multi-tenant/index.js';
 export * from './services/federation/index.js';
 export * from './services/event-sourcing/index.js';
+export * from './services/workspace/index.js';
 // Temporarily disabled quality service due to glob import issues
 // export * from './services/quality/index.js';
 
