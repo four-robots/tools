@@ -223,12 +223,460 @@ export const AnalyticsSchemas = {
   TimeSeriesDataPoint: TimeSeriesDataPointSchema,
   TimeSeriesData: TimeSeriesDataSchema,
   ChartConfig: ChartConfigSchema,
+  
+  // Real-time dashboard schemas
+  DashboardWidgetConfig: DashboardWidgetConfigSchema,
+  DataQuery: DataQuerySchema,
+  DashboardWidget: DashboardWidgetSchema,
+  DashboardConfiguration: DashboardConfigurationSchema,
+  MetricValue: MetricValueSchema,
+  StreamMetric: StreamMetricSchema,
+  CollaborationEvent: CollaborationEventSchema,
+  SystemMetric: SystemMetricSchema,
+  UserActivity: UserActivitySchema,
+  TimeWindow: TimeWindowSchema,
+  AggregationResult: AggregationResultSchema,
+  AlertCondition: AlertConditionSchema,
+  AlertAction: AlertActionSchema,
+  AlertRule: AlertRuleSchema,
+  Alert: AlertSchema,
+  RealtimeMetricValue: RealtimeMetricValueSchema,
+  MetricUpdate: MetricUpdateSchema,
+  CollaborationMetrics: CollaborationMetricsSchema,
+  UserEngagementMetrics: UserEngagementMetricsSchema,
+  SystemHealthMetrics: SystemHealthMetricsSchema,
+  AlertMetrics: AlertMetricsSchema,
+  UserJourney: UserJourneySchema,
+  CollaborationPattern: CollaborationPatternSchema,
+  Anomaly: AnomalySchema,
+  ReportConfig: ReportConfigSchema,
+  Report: ReportSchema,
+  TimeRange: TimeRangeSchema,
+  FilterCondition: FilterConditionSchema,
+  AnalyticsQueryEngine: AnalyticsQueryEngineSchema,
+  WidgetData: WidgetDataSchema,
 };
 
 // Utility types for analytics
 export type AnalyticsMetricType = 'tasks' | 'wiki' | 'memory' | 'collaboration' | 'performance';
 export type AnalyticsTimeframe = 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type AnalyticsAggregation = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'percentile';
+
+// Real-time analytics dashboard types
+export const DashboardWidgetConfigSchema = z.object({
+  chartType: z.enum(['line', 'bar', 'pie', 'gauge', 'number', 'table', 'heatmap']).optional(),
+  timeRange: z.object({
+    start: z.date(),
+    end: z.date(),
+    preset: z.enum(['1h', '4h', '24h', '7d', '30d', 'custom']).optional(),
+  }),
+  dimensions: z.array(z.string()).optional(),
+  filters: z.array(z.object({
+    field: z.string(),
+    operator: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'contains']),
+    value: z.any(),
+  })).optional(),
+  aggregation: z.enum(['sum', 'avg', 'count', 'min', 'max', 'p50', 'p95', 'p99']).optional(),
+  groupBy: z.array(z.string()).optional(),
+});
+
+export type DashboardWidgetConfig = z.infer<typeof DashboardWidgetConfigSchema>;
+
+export const DataQuerySchema = z.object({
+  metric: z.string(),
+  aggregation: z.enum(['sum', 'avg', 'count', 'min', 'max', 'p50', 'p95', 'p99']),
+  timeRange: DashboardWidgetConfigSchema.shape.timeRange,
+  filters: DashboardWidgetConfigSchema.shape.filters.optional(),
+  groupBy: z.array(z.string()).optional(),
+  limit: z.number().int().positive().max(10000).optional(),
+});
+
+export type DataQuery = z.infer<typeof DataQuerySchema>;
+
+export const DashboardWidgetSchema = z.object({
+  id: z.string().uuid(),
+  type: z.enum(['metric_card', 'time_series', 'bar_chart', 'pie_chart', 'gauge', 'data_table', 'heatmap', 'alert_panel']),
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  config: DashboardWidgetConfigSchema,
+  dataQuery: DataQuerySchema,
+  position: z.object({
+    x: z.number().int().min(0),
+    y: z.number().int().min(0),
+    width: z.number().int().min(1),
+    height: z.number().int().min(1),
+  }),
+  refreshInterval: z.number().int().min(5).max(3600).default(30), // 5 seconds to 1 hour
+  isVisible: z.boolean().default(true),
+});
+
+export type DashboardWidget = z.infer<typeof DashboardWidgetSchema>;
+
+export const DashboardConfigurationSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  layout: z.object({
+    columns: z.number().int().min(1).max(24).default(12),
+    rowHeight: z.number().int().min(10).default(150),
+    margin: z.tuple([z.number(), z.number()]).default([10, 10]),
+  }),
+  widgets: z.array(DashboardWidgetSchema),
+  ownerId: z.string().uuid(),
+  sharedWithUsers: z.array(z.string().uuid()).default([]),
+  sharedWithWorkspaces: z.array(z.string().uuid()).default([]),
+  isPublic: z.boolean().default(false),
+  refreshIntervalSeconds: z.number().int().min(10).max(3600).default(30),
+  autoRefreshEnabled: z.boolean().default(true),
+  tenantId: z.string().uuid().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export type DashboardConfiguration = z.infer<typeof DashboardConfigurationSchema>;
+
+// Real-time metrics and streaming types
+export const MetricValueSchema = z.object({
+  value: z.number(),
+  timestamp: z.date(),
+  dimensions: z.record(z.string(), z.any()).optional(),
+});
+
+export type MetricValue = z.infer<typeof MetricValueSchema>;
+
+export const StreamMetricSchema = z.object({
+  name: z.string(),
+  type: z.enum(['gauge', 'counter', 'histogram', 'summary']),
+  value: z.number(),
+  dimensions: z.record(z.string(), z.any()).default({}),
+  timestamp: z.date().default(() => new Date()),
+  tenantId: z.string().uuid().optional(),
+  workspaceId: z.string().uuid().optional(),
+});
+
+export type StreamMetric = z.infer<typeof StreamMetricSchema>;
+
+export const CollaborationEventSchema = z.object({
+  sessionId: z.string().uuid(),
+  eventType: z.enum(['session_start', 'user_join', 'user_leave', 'content_modification', 'conflict_detected', 'conflict_resolved']),
+  userId: z.string().uuid(),
+  resourceType: z.enum(['kanban', 'wiki', 'memory', 'search']),
+  resourceId: z.string().uuid(),
+  metadata: z.record(z.any()).default({}),
+  timestamp: z.date().default(() => new Date()),
+  tenantId: z.string().uuid().optional(),
+  workspaceId: z.string().uuid().optional(),
+});
+
+export type CollaborationEvent = z.infer<typeof CollaborationEventSchema>;
+
+export const SystemMetricSchema = z.object({
+  serviceName: z.string(),
+  serviceInstance: z.string().optional(),
+  metricType: z.enum(['cpu', 'memory', 'disk', 'network', 'database', 'websocket', 'api_response']),
+  metricName: z.string(),
+  value: z.number(),
+  unit: z.string().optional(),
+  metadata: z.record(z.any()).default({}),
+  timestamp: z.date().default(() => new Date()),
+});
+
+export type SystemMetric = z.infer<typeof SystemMetricSchema>;
+
+export const UserActivitySchema = z.object({
+  userId: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  activityType: z.enum(['page_view', 'click', 'input', 'scroll', 'feature_use', 'collaboration']),
+  feature: z.string().optional(),
+  duration: z.number().int().min(0).optional(),
+  metadata: z.record(z.any()).default({}),
+  timestamp: z.date().default(() => new Date()),
+  tenantId: z.string().uuid().optional(),
+});
+
+export type UserActivity = z.infer<typeof UserActivitySchema>;
+
+// Time window and aggregation types
+export const TimeWindowSchema = z.object({
+  id: z.string(),
+  windowSize: z.number().int().min(1), // in seconds
+  slideInterval: z.number().int().min(1), // in seconds
+  startTime: z.date(),
+  endTime: z.date(),
+});
+
+export type TimeWindow = z.infer<typeof TimeWindowSchema>;
+
+export const AggregationResultSchema = z.object({
+  metric: z.string(),
+  aggregationType: z.enum(['sum', 'avg', 'count', 'min', 'max', 'p50', 'p95', 'p99']),
+  value: z.number(),
+  timestamp: z.date(),
+  dimensions: z.record(z.string(), z.any()).optional(),
+  windowId: z.string().optional(),
+});
+
+export type AggregationResult = z.infer<typeof AggregationResultSchema>;
+
+// Alert types
+export const AlertConditionSchema = z.object({
+  type: z.enum(['threshold', 'anomaly', 'rate_of_change']),
+  metric: z.string(),
+  operator: z.enum(['gt', 'gte', 'lt', 'lte', 'eq', 'ne']).optional(),
+  threshold: z.number().optional(),
+  sensitivity: z.number().min(0).max(1).optional(), // for anomaly detection
+  timeWindow: z.number().int().min(60).optional(), // in seconds
+  evaluationInterval: z.number().int().min(30).default(60), // in seconds
+});
+
+export type AlertCondition = z.infer<typeof AlertConditionSchema>;
+
+export const AlertActionSchema = z.object({
+  type: z.enum(['email', 'slack', 'webhook', 'dashboard']),
+  target: z.string(), // email, slack channel, webhook URL, etc.
+  template: z.string().optional(),
+  escalationDelay: z.number().int().min(0).optional(), // in seconds
+});
+
+export type AlertAction = z.infer<typeof AlertActionSchema>;
+
+export const AlertRuleSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  condition: AlertConditionSchema,
+  actions: z.array(AlertActionSchema),
+  isEnabled: z.boolean().default(true),
+  tenantId: z.string().uuid().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export type AlertRule = z.infer<typeof AlertRuleSchema>;
+
+export const AlertSchema = z.object({
+  id: z.string().uuid().optional(),
+  ruleId: z.string().uuid(),
+  level: z.enum(['info', 'warning', 'critical']),
+  title: z.string(),
+  message: z.string(),
+  currentValue: z.number(),
+  thresholdValue: z.number().optional(),
+  status: z.enum(['active', 'acknowledged', 'resolved']).default('active'),
+  acknowledgedBy: z.string().uuid().optional(),
+  acknowledgedAt: z.date().optional(),
+  resolvedBy: z.string().uuid().optional(),
+  resolvedAt: z.date().optional(),
+  triggeredAt: z.date().default(() => new Date()),
+  tenantId: z.string().uuid().optional(),
+});
+
+export type Alert = z.infer<typeof AlertSchema>;
+
+// Real-time dashboard data types
+export const RealtimeMetricValueSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  timestamp: z.date(),
+  change: z.number().optional(), // percentage change
+  trend: z.enum(['up', 'down', 'stable']).optional(),
+  unit: z.string().optional(),
+});
+
+export type RealtimeMetricValue = z.infer<typeof RealtimeMetricValueSchema>;
+
+export const MetricUpdateSchema = z.object({
+  metricName: z.string(),
+  value: z.number(),
+  timestamp: z.date(),
+  dashboardId: z.string().uuid().optional(),
+  widgetId: z.string().uuid().optional(),
+});
+
+export type MetricUpdate = z.infer<typeof MetricUpdateSchema>;
+
+// Collaboration and user engagement metrics
+export const CollaborationMetricsSchema = z.object({
+  activeSessions: z.number().int().min(0),
+  totalParticipants: z.number().int().min(0),
+  avgSessionDuration: z.number().min(0),
+  conflictsDetected: z.number().int().min(0),
+  conflictsResolved: z.number().int().min(0),
+  avgResolutionTime: z.number().min(0),
+  topCollaborativeFeatures: z.array(z.object({
+    feature: z.string(),
+    usageCount: z.number().int().min(0),
+  })),
+});
+
+export type CollaborationMetrics = z.infer<typeof CollaborationMetricsSchema>;
+
+export const UserEngagementMetricsSchema = z.object({
+  activeUsers: z.number().int().min(0),
+  newUsers: z.number().int().min(0),
+  returningUsers: z.number().int().min(0),
+  avgSessionDuration: z.number().min(0),
+  avgInteractionsPerSession: z.number().min(0),
+  topFeatures: z.array(z.object({
+    feature: z.string(),
+    usageCount: z.number().int().min(0),
+    uniqueUsers: z.number().int().min(0),
+  })),
+  retentionRate: z.number().min(0).max(100),
+});
+
+export type UserEngagementMetrics = z.infer<typeof UserEngagementMetricsSchema>;
+
+export const SystemHealthMetricsSchema = z.object({
+  uptime: z.number().min(0).max(100), // percentage
+  avgResponseTime: z.number().min(0),
+  errorRate: z.number().min(0).max(100), // percentage
+  activeConnections: z.number().int().min(0),
+  databaseConnections: z.number().int().min(0),
+  memoryUsage: z.number().min(0).max(100), // percentage
+  cpuUsage: z.number().min(0).max(100), // percentage
+  diskUsage: z.number().min(0).max(100), // percentage
+  services: z.array(z.object({
+    name: z.string(),
+    status: z.enum(['healthy', 'degraded', 'unhealthy']),
+    responseTime: z.number().min(0),
+  })),
+});
+
+export type SystemHealthMetrics = z.infer<typeof SystemHealthMetricsSchema>;
+
+export const AlertMetricsSchema = z.object({
+  activeAlerts: z.number().int().min(0),
+  alertsByLevel: z.object({
+    info: z.number().int().min(0),
+    warning: z.number().int().min(0),
+    critical: z.number().int().min(0),
+  }),
+  avgResolutionTime: z.number().min(0),
+  escalatedAlerts: z.number().int().min(0),
+  recentAlerts: z.array(AlertSchema),
+});
+
+export type AlertMetrics = z.infer<typeof AlertMetricsSchema>;
+
+// User journey and pattern analysis
+export const UserJourneySchema = z.object({
+  userId: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  steps: z.array(z.object({
+    timestamp: z.date(),
+    action: z.string(),
+    feature: z.string(),
+    duration: z.number().int().min(0),
+    metadata: z.record(z.any()).optional(),
+  })),
+  totalDuration: z.number().int().min(0),
+  completedGoals: z.array(z.string()),
+  dropOffPoint: z.string().optional(),
+});
+
+export type UserJourney = z.infer<typeof UserJourneySchema>;
+
+export const CollaborationPatternSchema = z.object({
+  pattern: z.string(),
+  frequency: z.number().int().min(0),
+  participants: z.array(z.string().uuid()),
+  avgDuration: z.number().min(0),
+  successRate: z.number().min(0).max(100),
+  commonActions: z.array(z.string()),
+});
+
+export type CollaborationPattern = z.infer<typeof CollaborationPatternSchema>;
+
+export const AnomalySchema = z.object({
+  id: z.string().uuid().optional(),
+  metric: z.string(),
+  detectedAt: z.date(),
+  severity: z.enum(['low', 'medium', 'high']),
+  description: z.string(),
+  expectedValue: z.number(),
+  actualValue: z.number(),
+  confidence: z.number().min(0).max(1),
+  metadata: z.record(z.any()).optional(),
+});
+
+export type Anomaly = z.infer<typeof AnomalySchema>;
+
+// Report generation types
+export const ReportConfigSchema = z.object({
+  name: z.string().min(1).max(255),
+  type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
+  metrics: z.array(z.string()),
+  timeRange: DashboardWidgetConfigSchema.shape.timeRange,
+  filters: DashboardWidgetConfigSchema.shape.filters.optional(),
+  format: z.enum(['pdf', 'excel', 'csv', 'json']),
+  recipients: z.array(z.string().email()).optional(),
+  schedule: z.string().optional(), // cron expression
+  tenantId: z.string().uuid().optional(),
+  workspaceId: z.string().uuid().optional(),
+});
+
+export type ReportConfig = z.infer<typeof ReportConfigSchema>;
+
+export const ReportSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string(),
+  config: ReportConfigSchema,
+  generatedAt: z.date().default(() => new Date()),
+  data: z.record(z.any()),
+  summary: z.object({
+    totalMetrics: z.number().int().min(0),
+    keyFindings: z.array(z.string()),
+    recommendations: z.array(z.string()).optional(),
+  }),
+  fileUrl: z.string().url().optional(),
+});
+
+export type Report = z.infer<typeof ReportSchema>;
+
+// Enhanced analytics query types
+export const TimeRangeSchema = z.object({
+  start: z.date(),
+  end: z.date(),
+  preset: z.enum(['1h', '4h', '24h', '7d', '30d', 'custom']).optional(),
+});
+
+export type TimeRange = z.infer<typeof TimeRangeSchema>;
+
+export const FilterConditionSchema = z.object({
+  field: z.string(),
+  operator: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'contains', 'starts_with', 'ends_with']),
+  value: z.any(),
+});
+
+export type FilterCondition = z.infer<typeof FilterConditionSchema>;
+
+export const AnalyticsQueryEngineSchema = z.object({
+  metric: z.string(),
+  aggregation: z.enum(['sum', 'avg', 'count', 'min', 'max', 'p50', 'p95', 'p99']),
+  timeRange: TimeRangeSchema,
+  granularity: z.enum(['1m', '5m', '1h', '1d']).optional(),
+  filters: z.array(FilterConditionSchema).optional(),
+  groupBy: z.array(z.string()).optional(),
+  limit: z.number().int().positive().max(10000).optional(),
+  offset: z.number().int().min(0).optional(),
+});
+
+export type AnalyticsQueryEngine = z.infer<typeof AnalyticsQueryEngineSchema>;
+
+// Widget-specific types
+export const WidgetDataSchema = z.object({
+  labels: z.array(z.string()).optional(),
+  datasets: z.array(z.object({
+    name: z.string(),
+    data: z.array(z.number()),
+    color: z.string().optional(),
+    unit: z.string().optional(),
+  })),
+  metadata: z.record(z.any()).optional(),
+});
+
+export type WidgetData = z.infer<typeof WidgetDataSchema>;
 
 // Constants for analytics
 export const ANALYTICS_CONSTANTS = {
@@ -238,4 +686,8 @@ export const ANALYTICS_CONSTANTS = {
   REAL_TIME_UPDATE_INTERVAL: 30000, // 30 seconds
   CACHE_TTL: 300, // 5 minutes
   INSIGHT_CONFIDENCE_THRESHOLD: 0.7,
+  MAX_DASHBOARD_WIDGETS: 50,
+  MAX_ALERT_RULES: 100,
+  DEFAULT_AGGREGATION_WINDOW: 300, // 5 minutes in seconds
+  MAX_TIME_WINDOW_SIZE: 86400, // 24 hours in seconds
 } as const;
