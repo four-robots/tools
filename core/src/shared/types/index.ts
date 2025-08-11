@@ -64,3 +64,6 @@ export * from './collaboration.js';
 
 // Live search collaboration types
 export * from './live-search-collaboration.js';
+
+// Multi-tenant architecture types
+export * from './multi-tenant.js';
