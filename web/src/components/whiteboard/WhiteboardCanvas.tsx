@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   Tldraw, 
   Editor,
@@ -8,6 +8,8 @@ import {
 } from '@tldraw/tldraw';
 import { useWhiteboardCanvas } from './hooks/useWhiteboardCanvas';
 import { useWhiteboardPersistence } from './hooks/useWhiteboardPersistence';
+import { useWhiteboardCursors } from './hooks/useWhiteboardCursors';
+import { CursorManager } from './WhiteboardCursor';
 import { serializeCanvasData, deserializeCanvasData } from './utils/tldraw-serialization';
 
 interface WhiteboardCanvasProps {
@@ -17,6 +19,14 @@ interface WhiteboardCanvasProps {
   onCanvasChange?: (data: any) => void;
   onMount?: (editor: Editor) => void;
   className?: string;
+  socket?: any; // Socket.IO client instance
+  userInfo?: {
+    userId: string;
+    userName: string;
+    userColor: string;
+  };
+  sessionId?: string;
+  enableCursors?: boolean;
 }
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
@@ -26,8 +36,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onCanvasChange,
   onMount,
   className = '',
+  socket,
+  userInfo,
+  sessionId,
+  enableCursors = true,
 }) => {
   const editorRef = useRef<Editor | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Canvas state management
   const {
@@ -45,6 +60,36 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     lastSaved,
     saveError,
   } = useWhiteboardPersistence(whiteboardId, workspaceId);
+
+  // Viewport state for cursor tracking
+  const [viewport, setViewport] = useState({
+    x: 0,
+    y: 0,
+    zoom: 1,
+    width: 1920,
+    height: 1080,
+  });
+
+  // Live cursor tracking
+  const {
+    cursors,
+    activeCursors,
+    isTracking,
+    connectionStatus,
+    stats,
+  } = useWhiteboardCursors({
+    whiteboardId,
+    sessionId: sessionId || `session_${Date.now()}`,
+    socket,
+    containerRef,
+    viewport,
+    userInfo: userInfo || {
+      userId: 'anonymous',
+      userName: 'Anonymous User',
+      userColor: '#6B73FF',
+    },
+    enabled: enableCursors && !!socket && !!userInfo,
+  });
 
   // Handle editor mount
   const handleMount = useCallback((editor: Editor) => {
@@ -82,6 +127,20 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       
       // Auto-save after 5 seconds of inactivity
       saveCanvasData(serializedData);
+
+      // Update viewport for cursor tracking
+      if (containerRef.current) {
+        const camera = editor.getCamera();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        
+        setViewport({
+          x: camera.x,
+          y: camera.y,
+          zoom: camera.z,
+          width: containerRect.width,
+          height: containerRect.height,
+        });
+      }
     } catch (error) {
       console.error('Failed to save canvas changes:', error);
     }
@@ -126,7 +185,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   }
 
   return (
-    <div className={`whiteboard-canvas-container ${className}`}>
+    <div ref={containerRef} className={`whiteboard-canvas-container relative ${className}`}>
       {/* Auto-save indicator */}
       <div className="absolute top-4 right-4 z-10">
         {isSaving && (
@@ -146,6 +205,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         )}
       </div>
 
+      {/* Cursor tracking status indicator */}
+      {enableCursors && userInfo && (
+        <div className="absolute top-4 left-4 z-10">
+          <div className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
+            connectionStatus === 'connected' 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-red-100 text-red-700'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+            }`} />
+            {stats.activeCursors} cursor{stats.activeCursors !== 1 ? 's' : ''}
+            {connectionStatus === 'connected' ? ' active' : ' disconnected'}
+          </div>
+        </div>
+      )}
+
       {/* Main tldraw component */}
       <div className="w-full h-full">
         <Tldraw
@@ -158,6 +234,17 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           persistenceKey={`whiteboard-${workspaceId}-${whiteboardId}`}
         />
       </div>
+
+      {/* Live cursor overlay */}
+      {enableCursors && activeCursors.length > 0 && (
+        <CursorManager
+          cursors={activeCursors}
+          containerRef={containerRef}
+          viewport={viewport}
+          showLabels={true}
+          maxCursors={25}
+        />
+      )}
     </div>
   );
 };

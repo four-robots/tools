@@ -329,8 +329,40 @@ export const WhiteboardCursorPosition = z.object({
   y: z.number(),
   elementId: z.string().uuid().optional(),
   isDrawing: z.boolean().default(false),
+  timestamp: z.string().datetime().optional(),
 });
 export type WhiteboardCursorPosition = z.infer<typeof WhiteboardCursorPosition>;
+
+// Enhanced cursor tracking for real-time collaboration
+export const LiveCursorPosition = z.object({
+  x: z.number(),
+  y: z.number(),
+  canvasX: z.number(),
+  canvasY: z.number(),
+  timestamp: z.number(),
+  interpolated: z.boolean().default(false),
+});
+export type LiveCursorPosition = z.infer<typeof LiveCursorPosition>;
+
+export const LiveCursorState = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  userColor: z.string(),
+  currentPosition: LiveCursorPosition,
+  lastPosition: LiveCursorPosition.optional(),
+  isActive: z.boolean().default(true),
+  lastSeen: z.number(),
+  sessionId: z.string().uuid(),
+});
+export type LiveCursorState = z.infer<typeof LiveCursorState>;
+
+export const CursorInterpolationConfig = z.object({
+  enabled: z.boolean().default(true),
+  duration: z.number().min(50).max(500).default(200), // ms
+  easing: z.enum(['linear', 'ease-in', 'ease-out', 'ease-in-out']).default('ease-out'),
+  threshold: z.number().min(1).max(100).default(5), // pixels
+});
+export type CursorInterpolationConfig = z.infer<typeof CursorInterpolationConfig>;
 
 export const WhiteboardSelectionData = z.object({
   elementIds: z.array(z.string().uuid()).default([]),

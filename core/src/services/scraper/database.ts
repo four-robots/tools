@@ -8,6 +8,7 @@ import { DatabaseConnectionManager } from '../../utils/database.js';
 import type { DatabaseConfig } from '../../utils/database.js';
 import type { ScrapedPage, ScrapingJob } from './types.js';
 import type { ContentChunk } from '../../shared/types/content.js';
+import { createSafeSearchPattern } from '../../utils/sql-security.js';
 
 // Database schema interfaces
 export interface ScraperPerformanceMetric {
@@ -607,12 +608,14 @@ export class ScraperDatabaseManager {
     offset?: number;
     pageIds?: string[];
   }): Promise<Array<ScrapedContentChunk & { page_url?: string; page_title?: string }>> {
+    const safeSearch = createSafeSearchPattern(options.query);
+    
     let query = sql`
       SELECT c.*, p.url as page_url, p.title as page_title
       FROM content_chunks c
       LEFT JOIN scraped_pages p ON c.parent_id = p.id
       WHERE c.parent_type = 'scraped_page' 
-        AND c.content ILIKE ${'%' + options.query + '%'}
+        AND c.content ILIKE ${safeSearch.pattern} ESCAPE '\\'
     `;
 
     if (options.pageIds && options.pageIds.length > 0) {

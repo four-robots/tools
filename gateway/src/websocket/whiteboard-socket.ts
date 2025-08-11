@@ -15,14 +15,17 @@ import {
   SessionData, 
   createSessionStorage 
 } from './redis-session-storage.js';
+import {
+  authenticateWebSocketConnection,
+  validateTokenFreshness,
+  extractTokenFromHandshake,
+  AuthenticatedSocket
+} from './auth-handler.js';
+import { getGlobalRateLimiter } from './rate-limiter.js';
+import { LRUCache, createLRUCache } from './lru-cache.js';
+import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard-cursor-service';
 
-interface AuthenticatedSocket extends Socket {
-  user?: {
-    id: string;
-    email: string;
-    name: string;
-    tenantId: string;
-  };
+interface WhiteboardAuthenticatedSocket extends AuthenticatedSocket {
   whiteboardSession?: {
     whiteboardId: string;
     workspaceId: string;
@@ -97,23 +100,56 @@ export function setupWhiteboardWebSocket(
   const sessionStorage: SessionStorage = createSessionStorage(options?.useRedis);
   const sessionTtl = options?.sessionTtl || 30 * 60 * 1000; // 30 minutes
   
-  // Track active whiteboard sessions
-  const activeWhiteboardSessions = new Map<string, WhiteboardSession>();
+  // Track active whiteboard sessions with LRU eviction
+  const activeWhiteboardSessions = createLRUCache<string, WhiteboardSession>('sessions');
   
-  // Track canvas state versions for operational transforms
-  const canvasVersions = new Map<string, number>();
+  // Track canvas state versions for operational transforms with LRU eviction
+  const canvasVersions = createLRUCache<string, number>('versions');
   
-  // User color assignments for presence
+  // User color assignments for presence with LRU eviction
   const userColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FFB347'];
-  const assignedColors = new Map<string, string>();
+  const assignedColors = createLRUCache<string, string>('colors');
   
   logger.info('Whiteboard WebSocket initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
-    sessionTtl: sessionTtl / 1000 + 's'
+    sessionTtl: sessionTtl / 1000 + 's',
+    maxSessions: activeWhiteboardSessions.getStats().maxSize,
+    maxVersions: canvasVersions.getStats().maxSize,
+    maxColors: assignedColors.getStats().maxSize
   });
 
-  io.on('connection', (socket: AuthenticatedSocket) => {
-    logger.debug('Whiteboard socket connected', { socketId: socket.id, userId: socket.user?.id });
+  io.on('connection', async (socket: WhiteboardAuthenticatedSocket) => {
+    logger.debug('Whiteboard socket connection attempt', { socketId: socket.id });
+
+    // Authenticate the WebSocket connection with proper JWT validation
+    const token = extractTokenFromHandshake(socket);
+    if (!token) {
+      logger.warn('WebSocket connection rejected - no token provided', { socketId: socket.id });
+      socket.emit('error', { code: 'AUTH_REQUIRED', message: 'Authentication token required' });
+      socket.disconnect(true);
+      return;
+    }
+
+    const authResult = await authenticateWebSocketConnection(socket, token);
+    if (!authResult.success) {
+      logger.warn('WebSocket authentication failed', { 
+        socketId: socket.id, 
+        error: authResult.error,
+        clientIp: socket.handshake.address
+      });
+      socket.emit('error', { 
+        code: 'AUTH_FAILED', 
+        message: 'Authentication failed',
+        details: authResult.error 
+      });
+      socket.disconnect(true);
+      return;
+    }
+
+    logger.info('Whiteboard socket authenticated successfully', { 
+      socketId: socket.id, 
+      userId: socket.user?.id 
+    });
 
     // ==================== WHITEBOARD SESSIONS ====================
 
@@ -124,8 +160,20 @@ export function setupWhiteboardWebSocket(
       clientInfo?: any;
     }) => {
       try {
-        if (!socket.user) {
-          socket.emit('error', { code: 'AUTH_REQUIRED', message: 'Authentication required' });
+        // Validate token freshness and user authentication
+        const validation = validateUserAndToken(socket);
+        if (!validation.valid) {
+          socket.emit('error', validation.error);
+          if (validation.error.code === 'TOKEN_INVALID') {
+            socket.disconnect(true);
+          }
+          return;
+        }
+
+        // Check rate limiting
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:join');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('error', rateLimitCheck.error);
           return;
         }
 
@@ -133,7 +181,7 @@ export function setupWhiteboardWebSocket(
         
         // Assign user color for presence
         if (!assignedColors.has(socket.user.id)) {
-          const colorIndex = assignedColors.size % userColors.length;
+          const colorIndex = assignedColors.size() % userColors.length;
           assignedColors.set(socket.user.id, userColors[colorIndex]);
         }
 
@@ -203,7 +251,7 @@ export function setupWhiteboardWebSocket(
         });
 
         // Send current presence information to new user
-        const currentPresences = Array.from(activeWhiteboardSessions.values())
+        const currentPresences = activeWhiteboardSessions.values()
           .filter(session => 
             session.whiteboardId === whiteboardId && 
             session.socketId !== socket.id
@@ -250,7 +298,28 @@ export function setupWhiteboardWebSocket(
       clientVersion: number;
     }) => {
       try {
-        if (!socket.whiteboardSession || !socket.user) {
+        // Validate token freshness for critical operations
+        const validation = validateUserAndToken(socket);
+        if (!validation.valid) {
+          socket.emit('error', validation.error);
+          if (validation.error.code === 'TOKEN_INVALID') {
+            socket.disconnect(true);
+          }
+          return;
+        }
+
+        // Check rate limiting for canvas changes
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:canvas_change');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:canvas_ack', {
+            operationId: data.operation.elementId,
+            success: false,
+            error: rateLimitCheck.error.message,
+          });
+          return;
+        }
+
+        if (!socket.whiteboardSession) {
           socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
           return;
         }
@@ -325,6 +394,13 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
+        // Check rate limiting for sync requests
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:request_sync');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('error', rateLimitCheck.error);
+          return;
+        }
+
         const { whiteboardId } = data;
         const currentVersion = canvasVersions.get(whiteboardId) || 1;
 
@@ -380,6 +456,18 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
+        // Check rate limiting for presence updates
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:presence');
+        if (!rateLimitCheck.allowed) {
+          // For presence updates, we silently drop them rather than error
+          // to avoid disrupting the user experience
+          logger.debug('Presence update rate limited', {
+            userId: socket.user.id,
+            socketId: socket.id
+          });
+          return;
+        }
+
         const session = activeWhiteboardSessions.get(socket.id);
         if (!session) {
           return;
@@ -415,6 +503,166 @@ export function setupWhiteboardWebSocket(
 
       } catch (error) {
         logger.error('Failed to update presence', { error, data });
+      }
+    });
+
+    // ==================== LIVE CURSOR TRACKING ====================
+
+    // Cursor enter (user starts tracking)
+    socket.on('whiteboard:cursor_enter', async (data: {
+      whiteboardId: string;
+      sessionId: string;
+      userInfo: {
+        userId: string;
+        userName: string;
+        userColor: string;
+      };
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        // Check rate limiting for cursor events
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:cursor_enter');
+        if (!rateLimitCheck.allowed) {
+          return; // Silently drop to avoid disrupting UX
+        }
+
+        const { whiteboardId, sessionId, userInfo } = data;
+        const cursorService = getCursorService(logger);
+
+        // Initialize cursor tracking for this user
+        await cursorService.updateCursorPosition(
+          userInfo.userId,
+          whiteboardId,
+          {
+            x: 0,
+            y: 0,
+            canvasX: 0,
+            canvasY: 0,
+            timestamp: Date.now(),
+            interpolated: false,
+          },
+          {
+            userId: userInfo.userId,
+            userName: userInfo.userName,
+            userColor: userInfo.userColor,
+            sessionId,
+            whiteboardId,
+            lastSeen: Date.now(),
+            isActive: true,
+          }
+        );
+
+        // Broadcast cursor enter to other participants
+        socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_updated', {
+          userId: userInfo.userId,
+          userName: userInfo.userName,
+          userColor: userInfo.userColor,
+          position: {
+            x: 0,
+            y: 0,
+            canvasX: 0,
+            canvasY: 0,
+          },
+          timestamp: Date.now(),
+          sessionId,
+        });
+
+        logger.debug('Cursor tracking started', { 
+          userId: userInfo.userId, 
+          whiteboardId,
+          sessionId 
+        });
+
+      } catch (error) {
+        logger.error('Failed to handle cursor enter', { error, data });
+      }
+    });
+
+    // Cursor move (high-frequency updates)
+    socket.on('whiteboard:cursor_move', async (data: {
+      whiteboardId: string;
+      position: {
+        x: number;
+        y: number;
+        canvasX: number;
+        canvasY: number;
+      };
+      timestamp: number;
+      sessionId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        // Aggressive rate limiting for cursor moves (60 FPS max)
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:cursor_move');
+        if (!rateLimitCheck.allowed) {
+          return; // Silently drop high-frequency updates
+        }
+
+        const { whiteboardId, position, timestamp, sessionId } = data;
+        const cursorService = getCursorService(logger);
+
+        // Update cursor position with interpolation
+        const cursorState = await cursorService.updateCursorPosition(
+          socket.user.id,
+          whiteboardId,
+          {
+            ...position,
+            timestamp,
+            interpolated: false,
+          }
+        );
+
+        // Broadcast cursor position to other participants
+        socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_updated', {
+          userId: socket.user.id,
+          userName: socket.user.name,
+          userColor: cursorState.userColor,
+          position,
+          timestamp,
+          sessionId,
+        });
+
+      } catch (error) {
+        // Log but don't disrupt cursor tracking
+        logger.debug('Failed to handle cursor move', { error: error.message });
+      }
+    });
+
+    // Cursor leave (user stops tracking)
+    socket.on('whiteboard:cursor_leave', async (data: {
+      whiteboardId: string;
+      sessionId: string;
+      userId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, sessionId, userId } = data;
+        const cursorService = getCursorService(logger);
+
+        // Remove cursor tracking
+        await cursorService.removeCursor(userId, whiteboardId, 'leave');
+
+        // Broadcast cursor disconnect to other participants
+        socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
+          userId,
+          sessionId,
+          timestamp: Date.now(),
+          reason: 'leave',
+        });
+
+        logger.debug('Cursor tracking stopped', { userId, whiteboardId, sessionId });
+
+      } catch (error) {
+        logger.error('Failed to handle cursor leave', { error, data });
       }
     });
 
@@ -853,8 +1101,78 @@ export function setupWhiteboardWebSocket(
 
   // ==================== HELPER FUNCTIONS ====================
 
+  /**
+   * Validates token freshness and user authentication for operations
+   */
+  function validateUserAndToken(socket: WhiteboardAuthenticatedSocket): { valid: boolean; error?: any } {
+    if (!socket.user) {
+      return { 
+        valid: false, 
+        error: { code: 'AUTH_REQUIRED', message: 'Authentication required' } 
+      };
+    }
+
+    const tokenValidation = validateTokenFreshness(socket);
+    if (!tokenValidation.valid) {
+      logger.warn('Token validation failed', {
+        userId: socket.user.id,
+        reason: tokenValidation.reason,
+        socketId: socket.id
+      });
+      return {
+        valid: false,
+        error: { 
+          code: 'TOKEN_INVALID', 
+          message: 'Token validation failed',
+          details: tokenValidation.reason 
+        }
+      };
+    }
+
+    return { valid: true };
+  }
+
+  // Removed separate cursor rate limiting - now using global rate limiter for consistency
+
+  /**
+   * Checks rate limiting for a user operation using global rate limiter
+   */
+  function checkRateLimit(socket: WhiteboardAuthenticatedSocket, operation: string): { allowed: boolean; error?: any } {
+    if (!socket.user) {
+      return {
+        allowed: false,
+        error: { code: 'AUTH_REQUIRED', message: 'Authentication required' }
+      };
+    }
+
+    const rateLimiter = getGlobalRateLimiter();
+    const clientIp = socket.handshake.address;
+    const result = rateLimiter.checkRateLimit(socket.user.id, operation, clientIp);
+
+    if (!result.allowed) {
+      logger.warn('Rate limit exceeded for WebSocket operation', {
+        userId: socket.user.id,
+        operation,
+        clientIp,
+        error: result.error,
+        retryAfterMs: result.retryAfterMs
+      });
+
+      return {
+        allowed: false,
+        error: {
+          code: result.error,
+          message: 'Rate limit exceeded',
+          retryAfterMs: result.retryAfterMs
+        }
+      };
+    }
+
+    return { allowed: true };
+  }
+
   async function handleWhiteboardLeave(
-    socket: AuthenticatedSocket, 
+    socket: WhiteboardAuthenticatedSocket, 
     whiteboardId: string, 
     reason?: string
   ): Promise<void> {
@@ -863,6 +1181,18 @@ export function setupWhiteboardWebSocket(
     }
 
     try {
+      // Clean up cursor tracking
+      const cursorService = getCursorService(logger);
+      await cursorService.removeCursor(socket.user.id, whiteboardId, 'disconnect');
+
+      // Broadcast cursor disconnect to other participants
+      socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
+        userId: socket.user.id,
+        sessionId: socket.whiteboardSession.sessionId,
+        timestamp: Date.now(),
+        reason: reason === 'inactivity_timeout' ? 'timeout' : 'disconnect',
+      });
+
       // Leave whiteboard rooms
       socket.leave(`whiteboard:${whiteboardId}`);
       socket.leave(`whiteboard:${whiteboardId}:presence`);
@@ -914,35 +1244,68 @@ export function setupWhiteboardWebSocket(
     };
   }
 
-  // Cleanup inactive sessions
-  const cleanupInterval = setInterval(async () => {
+  // Cleanup inactive sessions with enhanced monitoring
+  const cleanupInterval = setInterval(enhancedCleanup, 5 * 60 * 1000); // Run every 5 minutes
+
+  // Enhanced cleanup with memory monitoring
+  const enhancedCleanup = async () => {
     try {
       const now = new Date();
       const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
+      let cleanedSessions = 0;
 
-      for (const [socketId, session] of activeWhiteboardSessions.entries()) {
+      // Clean up inactive sessions from LRU caches
+      for (const socketId of activeWhiteboardSessions.keys()) {
+        const session = activeWhiteboardSessions.get(socketId);
+        if (!session) continue;
+        
         const timeSinceActivity = now.getTime() - session.lastActivity.getTime();
         
         if (timeSinceActivity > inactiveThreshold) {
           const socket = io.sockets.sockets.get(socketId);
           if (socket) {
             await handleWhiteboardLeave(
-              socket as AuthenticatedSocket, 
+              socket as WhiteboardAuthenticatedSocket, 
               session.whiteboardId, 
               'inactivity_timeout'
             );
           } else {
-            // Socket doesn't exist, clean up storage
+            // Socket doesn't exist, clean up directly
             activeWhiteboardSessions.delete(socketId);
             await sessionStorage.delete(socketId);
           }
+          cleanedSessions++;
         }
       }
 
+      // Run LRU cache cleanup
+      const expiredSessions = activeWhiteboardSessions.cleanup();
+      const expiredVersions = canvasVersions.cleanup();
+      const expiredColors = assignedColors.cleanup();
+
+      // Log memory statistics
+      const sessionStats = activeWhiteboardSessions.getStats();
+      const versionStats = canvasVersions.getStats();
+      const colorStats = assignedColors.getStats();
+
+      if (cleanedSessions > 0 || expiredSessions > 0 || expiredVersions > 0 || expiredColors > 0) {
+        logger.info('Whiteboard memory cleanup completed', {
+          cleanedSessions,
+          expiredSessions,
+          expiredVersions,
+          expiredColors,
+          memoryStats: {
+            sessions: `${sessionStats.size}/${sessionStats.maxSize}`,
+            versions: `${versionStats.size}/${versionStats.maxSize}`,
+            colors: `${colorStats.size}/${colorStats.maxSize}`,
+          }
+        });
+      }
+
     } catch (error) {
-      logger.error('Failed to cleanup inactive whiteboard sessions', { error });
+      logger.error('Failed to perform enhanced whiteboard cleanup', { error });
     }
-  }, 5 * 60 * 1000); // Run every 5 minutes
+  };
 
   // Graceful shutdown
   const shutdown = async () => {
@@ -951,6 +1314,11 @@ export function setupWhiteboardWebSocket(
     if (cleanupInterval) {
       clearInterval(cleanupInterval);
     }
+    
+    // Destroy LRU caches
+    activeWhiteboardSessions.destroy();
+    canvasVersions.destroy();
+    assignedColors.destroy();
     
     // Clean up session storage
     if (sessionStorage && typeof (sessionStorage as any).destroy === 'function') {
@@ -965,8 +1333,24 @@ export function setupWhiteboardWebSocket(
 
   return {
     cleanup: shutdown,
-    getActiveSessionCount: () => activeWhiteboardSessions.size,
+    getActiveSessionCount: () => activeWhiteboardSessions.size(),
     getCanvasVersion: (whiteboardId: string) => canvasVersions.get(whiteboardId) || 1,
+    getMemoryStats: () => ({
+      sessions: activeWhiteboardSessions.getStats(),
+      versions: canvasVersions.getStats(),
+      colors: assignedColors.getStats(),
+    }),
+    forceCleanup: enhancedCleanup,
+    resizeCaches: (maxSessions: number, maxVersions: number, maxColors: number) => {
+      activeWhiteboardSessions.resize(maxSessions);
+      canvasVersions.resize(maxVersions);
+      assignedColors.resize(maxColors);
+      logger.info('Whiteboard cache sizes updated', {
+        maxSessions,
+        maxVersions,
+        maxColors
+      });
+    }
   };
 }
 

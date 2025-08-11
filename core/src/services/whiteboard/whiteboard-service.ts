@@ -20,20 +20,9 @@ import {
 } from '@shared/types/whiteboard.js';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import { sanitizeInput, escapeLikePattern, createSafeSearchPattern } from '../../utils/sql-security.js';
 
-/**
- * Input sanitization utility to prevent injection attacks
- */
-const sanitizeInput = (input: string): string => {
-  if (!input || typeof input !== 'string') {
-    return '';
-  }
-  // Remove potential SQL injection characters and normalize
-  return input
-    .replace(/[\x00\x08\x09\x1a\n\r"'\\%]/g, '')
-    .trim()
-    .substring(0, 1000); // Limit length
-};
+// Input sanitization and LIKE escaping utilities are now imported from shared utils
 
 /**
  * Build safe WHERE clause with proper parameterization
@@ -99,11 +88,11 @@ const buildSafeWhereClause = (filters: WhiteboardFilter | undefined, baseValues:
     }
 
     if (filters.search && typeof filters.search === 'string') {
-      const sanitizedSearch = sanitizeInput(filters.search);
-      if (sanitizedSearch.length > 0) {
-        conditions.push(`(w.name ILIKE $${paramIndex} OR w.description ILIKE $${paramIndex + 1})`);
-        const searchPattern = `%${sanitizedSearch}%`;
-        values.push(searchPattern, searchPattern);
+      const safeSearch = createSafeSearchPattern(filters.search);
+      if (safeSearch.escapedTerm.length > 0) {
+        // Use safe search pattern with proper escaping
+        conditions.push(`(w.name ILIKE $${paramIndex} ESCAPE '\\' OR w.description ILIKE $${paramIndex + 1} ESCAPE '\\')`);
+        values.push(safeSearch.pattern, safeSearch.pattern);
         paramIndex += 2;
       }
     }

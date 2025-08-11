@@ -4,52 +4,52 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Collaborative Whiteboards table - main whiteboard metadata
   await db.schema
     .createTable('whiteboards')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('thumbnail', 'text') // Base64 encoded thumbnail or URL
     .addColumn('canvas_data', 'jsonb', (col) => col.defaultTo('{}')) // Core canvas metadata (viewport, zoom, etc.)
     .addColumn('settings', 'jsonb', (col) => col.defaultTo('{}')) // Whiteboard-specific settings
-    .addColumn('template_id', 'varchar(255)') // Reference to whiteboard templates
+    .addColumn('template_id', 'uuid') // Reference to whiteboard templates
     .addColumn('is_template', 'boolean', (col) => col.defaultTo(false))
     .addColumn('visibility', 'varchar(20)', (col) => col.notNull().defaultTo('workspace')) // workspace, members, public
     .addColumn('status', 'varchar(20)', (col) => col.notNull().defaultTo('active')) // active, archived, deleted
     .addColumn('version', 'integer', (col) => col.defaultTo(1)) // Version for conflict resolution
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('last_modified_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
+    .addColumn('last_modified_by', 'uuid', (col) => col.notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('deleted_at', 'timestamptz')
     .execute();
 
   // Whiteboard elements table - individual canvas objects (shapes, text, images, etc.)
   await db.schema
     .createTable('whiteboard_elements')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
     .addColumn('element_type', 'varchar(50)', (col) => col.notNull()) // shape, text, image, sticky_note, arrow, line, etc.
     .addColumn('element_data', 'jsonb', (col) => col.notNull()) // Flexible storage for element properties (position, size, color, content, etc.)
     .addColumn('layer_index', 'integer', (col) => col.defaultTo(0)) // Z-index for layering
-    .addColumn('parent_id', 'varchar(255)') // For grouped elements
+    .addColumn('parent_id', 'uuid') // For grouped elements
     .addColumn('locked', 'boolean', (col) => col.defaultTo(false))
     .addColumn('visible', 'boolean', (col) => col.defaultTo(true))
     .addColumn('style_data', 'jsonb', (col) => col.defaultTo('{}')) // Styling properties (colors, fonts, borders, etc.)
     .addColumn('metadata', 'jsonb', (col) => col.defaultTo('{}')) // Additional properties
     .addColumn('version', 'integer', (col) => col.defaultTo(1)) // Element version for conflict resolution
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('last_modified_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
+    .addColumn('last_modified_by', 'uuid', (col) => col.notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('deleted_at', 'timestamptz')
     .execute();
 
   // Whiteboard sessions table - real-time collaboration tracking
   await db.schema
     .createTable('whiteboard_sessions')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('session_token', 'varchar(255)', (col) => col.notNull().unique())
     .addColumn('connection_id', 'varchar(255)') // WebSocket connection identifier
     .addColumn('cursor_position', 'jsonb') // Real-time cursor tracking
@@ -59,29 +59,29 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('tools_state', 'jsonb', (col) => col.defaultTo('{}')) // Active tool and tool settings
     .addColumn('is_active', 'boolean', (col) => col.defaultTo(true))
     .addColumn('permissions', 'jsonb', (col) => col.defaultTo('{}')) // Session-specific permissions
-    .addColumn('started_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('last_activity_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('started_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('last_activity_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('ended_at', 'timestamptz')
     .execute();
 
   // Whiteboard permissions table - granular access control
   await db.schema
     .createTable('whiteboard_permissions')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('role', 'varchar(50)', (col) => col.notNull()) // owner, editor, viewer, commenter
     .addColumn('permissions', 'jsonb', (col) => col.notNull()) // Detailed permissions object
-    .addColumn('granted_by', 'varchar(255)', (col) => col.notNull())
+    .addColumn('granted_by', 'uuid', (col) => col.notNull())
     .addColumn('expires_at', 'timestamptz') // Optional expiration for temporary access
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .execute();
 
   // Whiteboard templates table - reusable whiteboard configurations
   await db.schema
     .createTable('whiteboard_templates')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('category', 'varchar(100)', (col) => col.notNull()) // brainstorming, planning, design, presentation, etc.
@@ -90,66 +90,66 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('default_settings', 'jsonb', (col) => col.defaultTo('{}')) // Default whiteboard settings
     .addColumn('tags', 'text[]', (col) => col.defaultTo(sql`ARRAY[]::text[]`)) // Template tags for discovery
     .addColumn('is_public', 'boolean', (col) => col.defaultTo(false)) // Public templates available to all workspaces
-    .addColumn('workspace_id', 'varchar(255)') // Workspace-specific templates (null for public)
+    .addColumn('workspace_id', 'uuid') // Workspace-specific templates (null for public)
     .addColumn('usage_count', 'integer', (col) => col.defaultTo(0)) // Track template popularity
     .addColumn('rating', 'decimal(2,1)', (col) => col.defaultTo(0)) // User ratings
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .execute();
 
   // Whiteboard activity log table - detailed audit trail
   await db.schema
     .createTable('whiteboard_activity_log')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
-    .addColumn('session_id', 'varchar(255)') // Link to specific session
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
+    .addColumn('session_id', 'uuid') // Link to specific session
     .addColumn('action', 'varchar(100)', (col) => col.notNull()) // created, updated, deleted, moved, styled, etc.
     .addColumn('target_type', 'varchar(50)', (col) => col.notNull()) // whiteboard, element, template, permission, etc.
-    .addColumn('target_id', 'varchar(255)') // ID of affected object
+    .addColumn('target_id', 'uuid') // ID of affected object
     .addColumn('action_data', 'jsonb', (col) => col.defaultTo('{}')) // Detailed action information
     .addColumn('old_data', 'jsonb') // Previous state for undo operations
     .addColumn('new_data', 'jsonb') // New state
-    .addColumn('operation_id', 'varchar(255)') // Group related operations (e.g., bulk moves)
+    .addColumn('operation_id', 'uuid') // Group related operations (e.g., bulk moves)
     .addColumn('client_metadata', 'jsonb', (col) => col.defaultTo('{}')) // Client information
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .execute();
 
   // Whiteboard comments table - collaborative feedback and discussion
   await db.schema
     .createTable('whiteboard_comments')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
-    .addColumn('element_id', 'varchar(255)') // Optional: comment on specific element
-    .addColumn('parent_id', 'varchar(255)') // For nested comments/replies
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('element_id', 'uuid') // Optional: comment on specific element
+    .addColumn('parent_id', 'uuid') // For nested comments/replies
     .addColumn('content', 'text', (col) => col.notNull())
     .addColumn('content_type', 'varchar(20)', (col) => col.defaultTo('text')) // text, markdown
     .addColumn('position', 'jsonb') // Spatial position on canvas
     .addColumn('resolved', 'boolean', (col) => col.defaultTo(false))
-    .addColumn('resolved_by', 'varchar(255)')
+    .addColumn('resolved_by', 'uuid')
     .addColumn('resolved_at', 'timestamptz')
-    .addColumn('mentions', 'text[]', (col) => col.defaultTo(sql`ARRAY[]::text[]`)) // User IDs mentioned
+    .addColumn('mentions', 'uuid[]', (col) => col.defaultTo(sql`ARRAY[]::uuid[]`)) // User IDs mentioned
     .addColumn('attachments', 'jsonb', (col) => col.defaultTo('{}')) // File attachments
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
-    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
+    .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('deleted_at', 'timestamptz')
     .execute();
 
   // Whiteboard versions table - version history for collaboration and conflict resolution
   await db.schema
     .createTable('whiteboard_versions')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('whiteboard_id', 'varchar(255)', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
     .addColumn('version_number', 'integer', (col) => col.notNull())
     .addColumn('snapshot_data', 'jsonb', (col) => col.notNull()) // Complete whiteboard state at this version
     .addColumn('changes_summary', 'jsonb', (col) => col.defaultTo('{}')) // Summary of changes from previous version
     .addColumn('change_type', 'varchar(50)', (col) => col.notNull()) // major, minor, auto_save, conflict_resolution
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
     .addColumn('commit_message', 'text') // Optional description of changes
     .addColumn('is_automatic', 'boolean', (col) => col.defaultTo(false)) // Auto-saved vs manual save
-    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
+    .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .execute();
 
   // Create performance indexes
