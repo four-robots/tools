@@ -57,6 +57,59 @@ export interface PresenceUpdateEvent {
   selection?: string[];
 }
 
+// ==================== CURSOR TRACKING EVENTS ====================
+
+export interface CursorMoveEvent {
+  whiteboardId: string;
+  position: {
+    x: number;
+    y: number;
+    canvasX: number;
+    canvasY: number;
+  };
+  timestamp: number;
+  sessionId: string;
+}
+
+export interface CursorEnterEvent {
+  whiteboardId: string;
+  sessionId: string;
+  userInfo: {
+    userId: string;
+    userName: string;
+    userColor: string;
+  };
+  timestamp: number;
+}
+
+export interface CursorLeaveEvent {
+  whiteboardId: string;
+  sessionId: string;
+  userId: string;
+  timestamp: number;
+}
+
+export interface CursorUpdateEvent {
+  userId: string;
+  userName: string;
+  userColor: string;
+  position: {
+    x: number;
+    y: number;
+    canvasX: number;
+    canvasY: number;
+  };
+  timestamp: number;
+  sessionId: string;
+}
+
+export interface CursorDisconnectedEvent {
+  userId: string;
+  sessionId: string;
+  timestamp: number;
+  reason: 'timeout' | 'disconnect' | 'leave';
+}
+
 // ==================== CANVAS EVENTS ====================
 
 export interface CanvasChangeEvent {
@@ -246,6 +299,11 @@ export type WhiteboardClientEvents = {
   // Presence
   'whiteboard:presence': PresenceUpdateEvent;
   
+  // Cursor tracking
+  'whiteboard:cursor_move': CursorMoveEvent;
+  'whiteboard:cursor_enter': CursorEnterEvent;
+  'whiteboard:cursor_leave': CursorLeaveEvent;
+  
   // Comments
   'whiteboard:add_comment': AddCommentEvent;
   'whiteboard:reply_comment': ReplyCommentEvent;
@@ -269,6 +327,10 @@ export type WhiteboardServerEvents = {
   
   // Presence
   'whiteboard:presence_updated': WhiteboardPresence;
+  
+  // Cursor tracking
+  'whiteboard:cursor_updated': CursorUpdateEvent;
+  'whiteboard:cursor_disconnected': CursorDisconnectedEvent;
   
   // Comments
   'whiteboard:comment_added': CommentAddedEvent;

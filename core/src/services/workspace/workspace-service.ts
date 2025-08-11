@@ -16,6 +16,7 @@ import {
 } from '@shared/types/workspace.js';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import { createSafeSearchPattern } from '../../utils/sql-security.js';
 
 /**
  * Input sanitization utility to prevent injection attacks
@@ -70,11 +71,10 @@ const buildSafeWhereClause = (filters: WorkspaceFilter | undefined, baseValues: 
     }
 
     if (filters.search && typeof filters.search === 'string') {
-      const sanitizedSearch = sanitizeInput(filters.search);
-      if (sanitizedSearch.length > 0) {
-        conditions.push(`(w.name ILIKE $${paramIndex} OR w.description ILIKE $${paramIndex + 1})`);
-        const searchPattern = `%${sanitizedSearch}%`;
-        values.push(searchPattern, searchPattern);
+      const safeSearch = createSafeSearchPattern(filters.search);
+      if (safeSearch.escapedTerm.length > 0) {
+        conditions.push(`(w.name ILIKE $${paramIndex} ESCAPE '\\' OR w.description ILIKE $${paramIndex + 1} ESCAPE '\\')`);
+        values.push(safeSearch.pattern, safeSearch.pattern);
         paramIndex += 2;
       }
     }
