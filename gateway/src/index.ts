@@ -31,6 +31,7 @@ import searchRoutes from './routes/search.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import qualityRoutes from './routes/quality.routes.js';
 import { createAnalyticsRoutes } from './routes/analytics.routes.js';
+import analyticsRoutes from './routes/analytics.js';
 import apiDocumentationRecommendationsRoutes from './routes/api-documentation-recommendations.routes.js';
 import aiSummariesRoutes from './routes/ai-summaries.routes.js';
 import dynamicFacetsRoutes from './routes/dynamic-facets.routes.js';
@@ -57,6 +58,7 @@ import { APIDocumentationDiscoveryService, createDatabaseConfig, AISummaryServic
 import { AnalyticsService } from './services/AnalyticsService.js';
 import { setupWebSocket } from './websocket/index.js';
 import { WebSocketCollaborationGateway } from './collaboration/websocket-gateway.js';
+import AnalyticsSocketHandler from './websocket/analytics-socket.js';
 import { ConnectionManager } from './collaboration/connection-manager.js';
 import { RateLimiter } from './collaboration/rate-limiter.js';
 import { Pool } from 'pg';
@@ -345,6 +347,7 @@ async function createApp() {
   app.use('/api/v1/ai-summaries', aiSummariesRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
+  app.use('/api/analytics', analyticsRoutes);
   app.use('/api/v1/facets', dynamicFacetsRoutes);
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
@@ -400,6 +403,11 @@ async function startServer() {
     });
     
     setupWebSocket(io, app.locals.kanbanService, app.locals.analyticsService);
+    
+    // Setup Analytics WebSocket handler
+    console.log('🔄 Initializing Analytics WebSocket handler...');
+    const analyticsSocketHandler = new AnalyticsSocketHandler(io);
+    console.log('✅ Analytics WebSocket handler initialized');
     
     // Setup WebSocket Collaboration Gateway
     console.log('🔄 Initializing WebSocket Collaboration Gateway...');
@@ -484,6 +492,11 @@ async function startServer() {
         // Shutdown collaboration services
         if (collaborationGateway) {
           await collaborationGateway.shutdown();
+        }
+        
+        // Shutdown analytics socket handler
+        if (analyticsSocketHandler) {
+          await analyticsSocketHandler.destroy();
         }
         
         process.exit(0);
