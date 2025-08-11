@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useWhiteboardCollaboration } from './hooks/useWhiteboardCollaboration';
+import { WhiteboardPresence, WhiteboardComment, WhiteboardSession } from './utils/collaboration-events';
+import { WhiteboardOperation } from './utils/whiteboard-ot';
 
 // Whiteboard context state interface
 interface WhiteboardState {
@@ -27,6 +30,16 @@ interface WhiteboardState {
     cursor?: { x: number; y: number };
     selection?: string[];
   }>;
+  
+  // Real-time collaboration state
+  isCollaborationConnected: boolean;
+  isCollaborationConnecting: boolean;
+  collaborationError: string | null;
+  session: WhiteboardSession | null;
+  presences: WhiteboardPresence[];
+  comments: WhiteboardComment[];
+  showCursors: boolean;
+  showComments: boolean;
 }
 
 // Action types for state management
@@ -39,6 +52,12 @@ type WhiteboardAction =
   | { type: 'SET_SELECTED_ELEMENTS'; payload: string[] }
   | { type: 'SET_VIEWPORT_BOUNDS'; payload: WhiteboardState['viewportBounds'] }
   | { type: 'UPDATE_COLLABORATORS'; payload: WhiteboardState['collaborators'] }
+  | { type: 'SET_COLLABORATION_CONNECTION'; payload: { connected: boolean; connecting: boolean; error: string | null } }
+  | { type: 'SET_COLLABORATION_SESSION'; payload: WhiteboardSession | null }
+  | { type: 'SET_PRESENCES'; payload: WhiteboardPresence[] }
+  | { type: 'SET_COMMENTS'; payload: WhiteboardComment[] }
+  | { type: 'TOGGLE_CURSORS' }
+  | { type: 'TOGGLE_COMMENTS' }
   | { type: 'RESET_STATE' };
 
 // Context interface
@@ -54,6 +73,34 @@ interface WhiteboardContextType {
     setViewportBounds: (bounds: WhiteboardState['viewportBounds']) => void;
     updateCollaborators: (collaborators: WhiteboardState['collaborators']) => void;
     resetState: () => void;
+    
+    // Collaboration actions
+    setCollaborationConnection: (connected: boolean, connecting: boolean, error: string | null) => void;
+    setCollaborationSession: (session: WhiteboardSession | null) => void;
+    setPresences: (presences: WhiteboardPresence[]) => void;
+    setComments: (comments: WhiteboardComment[]) => void;
+    toggleCursors: () => void;
+    toggleComments: () => void;
+  };
+  
+  // Collaboration methods
+  collaboration: {
+    isConnected: boolean;
+    isConnecting: boolean;
+    connectionError: string | null;
+    session: WhiteboardSession | null;
+    presences: WhiteboardPresence[];
+    comments: WhiteboardComment[];
+    showCursors: boolean;
+    showComments: boolean;
+    canvasVersion: number;
+    sendCanvasChange: (operation: WhiteboardOperation) => void;
+    requestCanvasSync: () => void;
+    updatePresence: (update: any) => void;
+    addComment: (content: string, position: { x: number; y: number }, elementId?: string) => void;
+    replyToComment: (commentId: string, content: string) => void;
+    resolveComment: (commentId: string, resolved: boolean) => void;
+    deleteComment: (commentId: string) => void;
   };
 }
 
@@ -74,6 +121,16 @@ const createInitialState = (
   selectedElements: [],
   viewportBounds: null,
   collaborators: [],
+  
+  // Real-time collaboration state
+  isCollaborationConnected: false,
+  isCollaborationConnecting: false,
+  collaborationError: null,
+  session: null,
+  presences: [],
+  comments: [],
+  showCursors: true,
+  showComments: false,
 });
 
 // Reducer function
@@ -103,6 +160,29 @@ const whiteboardReducer = (state: WhiteboardState, action: WhiteboardAction): Wh
     case 'UPDATE_COLLABORATORS':
       return { ...state, collaborators: action.payload };
     
+    case 'SET_COLLABORATION_CONNECTION':
+      return { 
+        ...state, 
+        isCollaborationConnected: action.payload.connected,
+        isCollaborationConnecting: action.payload.connecting,
+        collaborationError: action.payload.error,
+      };
+    
+    case 'SET_COLLABORATION_SESSION':
+      return { ...state, session: action.payload };
+    
+    case 'SET_PRESENCES':
+      return { ...state, presences: action.payload };
+    
+    case 'SET_COMMENTS':
+      return { ...state, comments: action.payload };
+    
+    case 'TOGGLE_CURSORS':
+      return { ...state, showCursors: !state.showCursors };
+    
+    case 'TOGGLE_COMMENTS':
+      return { ...state, showComments: !state.showComments };
+    
     case 'RESET_STATE':
       return createInitialState(state.whiteboardId, state.workspaceId, state.isReadOnly);
     
@@ -118,6 +198,8 @@ const WhiteboardContext = createContext<WhiteboardContextType | null>(null);
 interface WhiteboardProviderProps {
   whiteboardId: string;
   workspaceId: string;
+  userId: string;
+  userName: string;
   isReadOnly?: boolean;
   children: ReactNode;
 }
@@ -126,6 +208,8 @@ interface WhiteboardProviderProps {
 export const WhiteboardProvider: React.FC<WhiteboardProviderProps> = ({
   whiteboardId,
   workspaceId,
+  userId,
+  userName,
   isReadOnly = false,
   children,
 }) => {
@@ -134,6 +218,25 @@ export const WhiteboardProvider: React.FC<WhiteboardProviderProps> = ({
     whiteboardReducer,
     createInitialState(whiteboardId, workspaceId, isReadOnly)
   );
+
+  // Initialize collaboration
+  const collaboration = useWhiteboardCollaboration({
+    whiteboardId,
+    workspaceId,
+    userId,
+    userName,
+    onCanvasChange: (operation) => {
+      // Handle incoming canvas changes from other users
+      dispatch({ type: 'SET_LAST_SAVED', payload: new Date() });
+    },
+    onSyncRequired: (version) => {
+      // Handle sync requirements
+      console.log('Canvas sync required, version:', version);
+    },
+    onError: (error) => {
+      console.error('Collaboration error:', error);
+    },
+  });
 
   // Action creators
   const actions = {
@@ -181,6 +284,31 @@ export const WhiteboardProvider: React.FC<WhiteboardProviderProps> = ({
     resetState: () => {
       dispatch({ type: 'RESET_STATE' });
     },
+    
+    // Collaboration actions
+    setCollaborationConnection: (connected: boolean, connecting: boolean, error: string | null) => {
+      dispatch({ type: 'SET_COLLABORATION_CONNECTION', payload: { connected, connecting, error } });
+    },
+
+    setCollaborationSession: (session: WhiteboardSession | null) => {
+      dispatch({ type: 'SET_COLLABORATION_SESSION', payload: session });
+    },
+
+    setPresences: (presences: WhiteboardPresence[]) => {
+      dispatch({ type: 'SET_PRESENCES', payload: presences });
+    },
+
+    setComments: (comments: WhiteboardComment[]) => {
+      dispatch({ type: 'SET_COMMENTS', payload: comments });
+    },
+
+    toggleCursors: () => {
+      dispatch({ type: 'TOGGLE_CURSORS' });
+    },
+
+    toggleComments: () => {
+      dispatch({ type: 'TOGGLE_COMMENTS' });
+    },
   };
 
   // Effect to handle state changes and side effects
@@ -211,9 +339,48 @@ export const WhiteboardProvider: React.FC<WhiteboardProviderProps> = ({
     }
   }, [state.error]);
 
+  // Sync collaboration state with local state
+  useEffect(() => {
+    actions.setCollaborationConnection(
+      collaboration.isConnected,
+      collaboration.isConnecting,
+      collaboration.connectionError
+    );
+  }, [collaboration.isConnected, collaboration.isConnecting, collaboration.connectionError]);
+
+  useEffect(() => {
+    actions.setCollaborationSession(collaboration.session);
+  }, [collaboration.session]);
+
+  useEffect(() => {
+    actions.setPresences(collaboration.presences);
+  }, [collaboration.presences]);
+
+  useEffect(() => {
+    actions.setComments(collaboration.comments);
+  }, [collaboration.comments]);
+
   const contextValue: WhiteboardContextType = {
     state,
     actions,
+    collaboration: {
+      isConnected: collaboration.isConnected,
+      isConnecting: collaboration.isConnecting,
+      connectionError: collaboration.connectionError,
+      session: collaboration.session,
+      presences: collaboration.presences,
+      comments: collaboration.comments,
+      showCursors: collaboration.showCursors,
+      showComments: collaboration.showComments,
+      canvasVersion: collaboration.canvasVersion,
+      sendCanvasChange: collaboration.sendCanvasChange,
+      requestCanvasSync: collaboration.requestCanvasSync,
+      updatePresence: collaboration.updatePresence,
+      addComment: collaboration.addComment,
+      replyToComment: collaboration.replyToComment,
+      resolveComment: collaboration.resolveComment,
+      deleteComment: collaboration.deleteComment,
+    },
   };
 
   return (

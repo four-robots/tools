@@ -10,6 +10,7 @@ import { KanbanService } from '@mcp-tools/core/kanban';
 import { AnalyticsService } from '../services/AnalyticsService.js';
 import { setupAnalyticsWebSocket } from './analytics.websocket.js';
 import { setupWorkspaceWebSocket } from './workspace-socket.js';
+import { setupWhiteboardWebSocket } from './whiteboard-socket.js';
 import {
   WorkspaceSessionService,
   WorkspaceActivityService,
@@ -248,6 +249,12 @@ export function setupWebSocket(
   if (workspaceServices) {
     setupWorkspaceWebSocket(io, workspaceServices);
   }
+
+  // Set up whiteboard WebSocket for real-time collaboration
+  setupWhiteboardWebSocket(io, {
+    useRedis: process.env.NODE_ENV === 'production',
+    sessionTtl: 30 * 60 * 1000, // 30 minutes
+  });
   
   // Example: Memory updates could be broadcast here
   // This would be called from the API routes when memories are created/updated

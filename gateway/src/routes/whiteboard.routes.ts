@@ -8,7 +8,8 @@ import { validateRequest } from '../middleware/validation.middleware.js';
 import { 
   WhiteboardService,
   WhiteboardElementService,
-  WhiteboardPermissionService 
+  WhiteboardPermissionService,
+  WhiteboardCollaborationService 
 } from '@mcp-tools/core';
 import {
   CreateWhiteboardRequest,
@@ -79,6 +80,21 @@ const ListWhiteboardsQuerySchema = z.object({
   sortDirection: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// Collaboration schemas
+const AddCommentSchema = z.object({
+  content: z.string().min(1).max(2000),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
+  elementId: z.string().optional(),
+  parentCommentId: z.string().uuid().optional(),
+});
+
+const ResolveCommentSchema = z.object({
+  resolved: z.boolean(),
+});
+
 /**
  * Initialize whiteboard routes
  */
@@ -86,6 +102,7 @@ export function createWhiteboardRoutes(db: DatabasePool): express.Router {
   const whiteboardService = new WhiteboardService(db, logger);
   const elementService = new WhiteboardElementService(db, logger);
   const permissionService = new WhiteboardPermissionService(db, logger);
+  const collaborationService = new WhiteboardCollaborationService(db);
 
   // Apply authentication middleware to all routes
   router.use(authMiddleware);
@@ -827,6 +844,405 @@ export function createWhiteboardRoutes(db: DatabasePool): express.Router {
         });
       } catch (error) {
         logger.error('Export canvas error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  // ==================== COLLABORATION ROUTES ====================
+
+  /**
+   * GET /api/v1/whiteboards/:id/sessions
+   * Get active collaboration sessions for a whiteboard
+   */
+  router.get(
+    '/v1/whiteboards/:id/sessions',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const sessions = await collaborationService.getActiveSessions(id);
+
+        res.json({
+          success: true,
+          data: sessions,
+          message: 'Active sessions retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get active sessions error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/whiteboards/:id/version
+   * Get current canvas version for synchronization
+   */
+  router.get(
+    '/v1/whiteboards/:id/version',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const version = await collaborationService.getCurrentVersion(id);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            currentVersion: version,
+            lastModified: whiteboard.updatedAt,
+          },
+          message: 'Canvas version retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get canvas version error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/whiteboards/:id/operations
+   * Get operations since a specific version (for syncing)
+   */
+  router.get(
+    '/v1/whiteboards/:id/operations',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const sinceVersion = parseInt(req.query.since || '0');
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const operations = await collaborationService.getOperationsSinceVersion(id, sinceVersion);
+        const currentVersion = await collaborationService.getCurrentVersion(id);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            currentVersion,
+            sinceVersion,
+            operations,
+          },
+          message: 'Operations retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get operations error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/whiteboards/:id/comments
+   * Get comments for a whiteboard
+   */
+  router.get(
+    '/v1/whiteboards/:id/comments',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const includeResolved = req.query.includeResolved === 'true';
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const comments = await collaborationService.getComments(id, includeResolved);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            comments,
+            total: comments.length,
+          },
+          message: 'Comments retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get comments error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/v1/whiteboards/:id/comments
+   * Add a comment to a whiteboard
+   */
+  router.post(
+    '/v1/whiteboards/:id/comments',
+    validateRequest({ body: AddCommentSchema }),
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const { content, position, elementId, parentCommentId } = req.body;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const comment = await collaborationService.addComment(
+          id,
+          userId,
+          content,
+          position,
+          elementId,
+          parentCommentId
+        );
+
+        res.status(201).json({
+          success: true,
+          data: comment,
+          message: 'Comment added successfully'
+        });
+      } catch (error) {
+        logger.error('Add comment error', { error, whiteboardId: req.params.id });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/v1/whiteboards/:whiteboardId/comments/:commentId/resolve
+   * Resolve or unresolve a comment
+   */
+  router.put(
+    '/v1/whiteboards/:whiteboardId/comments/:commentId/resolve',
+    validateRequest({ body: ResolveCommentSchema }),
+    async (req: any, res) => {
+      try {
+        const { whiteboardId, commentId } = req.params;
+        const userId = req.user.id;
+        const { resolved } = req.body;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(whiteboardId, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        await collaborationService.resolveComment(commentId, resolved, userId);
+
+        res.json({
+          success: true,
+          message: `Comment ${resolved ? 'resolved' : 'unresolved'} successfully`
+        });
+      } catch (error) {
+        logger.error('Resolve comment error', { error, commentId: req.params.commentId });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to whiteboard'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/v1/whiteboards/:whiteboardId/comments/:commentId
+   * Delete a comment
+   */
+  router.delete(
+    '/v1/whiteboards/:whiteboardId/comments/:commentId',
+    async (req: any, res) => {
+      try {
+        const { whiteboardId, commentId } = req.params;
+        const userId = req.user.id;
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(whiteboardId, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        await collaborationService.deleteComment(commentId, userId);
+
+        res.json({
+          success: true,
+          message: 'Comment deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Delete comment error', { error, commentId: req.params.commentId });
+        
+        if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied to comment'
+          });
+        }
+
+        if (error instanceof Error && error.message.includes('Unauthorized')) {
+          return res.status(403).json({
+            success: false,
+            error: 'Unauthorized to delete this comment'
+          });
+        }
+
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Internal server error'
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/whiteboards/:id/analytics
+   * Get collaboration analytics for a whiteboard
+   */
+  router.get(
+    '/v1/whiteboards/:id/analytics',
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const days = parseInt(req.query.days || '30');
+
+        // Verify access to whiteboard
+        const whiteboard = await whiteboardService.getWhiteboard(id, userId);
+        if (!whiteboard) {
+          return res.status(404).json({
+            success: false,
+            error: 'Whiteboard not found'
+          });
+        }
+
+        const analytics = await collaborationService.getCollaborationAnalytics(id, days);
+
+        res.json({
+          success: true,
+          data: {
+            whiteboardId: id,
+            periodDays: days,
+            ...analytics,
+          },
+          message: 'Analytics retrieved successfully'
+        });
+      } catch (error) {
+        logger.error('Get analytics error', { error, whiteboardId: req.params.id });
         
         if (error instanceof Error && error.message.includes('ACCESS_DENIED')) {
           return res.status(403).json({
