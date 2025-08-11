@@ -12,7 +12,7 @@
  */
 
 import { logger } from '../../utils/logger.js';
-import { DatabasePool } from '../../utils/database-pool.js';
+import { DatabaseConnectionPool } from '../../utils/database-pool.js';
 import { 
   TenantResourceQuota,
   TenantUsageMetric,
@@ -75,7 +75,7 @@ interface BillingPeriodSummary {
 }
 
 export class TenantResourceService {
-  private db: DatabasePool;
+  private db: DatabaseConnectionPool;
   private quotaEnforcementEnabled: boolean;
   private billingEnabled: boolean;
 
@@ -89,7 +89,7 @@ export class TenantResourceService {
   };
 
   constructor() {
-    this.db = new DatabasePool();
+    this.db = new DatabaseConnectionPool();
     this.quotaEnforcementEnabled = process.env.QUOTA_ENFORCEMENT_ENABLED !== 'false';
     this.billingEnabled = process.env.BILLING_ENABLED === 'true';
   }

@@ -12,7 +12,7 @@
  */
 
 import { logger } from '../../utils/logger.js';
-import { DatabasePool } from '../../utils/database-pool.js';
+import { DatabaseConnectionPool } from '../../utils/database-pool.js';
 import { 
   Tenant, 
   TenantUser, 
@@ -26,10 +26,10 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 
 export class TenantManagementService {
-  private db: DatabasePool;
+  private db: DatabaseConnectionPool;
 
   constructor() {
-    this.db = new DatabasePool();
+    this.db = new DatabaseConnectionPool();
   }
 
   // ===================

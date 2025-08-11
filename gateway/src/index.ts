@@ -40,6 +40,7 @@ import { createSearchAlertsRoutes } from './routes/search-alerts.routes.js';
 import userBehaviorRoutes from './routes/user-behavior.routes.js';
 import { createCollaborationRoutes } from './routes/collaboration.routes.js';
 import { createSearchCollaborationRoutes } from './routes/search-collaboration.routes.js';
+import { federationRoutes } from './routes/federation.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -347,6 +348,7 @@ async function createApp() {
   app.use('/api/v1/facets', dynamicFacetsRoutes);
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
+  app.use('/api/v1/federation', federationRoutes);
   app.use('/api', apiDocumentationRecommendationsRoutes);
   app.use('/api/search-collaboration', createSearchCollaborationRoutes(liveSearchCollaborationService));
   

@@ -12,7 +12,7 @@
  */
 
 import { logger } from '../../utils/logger.js';
-import { DatabasePool } from '../../utils/database-pool.js';
+import { DatabaseConnectionPool } from '../../utils/database-pool.js';
 import { 
   TenantContext, 
   TenantJwtClaims, 
@@ -51,13 +51,13 @@ interface ApiKeyValidationResult {
 }
 
 export class TenantAuthenticationService {
-  private db: DatabasePool;
+  private db: DatabaseConnectionPool;
   private jwtSecret: string;
   private jwtIssuer: string;
   private jwtAudience: string;
 
   constructor() {
-    this.db = new DatabasePool();
+    this.db = new DatabaseConnectionPool();
     this.validateJwtConfiguration();
     this.jwtSecret = process.env.JWT_SECRET!;
     this.jwtIssuer = process.env.JWT_ISSUER || 'mcp-tools';

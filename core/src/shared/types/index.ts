@@ -67,3 +67,6 @@ export * from './live-search-collaboration.js';
 
 // Multi-tenant architecture types
 export * from './multi-tenant.js';
+
+// Federation protocol types
+export * from './federation.js';

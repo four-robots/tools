@@ -13,7 +13,7 @@ import {
   FacetStatisticsService,
   type DynamicFacetServiceOptions,
   type FacetDiscoveryOptions
-} from '@mcp-tools/core/src/services/dynamic-facets';
+} from '@mcp-tools/core';
 import {
   type SearchResult,
   type FacetFilter,
@@ -21,7 +21,7 @@ import {
   type ApplyFiltersRequest,
   type FacetStatisticsRequest,
   DynamicFacetSchemas
-} from '@mcp-tools/core/src/shared/types';
+} from '@mcp-tools/core/shared';
 
 const router = Router();
 
