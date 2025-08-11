@@ -38,6 +38,109 @@ const SANITIZATION_CONFIGS = {
   }
 };
 
+export class ErrorSanitizer {
+  /**
+   * Sanitizes error messages to prevent sensitive data leakage
+   */
+  static sanitizeErrorMessage(error: Error, context: string): string {
+    let message = error.message
+      .replace(/\b\w+@\w+\.\w+\b/g, '[EMAIL_REDACTED]') // emails
+      .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[IP_REDACTED]') // IPs
+      .replace(/api[_-]?key[s]?[:\s=]+[^\s]+/gi, '[API_KEY_REDACTED]') // API keys
+      .replace(/password[:\s=]+[^\s]+/gi, '[PASSWORD_REDACTED]') // passwords
+      .replace(/token[:\s=]+[^\s]+/gi, '[TOKEN_REDACTED]') // tokens
+      .replace(/secret[:\s=]+[^\s]+/gi, '[SECRET_REDACTED]') // secrets
+      .replace(/bearer\s+[^\s]+/gi, '[BEARER_TOKEN_REDACTED]') // bearer tokens
+      .replace(/authorization[:\s=]+[^\s]+/gi, '[AUTH_REDACTED]') // authorization headers
+      .replace(/x-api-key[:\s=]+[^\s]+/gi, '[X_API_KEY_REDACTED]') // x-api-key headers
+      .replace(/\b[A-Fa-f0-9]{32}\b/g, '[HASH_REDACTED]') // 32-char hashes (MD5, etc.)
+      .replace(/\b[A-Fa-f0-9]{40}\b/g, '[HASH_REDACTED]') // 40-char hashes (SHA1)
+      .replace(/\b[A-Fa-f0-9]{64}\b/g, '[HASH_REDACTED]') // 64-char hashes (SHA256)
+      .replace(/\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}/g, '[BCRYPT_HASH_REDACTED]') // bcrypt hashes
+      .replace(/mongodb:\/\/[^@]*@[^/]*/g, 'mongodb://[CREDENTIALS_REDACTED]@[HOST_REDACTED]') // MongoDB URIs
+      .replace(/postgres:\/\/[^@]*@[^/]*/g, 'postgres://[CREDENTIALS_REDACTED]@[HOST_REDACTED]') // PostgreSQL URIs
+      .replace(/redis:\/\/[^@]*@[^/]*/g, 'redis://[CREDENTIALS_REDACTED]@[HOST_REDACTED]') // Redis URIs
+      .replace(/\b(?:sk-|pk_)[A-Za-z0-9_-]+/g, '[STRIPE_KEY_REDACTED]') // Stripe keys
+      .replace(/\bAIza[A-Za-z0-9_-]{35}/g, '[GOOGLE_API_KEY_REDACTED]') // Google API keys
+      .replace(/\bghp_[A-Za-z0-9]{36}/g, '[GITHUB_TOKEN_REDACTED]') // GitHub personal access tokens
+      .replace(/\bxoxb-[A-Za-z0-9-]+/g, '[SLACK_BOT_TOKEN_REDACTED]') // Slack bot tokens
+      .replace(/\bxoxp-[A-Za-z0-9-]+/g, '[SLACK_USER_TOKEN_REDACTED]') // Slack user tokens
+      .replace(/\bAKIA[A-Z0-9]{16}/g, '[AWS_ACCESS_KEY_REDACTED]') // AWS access keys
+      .replace(/\b[A-Za-z0-9/+=]{40}/g, '[AWS_SECRET_KEY_REDACTED]') // AWS secret keys (base64)
+      .replace(/\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, '[CREDIT_CARD_REDACTED]') // Credit card numbers
+      .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN_REDACTED]') // Social Security Numbers
+      .replace(/\b\d{9}\b/g, '[TAX_ID_REDACTED]') // Tax ID numbers
+      .replace(/\/([A-Za-z]:)?[\\\/](?:Users|home|Documents|Desktop)[\\\/][^\s"']+/g, '[FILE_PATH_REDACTED]') // File paths
+      .replace(/"[^"]*password[^"]*"/gi, '"[PASSWORD_FIELD_REDACTED]"') // Password fields in JSON
+      .replace(/"[^"]*secret[^"]*"/gi, '"[SECRET_FIELD_REDACTED]"') // Secret fields in JSON
+      .replace(/"[^"]*token[^"]*"/gi, '"[TOKEN_FIELD_REDACTED]"'); // Token fields in JSON
+
+    // Limit message length
+    if (message.length > 200) {
+      message = message.substring(0, 200) + '...';
+    }
+
+    return `[${context}] ${message}`;
+  }
+
+  /**
+   * Sanitizes log data to remove sensitive fields
+   */
+  static sanitizeLogData(data: any): any {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    // Handle arrays
+    if (Array.isArray(data)) {
+      return data.map(item => this.sanitizeLogData(item));
+    }
+
+    // Handle objects
+    const sensitiveFields = [
+      'password', 'token', 'apiKey', 'secret', 'credentials', 'auth', 'authorization',
+      'x-api-key', 'x-auth-token', 'bearer', 'jwt', 'session', 'cookie', 'sessionId',
+      'privateKey', 'publicKey', 'cert', 'certificate', 'key', 'hash', 'salt',
+      'connectionString', 'dbPassword', 'dbUser', 'mongoUri', 'redisUrl', 'databaseUrl',
+      'stripeKey', 'googleApiKey', 'githubToken', 'slackToken', 'awsAccessKey', 'awsSecretKey'
+    ];
+
+    const sanitized: any = {};
+    
+    for (const [key, value] of Object.entries(data)) {
+      const keyLower = key.toLowerCase();
+      
+      // Check if field should be redacted
+      if (sensitiveFields.some(field => keyLower.includes(field.toLowerCase()))) {
+        sanitized[key] = '[REDACTED]';
+      } else if (typeof value === 'object' && value !== null) {
+        // Recursively sanitize nested objects
+        sanitized[key] = this.sanitizeLogData(value);
+      } else if (typeof value === 'string') {
+        // Apply string sanitization to catch inline sensitive data
+        sanitized[key] = this.sanitizeStringValue(value);
+      } else {
+        sanitized[key] = value;
+      }
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * Sanitizes string values to remove inline sensitive data
+   */
+  private static sanitizeStringValue(value: string): string {
+    return value
+      .replace(/\b\w+@\w+\.\w+\b/g, '[EMAIL_REDACTED]')
+      .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[IP_REDACTED]')
+      .replace(/\b[A-Fa-f0-9]{32,}\b/g, '[HASH_REDACTED]')
+      .replace(/\b(?:sk-|pk_)[A-Za-z0-9_-]+/g, '[API_KEY_REDACTED]')
+      .replace(/bearer\s+[^\s]+/gi, '[BEARER_TOKEN_REDACTED]')
+      .replace(/\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, '[CARD_REDACTED]');
+  }
+}
+
 export class InputSanitizer {
   /**
    * Sanitizes annotation text allowing basic HTML formatting

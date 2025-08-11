@@ -70,3 +70,6 @@ export * from './multi-tenant.js';
 
 // Federation protocol types
 export * from './federation.js';
+
+// Conflict resolution and merge strategy types
+export * from './conflict-resolution.js';
