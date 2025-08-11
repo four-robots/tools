@@ -15,6 +15,7 @@ import {
   FileText,
   Brain,
   Kanban,
+  PenTool,
   Wifi,
   WifiOff,
   Eye,
@@ -300,6 +301,22 @@ export function WorkspaceLayout({ workspaceId, children }: WorkspaceLayoutProps)
                   >
                     <Brain size={16} className="mr-2" />
                     Memory Graph
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      // Navigate to whiteboard integration
+                      router.push(`/workspaces/${workspaceId}/whiteboards`);
+                      updateActivity({
+                        activeTool: 'whiteboard',
+                        activeResource: `workspace:${workspaceId}:whiteboard`,
+                      });
+                    }}
+                  >
+                    <PenTool size={16} className="mr-2" />
+                    Whiteboards
                   </Button>
                 </div>
               </Tabs>

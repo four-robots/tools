@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* tldraw styles */
+@import '@tldraw/tldraw/tldraw.css';
+
 @layer base {
   html {
     @apply scroll-smooth;

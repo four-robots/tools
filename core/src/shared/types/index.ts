@@ -80,3 +80,6 @@ export * from './collaboration-events.js';
 
 // Collaborative workspace types
 export * from './workspace.js';
+
+// Collaborative whiteboard types
+export * from './whiteboard.js';
