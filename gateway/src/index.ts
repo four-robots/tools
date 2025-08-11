@@ -43,6 +43,7 @@ import { createCollaborationRoutes } from './routes/collaboration.routes.js';
 import { createSearchCollaborationRoutes } from './routes/search-collaboration.routes.js';
 import { federationRoutes } from './routes/federation.routes.js';
 import workspaceRoutes from './routes/workspace.routes.js';
+import { createWhiteboardRoutes } from './routes/whiteboard.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -385,6 +386,7 @@ async function createApp() {
   app.use('/api/v1/behavior', userBehaviorRoutes);
   app.use('/api/v1/federation', federationRoutes);
   app.use('/api/v1/workspaces', workspaceRoutes);
+  app.use('/api/v1', createWhiteboardRoutes(pgPool));
   app.use('/api', apiDocumentationRecommendationsRoutes);
   app.use('/api/search-collaboration', createSearchCollaborationRoutes(liveSearchCollaborationService));
   
