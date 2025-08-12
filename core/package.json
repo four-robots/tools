@@ -103,6 +103,7 @@
     "dompurify": "^3.2.6",
     "escomplex": "^2.0.0-alpha",
     "eslint": "^8.57.0",
+    "fast-json-patch": "^3.1.1",
     "franc": "^6.1.0",
     "glob": "^10.3.10",
     "gray-matter": "^4.0.3",
@@ -142,6 +143,7 @@
   },
   "devDependencies": {
     "@types/babel__parser": "^7.1.5",
+    "@types/fast-json-patch": "^1.0.4",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.9",

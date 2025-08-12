@@ -58,6 +58,7 @@ import {
   createAnalyticsMiddleware,
   AnalyticsBatcher 
 } from './whiteboard-analytics-integration.js';
+import { WhiteboardVersionService } from '@mcp-tools/core/services/whiteboard/whiteboard-version-service';
 
 interface WhiteboardAuthenticatedSocket extends AuthenticatedSocket {
   whiteboardSession?: {
@@ -207,6 +208,9 @@ export function setupWhiteboardWebSocket(
     },
     logger
   );
+
+  // Initialize version service for version history and rollback
+  const versionService = new WhiteboardVersionService(db, logger);
 
   // Initialize analytics integration for comprehensive tracking
   const analyticsIntegration = new WhiteboardAnalyticsIntegration(db, {
@@ -928,6 +932,14 @@ export function setupWhiteboardWebSocket(
           } : undefined
         });
 
+        // Handle auto-versioning for significant changes
+        await handleAutoVersioning(whiteboardId, socket.user.id, {
+          operation: data.operation,
+          elementCount: newVersion,
+          conflicts: conflicts.length,
+          processingTime: performance.processingTimeMs,
+        });
+
         // Performance monitoring and alerts
         if (performance.processingTimeMs > 500) {
           logger.warn('High operation processing latency detected', {
@@ -1333,7 +1345,7 @@ export function setupWhiteboardWebSocket(
     });
 
     // Provide canvas sync response
-    socket.on('whiteboard:sync_response', (data: {
+    socket.on('whiteboard:sync_response', async (data: {
       requesterId: string;
       requesterSocketId: string;
       canvasData: any;
@@ -3383,6 +3395,386 @@ export function setupWhiteboardWebSocket(
         logger.error('Failed to broadcast external resource update', { error, data });
       }
     });
+
+    // ==================== VERSION HISTORY AND ROLLBACK SYSTEM ====================
+    
+    // Create version checkpoint
+    socket.on('whiteboard:create_version', async (data: {
+      whiteboardId: string;
+      changeType?: 'major' | 'minor' | 'patch' | 'manual';
+      commitMessage?: string;
+      isMilestone?: boolean;
+      tags?: string[];
+      branchName?: string;
+      metadata?: any;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check permissions
+        const hasEditPermission = await permissionService.checkPermission({
+          whiteboardId: data.whiteboardId,
+          userId: socket.user.id,
+          action: 'canEdit',
+        });
+
+        if (!hasEditPermission.hasPermission) {
+          socket.emit('error', { code: 'PERMISSION_DENIED', message: 'Insufficient permissions to create version' });
+          return;
+        }
+
+        const version = await versionService.createVersion(
+          data.whiteboardId,
+          socket.user.id,
+          {
+            changeType: data.changeType || 'manual',
+            commitMessage: data.commitMessage,
+            isMilestone: data.isMilestone,
+            tags: data.tags,
+            branchName: data.branchName,
+            metadata: data.metadata,
+          }
+        );
+
+        // Notify all users in the whiteboard
+        io.to(`whiteboard:${data.whiteboardId}`).emit('whiteboard:version_created', {
+          version,
+          createdBy: {
+            id: socket.user.id,
+            username: socket.user.username,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        socket.emit('whiteboard:version_created_success', {
+          version,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info('Version created via WebSocket', {
+          versionId: version.id,
+          whiteboardId: data.whiteboardId,
+          userId: socket.user.id,
+          versionNumber: version.versionNumber,
+        });
+      } catch (error) {
+        logger.error('Failed to create version via WebSocket', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:version_create_error', {
+          message: error.message,
+          code: 'VERSION_CREATE_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Get version history
+    socket.on('whiteboard:get_version_history', async (data: {
+      whiteboardId: string;
+      filters?: {
+        branchName?: string;
+        changeType?: string[];
+        createdBy?: string;
+        isMilestone?: boolean;
+        dateFrom?: string;
+        dateTo?: string;
+      };
+      limit?: number;
+      offset?: number;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { whiteboardId, filters, limit = 20, offset = 0 } = data;
+
+        const versionHistory = await versionService.getVersionHistory(
+          whiteboardId,
+          socket.user.id,
+          filters,
+          limit,
+          offset
+        );
+
+        socket.emit('whiteboard:version_history', {
+          whiteboardId,
+          versions: versionHistory,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        logger.error('Failed to get version history via WebSocket', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:version_history_error', {
+          message: error.message,
+          code: 'VERSION_HISTORY_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Compare versions
+    socket.on('whiteboard:compare_versions', async (data: {
+      whiteboardId: string;
+      versionAId: string;
+      versionBId: string;
+      comparisonType?: 'full' | 'elements_only' | 'canvas_only' | 'metadata_only';
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const comparison = await versionService.compareVersions(
+          data.whiteboardId,
+          socket.user.id,
+          {
+            versionAId: data.versionAId,
+            versionBId: data.versionBId,
+            comparisonType: data.comparisonType || 'full',
+          }
+        );
+
+        socket.emit('whiteboard:version_comparison', {
+          comparison,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        logger.error('Failed to compare versions via WebSocket', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:version_comparison_error', {
+          message: error.message,
+          code: 'VERSION_COMPARISON_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Rollback to version
+    socket.on('whiteboard:rollback_to_version', async (data: {
+      whiteboardId: string;
+      targetVersionId: string;
+      rollbackType?: 'full' | 'partial' | 'elements_only' | 'canvas_only';
+      conflictResolution?: 'overwrite' | 'merge' | 'manual' | 'cancel';
+      confirmConflicts?: boolean;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check permissions - rollback requires edit permissions
+        const hasEditPermission = await permissionService.checkPermission({
+          whiteboardId: data.whiteboardId,
+          userId: socket.user.id,
+          action: 'canEdit',
+        });
+
+        if (!hasEditPermission.hasPermission) {
+          socket.emit('error', { code: 'PERMISSION_DENIED', message: 'Insufficient permissions to rollback whiteboard' });
+          return;
+        }
+
+        // Emit rollback started event
+        socket.emit('whiteboard:rollback_started', {
+          whiteboardId: data.whiteboardId,
+          targetVersionId: data.targetVersionId,
+          timestamp: new Date().toISOString(),
+        });
+
+        const rollback = await versionService.rollbackToVersion(
+          data.whiteboardId,
+          socket.user.id,
+          {
+            targetVersionId: data.targetVersionId,
+            rollbackType: data.rollbackType || 'full',
+            conflictResolution: data.conflictResolution || 'overwrite',
+          }
+        );
+
+        // Handle different rollback statuses
+        if (rollback.status === 'conflict' && !data.confirmConflicts) {
+          // Send conflict information for manual resolution
+          socket.emit('whiteboard:rollback_conflicts', {
+            rollback,
+            conflicts: rollback.conflictsData,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (rollback.status === 'completed') {
+          // Notify all users in the whiteboard about successful rollback
+          io.to(`whiteboard:${data.whiteboardId}`).emit('whiteboard:rollback_completed', {
+            rollback,
+            rolledBackBy: {
+              id: socket.user.id,
+              username: socket.user.username,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          // Request canvas sync for all connected clients
+          io.to(`whiteboard:${data.whiteboardId}`).emit('whiteboard:request_full_sync', {
+            reason: 'rollback_completed',
+            rollbackId: rollback.id,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          // Handle failed rollback
+          socket.emit('whiteboard:rollback_failed', {
+            rollback,
+            error: rollback.errorMessage,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        logger.info('Rollback initiated via WebSocket', {
+          rollbackId: rollback.id,
+          whiteboardId: data.whiteboardId,
+          targetVersionId: data.targetVersionId,
+          userId: socket.user.id,
+          status: rollback.status,
+        });
+      } catch (error) {
+        logger.error('Failed to rollback version via WebSocket', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:rollback_error', {
+          message: error.message,
+          code: 'ROLLBACK_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Resolve rollback conflicts
+    socket.on('whiteboard:resolve_rollback_conflicts', async (data: {
+      rollbackId: string;
+      resolution: 'overwrite' | 'merge' | 'cancel';
+      selectedOperations?: string[];
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        // Update rollback with conflict resolution
+        // This would require extending the rollback service with conflict resolution methods
+        // For now, emit a notification that conflicts are being resolved
+        socket.emit('whiteboard:rollback_conflicts_resolving', {
+          rollbackId: data.rollbackId,
+          resolution: data.resolution,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info('Rollback conflict resolution initiated', {
+          rollbackId: data.rollbackId,
+          resolution: data.resolution,
+          userId: socket.user.id,
+        });
+      } catch (error) {
+        logger.error('Failed to resolve rollback conflicts', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:rollback_conflict_resolution_error', {
+          message: error.message,
+          code: 'CONFLICT_RESOLUTION_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Get version branches
+    socket.on('whiteboard:get_version_branches', async (data: {
+      whiteboardId: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        // This would require implementing branch management methods
+        // For now, return a simple response
+        socket.emit('whiteboard:version_branches', {
+          whiteboardId: data.whiteboardId,
+          branches: [
+            {
+              id: 'main',
+              name: 'main',
+              isMain: true,
+              headVersionId: null,
+              createdBy: socket.user.id,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        logger.error('Failed to get version branches', { error, data, userId: socket.user?.id });
+        socket.emit('whiteboard:version_branches_error', {
+          message: error.message,
+          code: 'BRANCHES_FAILED',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Auto-version on significant changes
+    const handleAutoVersioning = async (whiteboardId: string, userId: string, changeData: any) => {
+      try {
+        // Only create auto-versions for significant changes
+        const shouldCreateVersion = await shouldCreateAutoVersion(whiteboardId, changeData);
+        
+        if (shouldCreateVersion) {
+          const version = await versionService.createVersion(whiteboardId, userId, {
+            changeType: 'auto_save',
+            commitMessage: 'Automatic version created',
+            isAutomatic: true,
+            metadata: {
+              changeType: changeData.operation?.type,
+              elementCount: changeData.elementCount,
+              trigger: 'canvas_change',
+            },
+          });
+
+          // Silently notify connected clients about auto-version
+          io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:auto_version_created', {
+            versionId: version.id,
+            versionNumber: version.versionNumber,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        logger.warn('Auto-versioning failed', { error, whiteboardId, userId });
+        // Don't emit error for auto-versioning failures
+      }
+    };
+
+    // Helper function to determine if auto-version should be created
+    const shouldCreateAutoVersion = async (whiteboardId: string, changeData: any): Promise<boolean> => {
+      // Simple heuristics for auto-versioning
+      const significantOperations = ['create', 'delete'];
+      const operationType = changeData.operation?.type;
+      
+      // Create version for significant operations
+      if (significantOperations.includes(operationType)) {
+        return true;
+      }
+
+      // Create version every 10 minutes for active editing
+      const lastAutoVersionTime = canvasVersions.get(`auto_version_time:${whiteboardId}`);
+      const now = Date.now();
+      const tenMinutes = 10 * 60 * 1000;
+
+      if (!lastAutoVersionTime || (now - lastAutoVersionTime) > tenMinutes) {
+        canvasVersions.set(`auto_version_time:${whiteboardId}`, now);
+        return true;
+      }
+
+      return false;
+    };
 
     // ==================== ADVANCED SEARCH FUNCTIONALITY ====================
 
