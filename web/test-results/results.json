@@ -1,0 +1,831 @@
+{
+  "config": {
+    "configFile": "D:\\source\\@tylercoles\\tools\\web\\playwright.config.ts",
+    "rootDir": "D:/source/@tylercoles/tools/web/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "D:\\source\\@tylercoles\\tools\\web\\tests\\setup\\global-setup.ts",
+    "globalTeardown": "D:\\source\\@tylercoles\\tools\\web\\tests\\setup\\global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "testType": "cross-browser-compatibility",
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari",
+        "edge"
+      ],
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "features": [
+        "ui-consistency",
+        "feature-compatibility",
+        "performance",
+        "accessibility"
+      ]
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never",
+          "outputFolder": "test-results/html-report"
+        }
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "github",
+        null
+      ],
+      [
+        "D:\\source\\@tylercoles\\tools\\web\\tests\\utils\\cross-browser-reporter.ts",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.setup\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "chrome-desktop",
+        "name": "chrome-desktop",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "chrome-desktop-headless",
+        "name": "chrome-desktop-headless",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**",
+          "**/visual/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "edge-desktop",
+        "name": "edge-desktop",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "firefox-desktop",
+        "name": "firefox-desktop",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "firefox-esr",
+        "name": "firefox-esr",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**",
+          "**/modern-features/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "safari-desktop",
+        "name": "safari-desktop",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/mobile/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "chrome-mobile-android",
+        "name": "chrome-mobile-android",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/desktop/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "samsung-internet-mobile",
+        "name": "samsung-internet-mobile",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/desktop/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "safari-mobile-ios",
+        "name": "safari-mobile-ios",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/desktop/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "safari-mobile-ipad",
+        "name": "safari-mobile-ipad",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [
+          "**/desktop/**",
+          "**/legacy/**"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "feature-compatibility",
+        "name": "feature-compatibility",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/feature-compatibility/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "ui-consistency",
+        "name": "ui-consistency",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/ui-consistency/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "performance-cross-browser",
+        "name": "performance-cross-browser",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/performance/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "visual-cross-browser",
+        "name": "visual-cross-browser",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/visual/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "legacy-support",
+        "name": "legacy-support",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/legacy/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "accessibility-cross-browser",
+        "name": "accessibility-cross-browser",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/accessibility/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "security-cross-browser",
+        "name": "security-cross-browser",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/cross-browser/security/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "chrome-specific",
+        "name": "chrome-specific",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/browser-specific/chrome/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "firefox-specific",
+        "name": "firefox-specific",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/browser-specific/firefox/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "safari-specific",
+        "name": "safari-specific",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/browser-specific/safari/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "D:/source/@tylercoles/tools/web/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "testType": "cross-browser-compatibility",
+          "browsers": [
+            "chrome",
+            "firefox",
+            "safari",
+            "edge"
+          ],
+          "platforms": [
+            "desktop",
+            "mobile"
+          ],
+          "features": [
+            "ui-consistency",
+            "feature-compatibility",
+            "performance",
+            "accessibility"
+          ]
+        },
+        "id": "mobile-specific",
+        "name": "mobile-specific",
+        "testDir": "D:/source/@tylercoles/tools/web/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/browser-specific/mobile/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.54.2",
+    "workers": 16,
+    "webServer": null
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 1",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 1"
+    }
+  ],
+  "stats": {
+    "startTime": "2025-08-12T14:25:21.041Z",
+    "duration": 8364.668,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

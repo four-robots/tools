@@ -660,9 +660,480 @@ export class WhiteboardService {
     }
   }
 
-  private async applyTemplate(whiteboardId: string, templateId: string, userId: string): Promise<void> {
-    // TODO: Implement template application
-    this.logger.info('Applying template to whiteboard', { whiteboardId, templateId, userId });
+  private async applyTemplate(
+    whiteboardId: string, 
+    templateId: string, 
+    userId: string,
+    options?: {
+      position?: { x: number; y: number };
+      scale?: number;
+      replaceContent?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    elementsCreated: string[];
+    errors?: string[];
+  }> {
+    const errors: string[] = [];
+    const elementsCreated: string[] = [];
+    let rollbackOperations: (() => Promise<void>)[] = [];
+
+    try {
+      this.logger.info('Starting template application', { whiteboardId, templateId, userId, options });
+
+      // 1. Validate user permissions to edit the whiteboard
+      const whiteboardQuery = `
+        SELECT w.id, w.workspace_id, w.name, w.canvas_data, w.version, w.created_by, w.visibility
+        FROM whiteboards w
+        WHERE w.id = $1 AND w.deleted_at IS NULL
+      `;
+      
+      const whiteboardResult = await this.db.query(whiteboardQuery, [whiteboardId]);
+      
+      if (whiteboardResult.rows.length === 0) {
+        throw this.createWhiteboardError('WHITEBOARD_NOT_FOUND', 'Whiteboard not found');
+      }
+      
+      const whiteboard = whiteboardResult.rows[0];
+
+      const hasEditPermission = await this.hasUserEditPermission(whiteboardId, userId);
+      if (!hasEditPermission) {
+        throw this.createWhiteboardError('PERMISSION_DENIED', 'User does not have edit permissions for this whiteboard');
+      }
+
+      // 2. Get template data from WhiteboardTemplateService
+      const templateService = new (await import('./whiteboard-template-service.js')).WhiteboardTemplateService(this.db, this.logger);
+      const template = await templateService.getTemplate(templateId, userId, whiteboard.workspaceId);
+      
+      if (!template) {
+        throw this.createWhiteboardError('TEMPLATE_NOT_FOUND', 'Template not found or access denied');
+      }
+
+      if (!template.templateData || !template.templateData.defaultElements) {
+        throw this.createWhiteboardError('INVALID_TEMPLATE', 'Template has no elements to apply');
+      }
+
+      this.logger.debug('Retrieved template data', { 
+        templateId, 
+        elementCount: template.templateData.defaultElements.length,
+        hasCanvasData: !!template.templateData.canvasData
+      });
+
+      // 3. Replace content if requested
+      if (options?.replaceContent) {
+        const deleteQuery = `
+          UPDATE whiteboard_elements 
+          SET deleted_at = $1, last_modified_by = $2, updated_at = $1
+          WHERE whiteboard_id = $3 AND deleted_at IS NULL
+        `;
+        
+        await this.db.query(deleteQuery, [new Date().toISOString(), userId, whiteboardId]);
+        this.logger.debug('Cleared existing whiteboard content');
+      }
+
+      // 4. Apply canvas settings if present
+      if (template.templateData.canvasData && Object.keys(template.templateData.canvasData).length > 0) {
+        const currentCanvasData = whiteboard.canvas_data ? 
+          JSON.parse(whiteboard.canvas_data) : {};
+        const mergedCanvasData = {
+          ...currentCanvasData,
+          ...template.templateData.canvasData
+        };
+
+        const updateCanvasQuery = `
+          UPDATE whiteboards 
+          SET canvas_data = $1, updated_at = $2, last_modified_by = $3, version = version + 1
+          WHERE id = $4
+        `;
+
+        await this.db.query(updateCanvasQuery, [
+          JSON.stringify(mergedCanvasData),
+          new Date().toISOString(),
+          userId,
+          whiteboardId
+        ]);
+
+        this.logger.debug('Applied template canvas settings');
+      }
+
+      // 5. Create transform context for OT operations
+      const transformContext = {
+        canvasVersion: whiteboard.version + 1,
+        pendingOperations: [],
+        elementStates: new Map(),
+        currentVectorClock: { [userId]: 0 },
+        lamportClock: Date.now(),
+        userId,
+        userRole: 'editor',
+        permissions: {
+          canCreate: true,
+          canEdit: hasEditPermission,
+          canDelete: hasEditPermission,
+        },
+        operationStartTime: Date.now(),
+        maxProcessingTime: 30000, // 30 second timeout
+      };
+
+      // 6. Transform and create elements with proper positioning
+      const positionOffset = options?.position || { x: 0, y: 0 };
+      const scale = options?.scale || 1;
+      const now = new Date().toISOString();
+
+      for (let i = 0; i < template.templateData.defaultElements.length; i++) {
+        const templateElement = template.templateData.defaultElements[i];
+        
+        try {
+          // Generate new UUID for the element
+          const newElementId = randomUUID();
+          elementsCreated.push(newElementId);
+
+          // Transform element data with positioning
+          const transformedElementData = this.transformTemplateElementData(
+            templateElement.elementData, 
+            positionOffset, 
+            scale
+          );
+
+          // Create OT operation for element creation
+          const { createOperation } = await import('@shared/whiteboard-ot.js');
+          
+          const operation = createOperation(
+            'create',
+            newElementId,
+            userId,
+            transformContext,
+            {
+              elementType: templateElement.elementType,
+              data: transformedElementData,
+              position: transformedElementData.position,
+              bounds: transformedElementData.bounds,
+              style: templateElement.styleData,
+              zIndex: templateElement.layerIndex + i, // Maintain relative ordering
+            }
+          );
+
+          // Validate the operation
+          const { validateAndSanitizeOperation } = await import('@shared/whiteboard-ot.js');
+          const { operation: validatedOperation, errors: validationErrors } = validateAndSanitizeOperation(
+            operation,
+            transformContext
+          );
+
+          if (!validatedOperation || validationErrors.length > 0) {
+            errors.push(`Failed to validate element ${i + 1}: ${validationErrors.join(', ')}`);
+            continue;
+          }
+
+          // Insert element into database
+          const elementQuery = `
+            INSERT INTO whiteboard_elements (
+              id, whiteboard_id, element_type, element_data, layer_index, 
+              parent_id, locked, visible, style_data, metadata, version,
+              created_by, last_modified_by, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          `;
+
+          await this.db.query(elementQuery, [
+            newElementId,
+            whiteboardId,
+            templateElement.elementType,
+            JSON.stringify(transformedElementData),
+            templateElement.layerIndex + i,
+            templateElement.parentId || null,
+            false, // Not locked by default
+            true,  // Visible by default
+            JSON.stringify(templateElement.styleData || {}),
+            JSON.stringify({}), // Empty metadata
+            1, // Initial version
+            userId,
+            userId,
+            now,
+            now
+          ]);
+
+          // Add rollback operation
+          rollbackOperations.push(async () => {
+            await this.db.query(`DELETE FROM whiteboard_elements WHERE id = $1`, [newElementId]);
+          });
+
+          // Update transform context
+          const { updateTransformContext } = await import('@shared/whiteboard-ot.js');
+          Object.assign(transformContext, updateTransformContext(transformContext, validatedOperation));
+
+          this.logger.debug('Created template element', { 
+            elementId: newElementId, 
+            type: templateElement.elementType,
+            position: transformedElementData.position
+          });
+
+        } catch (elementError) {
+          this.logger.error('Failed to create template element', { 
+            error: elementError, 
+            elementIndex: i,
+            elementType: templateElement.elementType 
+          });
+          errors.push(`Failed to create element ${i + 1}: ${elementError instanceof Error ? elementError.message : 'Unknown error'}`);
+        }
+      }
+
+      // 7. Update template usage statistics
+      try {
+        await templateService.applyTemplate(templateId, whiteboardId, userId, whiteboard.workspaceId);
+      } catch (usageError) {
+        this.logger.warn('Failed to update template usage statistics', { 
+          error: usageError,
+          templateId,
+          whiteboardId 
+        });
+        // Don't fail the main operation for usage tracking errors
+      }
+
+      // 8. Log activity
+      try {
+        const activityId = randomUUID();
+        const activityQuery = `
+          INSERT INTO whiteboard_activity_log (
+            id, whiteboard_id, user_id, action, target_type, target_id,
+            action_data, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `;
+
+        await this.db.query(activityQuery, [
+          activityId,
+          whiteboardId,
+          userId,
+          'template_applied',
+          'template',
+          templateId,
+          JSON.stringify({
+            templateName: template.name,
+            elementsCreated: elementsCreated.length,
+            errors: errors.length,
+          }),
+          new Date().toISOString(),
+        ]);
+      } catch (logError) {
+        this.logger.warn('Failed to log template application activity', { error: logError });
+      }
+
+      // 9. Broadcast real-time updates to connected users
+      try {
+        await this.broadcastTemplateApplied(whiteboardId, userId, {
+          templateId,
+          templateName: template.name,
+          elementsCreated,
+          errors,
+        });
+      } catch (broadcastError) {
+        this.logger.warn('Failed to broadcast template application', { error: broadcastError });
+      }
+
+      // 10. Return results
+      const success = elementsCreated.length > 0;
+      
+      this.logger.info('Template application completed', { 
+        whiteboardId, 
+        templateId, 
+        userId,
+        success,
+        elementsCreated: elementsCreated.length,
+        errors: errors.length 
+      });
+
+      return {
+        success,
+        elementsCreated,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+
+    } catch (error) {
+      this.logger.error('Template application failed', { 
+        error, 
+        whiteboardId, 
+        templateId, 
+        userId,
+        elementsCreated: elementsCreated.length
+      });
+
+      // Rollback created elements on failure
+      if (rollbackOperations.length > 0) {
+        this.logger.info('Rolling back template application', { operationCount: rollbackOperations.length });
+        
+        for (const rollback of rollbackOperations.reverse()) {
+          try {
+            await rollback();
+          } catch (rollbackError) {
+            this.logger.error('Rollback operation failed', { error: rollbackError });
+          }
+        }
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during template application';
+      return {
+        success: false,
+        elementsCreated: [],
+        errors: [errorMessage, ...errors],
+      };
+    }
+  }
+
+  /**
+   * Transform template element data with positioning and scaling
+   */
+  private transformTemplateElementData(
+    elementData: any, 
+    positionOffset: { x: number; y: number }, 
+    scale: number
+  ): any {
+    const transformedData = JSON.parse(JSON.stringify(elementData)); // Deep copy
+    
+    // Transform position if present
+    if (transformedData.position) {
+      transformedData.position.x = (transformedData.position.x * scale) + positionOffset.x;
+      transformedData.position.y = (transformedData.position.y * scale) + positionOffset.y;
+    }
+    
+    // Transform bounds if present
+    if (transformedData.bounds) {
+      transformedData.bounds.x = (transformedData.bounds.x * scale) + positionOffset.x;
+      transformedData.bounds.y = (transformedData.bounds.y * scale) + positionOffset.y;
+      transformedData.bounds.width *= scale;
+      transformedData.bounds.height *= scale;
+    }
+    
+    // Transform size if present
+    if (transformedData.size) {
+      transformedData.size.width *= scale;
+      transformedData.size.height *= scale;
+    }
+    
+    // Transform line element points
+    if (transformedData.start && transformedData.end) {
+      transformedData.start.x = (transformedData.start.x * scale) + positionOffset.x;
+      transformedData.start.y = (transformedData.start.y * scale) + positionOffset.y;
+      transformedData.end.x = (transformedData.end.x * scale) + positionOffset.x;
+      transformedData.end.y = (transformedData.end.y * scale) + positionOffset.y;
+    }
+    
+    // Transform freehand points
+    if (Array.isArray(transformedData.points)) {
+      transformedData.points = transformedData.points.map((point: any) => ({
+        x: (point.x * scale) + positionOffset.x,
+        y: (point.y * scale) + positionOffset.y,
+      }));
+    }
+    
+    // Transform control points for curves
+    if (Array.isArray(transformedData.controlPoints)) {
+      transformedData.controlPoints = transformedData.controlPoints.map((point: any) => ({
+        x: (point.x * scale) + positionOffset.x,
+        y: (point.y * scale) + positionOffset.y,
+      }));
+    }
+    
+    return transformedData;
+  }
+
+  /**
+   * Check if user has edit permissions for the whiteboard
+   */
+  private async hasUserEditPermission(whiteboardId: string, userId: string): Promise<boolean> {
+    try {
+      const query = `
+        SELECT wp.can_edit, wp.element_permissions
+        FROM whiteboard_permissions wp
+        WHERE wp.whiteboard_id = $1 AND wp.user_id = $2
+      `;
+      
+      const result = await this.db.query(query, [whiteboardId, userId]);
+      
+      if (result.rows.length > 0) {
+        const permissions = result.rows[0];
+        return permissions.can_edit && 
+               (!permissions.element_permissions || 
+                permissions.element_permissions.canCreateElements !== false);
+      }
+      
+      // Fallback: check if user is the creator or has workspace access
+      const whiteboardQuery = `
+        SELECT w.created_by, w.workspace_id, w.visibility
+        FROM whiteboards w
+        WHERE w.id = $1
+      `;
+      
+      const whiteboardResult = await this.db.query(whiteboardQuery, [whiteboardId]);
+      
+      if (whiteboardResult.rows.length === 0) {
+        return false;
+      }
+      
+      const whiteboard = whiteboardResult.rows[0];
+      
+      // Owner always has edit permissions
+      if (whiteboard.created_by === userId) {
+        return true;
+      }
+      
+      // Check workspace membership for workspace visibility
+      if (whiteboard.visibility === 'workspace' && whiteboard.workspace_id) {
+        const memberQuery = `
+          SELECT wm.role
+          FROM workspace_members wm
+          WHERE wm.workspace_id = $1 AND wm.user_id = $2 AND wm.status = 'active'
+        `;
+        
+        const memberResult = await this.db.query(memberQuery, [whiteboard.workspace_id, userId]);
+        
+        if (memberResult.rows.length > 0) {
+          const role = memberResult.rows[0].role;
+          return role === 'owner' || role === 'admin' || role === 'editor';
+        }
+      }
+      
+      // Public whiteboards allow editing by default (can be restricted by explicit permissions)
+      return whiteboard.visibility === 'public';
+      
+    } catch (error) {
+      this.logger.error('Failed to check user edit permissions', { error, whiteboardId, userId });
+      return false;
+    }
+  }
+
+  /**
+   * Broadcast template application to connected users via WebSocket
+   */
+  private async broadcastTemplateApplied(
+    whiteboardId: string, 
+    userId: string, 
+    data: {
+      templateId: string;
+      templateName: string;
+      elementsCreated: string[];
+      errors: string[];
+    }
+  ): Promise<void> {
+    try {
+      // WebSocket broadcasting would be handled by the gateway service
+      // The activity log entry will be picked up by the gateway for real-time updates
+      this.logger.info('Template application broadcast intent', {
+        whiteboardId,
+        userId,
+        templateId: data.templateId,
+        templateName: data.templateName,
+        elementCount: data.elementsCreated.length,
+        errorCount: data.errors.length,
+        type: 'template_applied'
+      });
+    } catch (error) {
+      this.logger.warn('Failed to broadcast template application', { 
+        error, 
+        whiteboardId,
+        userId 
+      });
+      // Don't throw - broadcasting errors shouldn't fail the main operation
+    }
   }
 
   private hasWhiteboardAccess(
