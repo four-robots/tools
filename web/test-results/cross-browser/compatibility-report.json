@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-08-12T14:25:29.416Z",
+  "summary": {
+    "totalTests": 0,
+    "totalBrowsers": 0,
+    "totalIssues": 0
+  },
+  "browserResults": {},
+  "compatibilityIssues": [],
+  "metadata": {
+    "testType": "cross-browser-compatibility",
+    "reportVersion": "1.0.0"
+  }
+}
