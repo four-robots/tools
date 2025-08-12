@@ -340,3 +340,8 @@ export async function closeGlobalDatabaseConnectionPool(): Promise<void> {
 export function createDatabaseConnectionPool(config?: DatabaseConnectionPoolConfig): DatabaseConnectionPool {
   return new DatabaseConnectionPool(config);
 }
+
+/**
+ * Alias for DatabaseConnectionPool for backwards compatibility
+ */
+export { DatabaseConnectionPool as DatabasePool };

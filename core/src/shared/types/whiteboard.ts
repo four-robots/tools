@@ -21,7 +21,7 @@ export const WhiteboardElementType = z.enum([
 ]);
 export type WhiteboardElementType = z.infer<typeof WhiteboardElementType>;
 
-export const WhiteboardChangeType = z.enum(['major', 'minor', 'auto_save', 'conflict_resolution']);
+export const WhiteboardChangeType = z.enum(['major', 'minor', 'patch', 'auto_save', 'manual', 'template', 'rollback', 'merge', 'conflict_resolution']);
 export type WhiteboardChangeType = z.infer<typeof WhiteboardChangeType>;
 
 export const WhiteboardActivityAction = z.enum([
