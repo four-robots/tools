@@ -28,6 +28,11 @@ import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboa
 import { getSelectionService } from '@mcp-tools/core/services/whiteboard/whiteboard-selection-service';
 import { WhiteboardCommentService } from '@mcp-tools/core/services/whiteboard/whiteboard-comment-service';
 import { 
+  WhiteboardPermissionService,
+  PermissionCheckRequest,
+  PermissionCheckResult 
+} from '@mcp-tools/core/services/whiteboard/whiteboard-permission-service';
+import { 
   WhiteboardOTEngine, 
   EnhancedWhiteboardOperation, 
   EnhancedTransformContext,
@@ -171,6 +176,9 @@ export function setupWhiteboardWebSocket(
     logger
   );
 
+  // Initialize granular permission service for comprehensive RBAC
+  const permissionService = new WhiteboardPermissionService(db, logger);
+
   // Initialize enhanced OT engine for complex conflict resolution
   const otEngine = new WhiteboardOTEngine(logger);
 
@@ -194,6 +202,28 @@ export function setupWhiteboardWebSocket(
   const whiteboardContexts = createLRUCache<string, EnhancedTransformContext>('contexts');
   const operationQueues = createLRUCache<string, EnhancedWhiteboardOperation[]>('operations');
   const pendingConflicts = createLRUCache<string, ConflictInfo[]>('conflicts');
+  
+  // Permission cache for performance optimization (with TTL for security)
+  const permissionCache = createLRUCache<string, PermissionCheckResult>('permissions', { maxSize: 1000 });
+  
+  /**
+   * Invalidate permission cache for a user on a specific whiteboard
+   * Called when permissions are modified
+   */
+  function invalidatePermissionCache(userId: string, whiteboardId: string): void {
+    // Remove all cached permissions for this user on this whiteboard
+    const keysToDelete = Array.from(permissionCache.keys()).filter(key => 
+      key.startsWith(`perm:${userId}:${whiteboardId}:`)
+    );
+    
+    keysToDelete.forEach(key => permissionCache.delete(key));
+    
+    logger.debug('Permission cache invalidated', {
+      userId,
+      whiteboardId,
+      clearedEntries: keysToDelete.length
+    });
+  }
   
   logger.info('Whiteboard WebSocket initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
@@ -461,7 +491,15 @@ export function setupWhiteboardWebSocket(
           
           // Validate all operations before starting transaction
           for (const operation of operations) {
-            await validateWhiteboardAccess(socket.user.id, whiteboardId, operation.type);
+            // Include position and element context for granular permission checking
+            await validateWhiteboardAccess(
+              socket.user.id, 
+              whiteboardId, 
+              operation.type,
+              operation.elementId,
+              operation.position
+            );
+            
             if (operation.elementId) {
               await validateElementAccess(socket.user.id, whiteboardId, operation.elementId, operation.type);
             }
@@ -634,8 +672,14 @@ export function setupWhiteboardWebSocket(
 
         // CRITICAL SECURITY: Validate user permissions before processing operation
         try {
-          // Check if user has permission to modify this whiteboard
-          await validateWhiteboardAccess(socket.user.id, whiteboardId, operation.type);
+          // Check if user has permission to modify this whiteboard with granular context
+          await validateWhiteboardAccess(
+            socket.user.id, 
+            whiteboardId, 
+            operation.type,
+            operation.elementId,
+            operation.position
+          );
           
           // Validate element ownership and permissions
           if (operation.elementId) {
@@ -2738,6 +2782,332 @@ export function setupWhiteboardWebSocket(
       }
     });
 
+    // ==================== GRANULAR PERMISSION MANAGEMENT ====================
+
+    // Grant permission to a user
+    socket.on('whiteboard:grant_permission', async (data: {
+      whiteboardId: string;
+      userEmail: string;
+      role: 'editor' | 'commenter' | 'viewer';
+      customPermissions?: Record<string, boolean>;
+      expiresAt?: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NOT_AUTHENTICATED', message: 'User not authenticated' });
+          return;
+        }
+
+        const { whiteboardId, userEmail, role, customPermissions, expiresAt } = data;
+
+        // Validate that current user can manage permissions
+        const hasPermission = await permissionService.checkPermission({
+          whiteboardId,
+          userId: socket.user.id,
+          action: 'canManagePermissions'
+        });
+
+        if (!hasPermission.allowed) {
+          socket.emit('whiteboard:permission_error', {
+            code: 'PERMISSION_DENIED',
+            message: 'You do not have permission to manage whiteboard permissions',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Grant the permission
+        const result = await permissionService.grantPermission(
+          whiteboardId,
+          userEmail,
+          socket.user.id,
+          role,
+          customPermissions,
+          expiresAt
+        );
+
+        // Invalidate permission cache for the user
+        invalidatePermissionCache(result.userId, whiteboardId);
+
+        // Notify the whiteboard room
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:permission_granted', {
+          permission: result,
+          grantedBy: {
+            id: socket.user.id,
+            name: socket.user.name
+          },
+          timestamp: new Date().toISOString()
+        });
+
+        socket.emit('whiteboard:permission_granted', {
+          success: true,
+          permission: result,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.info('Permission granted successfully', {
+          whiteboardId,
+          grantedTo: userEmail,
+          role,
+          grantedBy: socket.user.id
+        });
+
+      } catch (error) {
+        logger.error('Failed to grant permission', { error, data });
+        socket.emit('whiteboard:permission_error', {
+          code: 'GRANT_PERMISSION_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to grant permission',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Revoke permission from a user
+    socket.on('whiteboard:revoke_permission', async (data: {
+      whiteboardId: string;
+      userId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NOT_AUTHENTICATED', message: 'User not authenticated' });
+          return;
+        }
+
+        const { whiteboardId, userId } = data;
+
+        // Validate that current user can manage permissions
+        const hasPermission = await permissionService.checkPermission({
+          whiteboardId,
+          userId: socket.user.id,
+          action: 'canManagePermissions'
+        });
+
+        if (!hasPermission.allowed) {
+          socket.emit('whiteboard:permission_error', {
+            code: 'PERMISSION_DENIED',
+            message: 'You do not have permission to manage whiteboard permissions',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Revoke the permission
+        await permissionService.revokePermission(whiteboardId, userId, socket.user.id);
+
+        // Invalidate permission cache for the user
+        invalidatePermissionCache(userId, whiteboardId);
+
+        // Notify the whiteboard room
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:permission_revoked', {
+          userId,
+          revokedBy: {
+            id: socket.user.id,
+            name: socket.user.name
+          },
+          timestamp: new Date().toISOString()
+        });
+
+        socket.emit('whiteboard:permission_revoked', {
+          success: true,
+          userId,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.info('Permission revoked successfully', {
+          whiteboardId,
+          revokedFrom: userId,
+          revokedBy: socket.user.id
+        });
+
+      } catch (error) {
+        logger.error('Failed to revoke permission', { error, data });
+        socket.emit('whiteboard:permission_error', {
+          code: 'REVOKE_PERMISSION_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to revoke permission',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Update user permission
+    socket.on('whiteboard:update_permission', async (data: {
+      whiteboardId: string;
+      userId: string;
+      updates: {
+        role?: 'owner' | 'editor' | 'commenter' | 'viewer' | 'custom';
+        permissions?: Record<string, boolean>;
+        expiresAt?: string;
+      };
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NOT_AUTHENTICATED', message: 'User not authenticated' });
+          return;
+        }
+
+        const { whiteboardId, userId, updates } = data;
+
+        // Validate that current user can manage permissions
+        const hasPermission = await permissionService.checkPermission({
+          whiteboardId,
+          userId: socket.user.id,
+          action: 'canManagePermissions'
+        });
+
+        if (!hasPermission.allowed) {
+          socket.emit('whiteboard:permission_error', {
+            code: 'PERMISSION_DENIED',
+            message: 'You do not have permission to manage whiteboard permissions',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Update the permission
+        const result = await permissionService.updatePermission(
+          whiteboardId,
+          userId,
+          socket.user.id,
+          updates
+        );
+
+        // Invalidate permission cache for the user
+        invalidatePermissionCache(userId, whiteboardId);
+
+        // Notify the whiteboard room
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:permission_updated', {
+          permission: result,
+          updatedBy: {
+            id: socket.user.id,
+            name: socket.user.name
+          },
+          timestamp: new Date().toISOString()
+        });
+
+        socket.emit('whiteboard:permission_updated', {
+          success: true,
+          permission: result,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.info('Permission updated successfully', {
+          whiteboardId,
+          updatedFor: userId,
+          updates,
+          updatedBy: socket.user.id
+        });
+
+      } catch (error) {
+        logger.error('Failed to update permission', { error, data });
+        socket.emit('whiteboard:permission_error', {
+          code: 'UPDATE_PERMISSION_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to update permission',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Get whiteboard permissions
+    socket.on('whiteboard:get_permissions', async (data: {
+      whiteboardId?: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NOT_AUTHENTICATED', message: 'User not authenticated' });
+          return;
+        }
+
+        const whiteboardId = data.whiteboardId || socket.whiteboardSession.whiteboardId;
+
+        // Validate that current user can view permissions
+        const hasPermission = await permissionService.checkPermission({
+          whiteboardId,
+          userId: socket.user.id,
+          action: 'canView'
+        });
+
+        if (!hasPermission.allowed) {
+          socket.emit('whiteboard:permission_error', {
+            code: 'PERMISSION_DENIED',
+            message: 'You do not have permission to view whiteboard permissions',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Get all permissions for this whiteboard
+        const permissions = await permissionService.getWhiteboardPermissions(whiteboardId);
+
+        socket.emit('whiteboard:permissions_list', {
+          permissions,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.debug('Permissions retrieved successfully', {
+          whiteboardId,
+          requestedBy: socket.user.id,
+          permissionCount: permissions.length
+        });
+
+      } catch (error) {
+        logger.error('Failed to get permissions', { error, data });
+        socket.emit('whiteboard:permission_error', {
+          code: 'GET_PERMISSIONS_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to get permissions',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Check specific permission
+    socket.on('whiteboard:check_permission', async (data: {
+      whiteboardId: string;
+      action: string;
+      elementId?: string;
+      position?: { x: number; y: number };
+      layerIndex?: number;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NOT_AUTHENTICATED', message: 'User not authenticated' });
+          return;
+        }
+
+        const { whiteboardId, action, elementId, position, layerIndex } = data;
+
+        // Check the specific permission
+        const result = await permissionService.checkPermission({
+          whiteboardId,
+          userId: socket.user.id,
+          action,
+          elementId,
+          areaCoordinates: position,
+          layerIndex
+        });
+
+        socket.emit('whiteboard:permission_check_result', {
+          allowed: result.allowed,
+          reason: result.reason,
+          appliedRule: result.appliedRule,
+          context: {
+            action,
+            elementId,
+            position,
+            layerIndex
+          },
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to check permission', { error, data });
+        socket.emit('whiteboard:permission_error', {
+          code: 'CHECK_PERMISSION_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to check permission',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // ==================== CROSS-SERVICE INTEGRATION EVENTS ====================
 
     // Resource attachment notification
@@ -3235,7 +3605,41 @@ export function setupWhiteboardWebSocket(
       logger.error('Session cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
     }
 
-    // Step 6: Broadcast notifications (best effort)
+    // Step 6: Clean up operational data structures to prevent memory leaks
+    try {
+      // Check if this was the last user on the whiteboard by checking room membership
+      const whiteboardRoom = io.sockets.adapter.rooms.get(`whiteboard:${whiteboardId}`);
+      const remainingUsers = whiteboardRoom ? whiteboardRoom.size : 0;
+      
+      if (remainingUsers === 0) {
+        // No more users, safe to clean up whiteboard-specific data structures
+        operationQueues.delete(whiteboardId);
+        whiteboardContexts.delete(whiteboardId);
+        pendingConflicts.delete(whiteboardId);
+        canvasVersions.delete(whiteboardId);
+        
+        // Clean up permission cache for this whiteboard
+        const keysToDelete = Array.from(permissionCache.keys()).filter(key => 
+          key.includes(`:${whiteboardId}:`)
+        );
+        keysToDelete.forEach(key => permissionCache.delete(key));
+        
+        logger.debug('Whiteboard data structures cleaned up', { 
+          whiteboardId, 
+          cleanedCacheEntries: keysToDelete.length 
+        });
+      } else {
+        // Other users still connected, just clean up user-specific cache
+        invalidatePermissionCache(userId, whiteboardId);
+        logger.debug('User-specific cache cleaned up', { userId, whiteboardId });
+      }
+    } catch (cleanupError) {
+      const errorMsg = `Memory cleanup failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.error('Memory cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
+    }
+
+    // Step 7: Broadcast notifications (best effort)
     try {
       // Broadcast cursor disconnect
       socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
@@ -3727,35 +4131,113 @@ export function broadcastElementOwnershipChanged(
 // ==================== SECURITY VALIDATION FUNCTIONS ====================
 
 /**
- * Validate user access to whiteboard operations
+ * Validate user access to whiteboard operations using granular permission service
+ */
+/**
+ * Enhanced permission validation with caching and performance optimization
  */
 async function validateWhiteboardAccess(
   userId: string, 
   whiteboardId: string, 
-  operationType: string
+  operationType: string,
+  elementId?: string,
+  position?: { x: number; y: number },
+  layerIndex?: number
 ): Promise<void> {
-  // TODO: Implement with actual database service
-  // This is a placeholder that would check against the whiteboard permissions table
+  const startTime = Date.now();
   
-  // For now, return success - this would be implemented with the actual whiteboard service
-  // const whiteboardService = getWhiteboardService();
-  // await whiteboardService.checkUserPermission(userId, whiteboardId, operationType);
-  
-  // Validate UUID format
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(userId) || !uuidRegex.test(whiteboardId)) {
-    throw new Error('Invalid ID format');
-  }
-  
-  // Basic operation type validation
-  const validOperations = ['create', 'update', 'delete', 'move', 'style'];
-  if (!validOperations.includes(operationType)) {
-    throw new Error('Invalid operation type');
+  try {
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId) || !uuidRegex.test(whiteboardId)) {
+      throw new Error('Invalid ID format');
+    }
+    
+    // Basic operation type validation
+    const validOperations = ['create', 'update', 'delete', 'move', 'style', 'view', 'comment'];
+    if (!validOperations.includes(operationType)) {
+      throw new Error('Invalid operation type');
+    }
+    
+    // Map operation type to permission action
+    const actionMap: Record<string, string> = {
+      create: 'canCreateElements',
+      update: 'canEdit',
+      delete: 'canDelete',
+      move: 'canMoveElements',
+      style: 'canStyleElements',
+      view: 'canView',
+      comment: 'canComment'
+    };
+    
+    const action = actionMap[operationType];
+    if (!action) {
+      throw new Error(`Unsupported operation type: ${operationType}`);
+    }
+    
+    // Create cache key for performance
+    const cacheKey = `perm:${userId}:${whiteboardId}:${action}:${elementId || 'none'}:${position ? `${position.x},${position.y}` : 'none'}:${layerIndex || 'none'}`;
+    
+    // Check cache first (with 5 second TTL for security)
+    let result = permissionCache.get(cacheKey);
+    let cacheHit = !!result;
+    
+    if (!result) {
+      // Check granular permissions using the permission service
+      const permissionCheck: PermissionCheckRequest = {
+        whiteboardId,
+        userId,
+        action,
+        elementId,
+        areaCoordinates: position,
+        layerIndex
+      };
+      
+      result = await permissionService.checkPermission(permissionCheck);
+      
+      // Cache result for 5 seconds only (security vs performance balance)
+      if (result.allowed) {
+        permissionCache.set(cacheKey, result, 5000);
+      }
+    }
+    
+    const duration = Date.now() - startTime;
+    if (duration > 50) {
+      logger.warn('Slow permission check detected', {
+        userId,
+        whiteboardId,
+        action,
+        duration: `${duration}ms`,
+        cacheHit
+      });
+    }
+    
+    if (!result.allowed) {
+      const error = new Error(`Permission denied: ${result.reason}`);
+      (error as any).code = 'PERMISSION_DENIED';
+      (error as any).details = {
+        action,
+        reason: result.reason,
+        appliedRule: result.appliedRule
+      };
+      throw error;
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error('Permission validation failed', {
+      userId,
+      whiteboardId,
+      operationType,
+      duration: `${duration}ms`,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
   }
 }
 
 /**
- * Validate user access to specific whiteboard elements
+ * Validate user access to specific whiteboard elements using granular permission service
+ * Note: This function now delegates to validateWhiteboardAccess for comprehensive checking
  */
 async function validateElementAccess(
   userId: string, 
@@ -3763,43 +4245,57 @@ async function validateElementAccess(
   elementId: string, 
   operationType: string
 ): Promise<void> {
-  // TODO: Implement with actual database service
-  // This would check if the user has permission to modify the specific element
-  
   // Validate UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(elementId)) {
     throw new Error('Invalid element ID format');
   }
   
-  // For delete operations, ensure user owns the element or has admin permissions
-  if (operationType === 'delete') {
-    // This would check element ownership in the database
-    // const elementService = getElementService();
-    // const element = await elementService.getElement(whiteboardId, elementId);
-    // if (element.createdBy !== userId && !hasAdminPermission(userId, whiteboardId)) {
-    //   throw new Error('Permission denied: Cannot delete element not owned by user');
-    // }
-  }
+  // Use the comprehensive validateWhiteboardAccess function which handles element-level permissions
+  await validateWhiteboardAccess(userId, whiteboardId, operationType, elementId);
 }
 
 /**
- * Get user permissions for a specific whiteboard
+ * Get user permissions for a specific whiteboard using granular permission service
  */
 async function getUserWhiteboardPermissions(
   userId: string, 
   whiteboardId: string
 ): Promise<Record<string, boolean>> {
-  // TODO: Implement with actual database service
-  // This would fetch the user's permissions from the whiteboard_permissions table
-  
-  // Default permissions for now - this would come from the database
-  return {
-    canCreate: true,
-    canEdit: true,
-    canDelete: true,
-    canComment: true,
-    canShare: false,
-    canManagePermissions: false
-  };
+  try {
+    const userPermissions = await permissionService.getUserPermissions(whiteboardId, userId);
+    
+    if (!userPermissions) {
+      // User has no explicit permissions, return minimal access
+      return {
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canComment: false,
+        canShare: false,
+        canManagePermissions: false
+      };
+    }
+    
+    // Convert granular permissions to the format expected by OT engine
+    return {
+      canCreate: userPermissions.permissions.canCreateElements,
+      canEdit: userPermissions.permissions.canEdit,
+      canDelete: userPermissions.permissions.canDelete,
+      canComment: userPermissions.permissions.canComment,
+      canShare: userPermissions.permissions.canShare,
+      canManagePermissions: userPermissions.permissions.canManagePermissions
+    };
+  } catch (error) {
+    logger.error('Failed to get user permissions', { userId, whiteboardId, error });
+    // Fail securely - deny all permissions on error
+    return {
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canComment: false,
+      canShare: false,
+      canManagePermissions: false
+    };
+  }
 }

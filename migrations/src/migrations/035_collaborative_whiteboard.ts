@@ -9,12 +9,18 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('thumbnail', 'text') // Base64 encoded thumbnail or URL
-    .addColumn('canvas_data', 'jsonb', (col) => col.defaultTo('{}')) // Core canvas metadata (viewport, zoom, etc.)
+    .addColumn('canvas_data', 'jsonb', (col) => col.defaultTo('{}').check(
+      sql`jsonb_typeof(canvas_data) = 'object'`
+    )) // Core canvas metadata with object validation
     .addColumn('settings', 'jsonb', (col) => col.defaultTo('{}')) // Whiteboard-specific settings
     .addColumn('template_id', 'uuid') // Reference to whiteboard templates
     .addColumn('is_template', 'boolean', (col) => col.defaultTo(false))
-    .addColumn('visibility', 'varchar(20)', (col) => col.notNull().defaultTo('workspace')) // workspace, members, public
-    .addColumn('status', 'varchar(20)', (col) => col.notNull().defaultTo('active')) // active, archived, deleted
+    .addColumn('visibility', 'varchar(20)', (col) => col.notNull().defaultTo('workspace').check(
+      sql`visibility IN ('workspace', 'members', 'public')`
+    )) // Restricted visibility values
+    .addColumn('status', 'varchar(20)', (col) => col.notNull().defaultTo('active').check(
+      sql`status IN ('active', 'archived', 'deleted')`
+    )) // Restricted status values
     .addColumn('version', 'integer', (col) => col.defaultTo(1)) // Version for conflict resolution
     .addColumn('created_by', 'uuid', (col) => col.notNull())
     .addColumn('last_modified_by', 'uuid', (col) => col.notNull())
@@ -29,7 +35,11 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
     .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
     .addColumn('element_type', 'varchar(50)', (col) => col.notNull()) // shape, text, image, sticky_note, arrow, line, etc.
-    .addColumn('element_data', 'jsonb', (col) => col.notNull()) // Flexible storage for element properties (position, size, color, content, etc.)
+    .addColumn('element_data', 'jsonb', (col) => col.notNull().check(
+      sql`jsonb_typeof(element_data) = 'object' AND 
+          element_data ? 'id' AND
+          jsonb_typeof(element_data->'id') = 'string'`
+    )) // Flexible storage for element properties with basic validation
     .addColumn('layer_index', 'integer', (col) => col.defaultTo(0)) // Z-index for layering
     .addColumn('parent_id', 'uuid') // For grouped elements
     .addColumn('locked', 'boolean', (col) => col.defaultTo(false))
@@ -52,13 +62,25 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('session_token', 'varchar(255)', (col) => col.notNull().unique())
     .addColumn('connection_id', 'varchar(255)') // WebSocket connection identifier
-    .addColumn('cursor_position', 'jsonb') // Real-time cursor tracking
-    .addColumn('selection_data', 'jsonb') // Currently selected elements
-    .addColumn('viewport_data', 'jsonb') // Current view position and zoom
-    .addColumn('presence_data', 'jsonb', (col) => col.defaultTo('{}')) // User presence information (name, avatar, color)
-    .addColumn('tools_state', 'jsonb', (col) => col.defaultTo('{}')) // Active tool and tool settings
+    .addColumn('cursor_position', 'jsonb', (col) => col.check(
+      sql`cursor_position IS NULL OR jsonb_typeof(cursor_position) = 'object'`
+    )) // Real-time cursor tracking with validation
+    .addColumn('selection_data', 'jsonb', (col) => col.check(
+      sql`selection_data IS NULL OR jsonb_typeof(selection_data) = 'object'`
+    )) // Currently selected elements with validation
+    .addColumn('viewport_data', 'jsonb', (col) => col.check(
+      sql`viewport_data IS NULL OR jsonb_typeof(viewport_data) = 'object'`
+    )) // Current view position and zoom with validation
+    .addColumn('presence_data', 'jsonb', (col) => col.defaultTo('{}').check(
+      sql`jsonb_typeof(presence_data) = 'object'`
+    )) // User presence information with validation
+    .addColumn('tools_state', 'jsonb', (col) => col.defaultTo('{}').check(
+      sql`jsonb_typeof(tools_state) = 'object'`
+    )) // Active tool and tool settings with validation
     .addColumn('is_active', 'boolean', (col) => col.defaultTo(true))
-    .addColumn('permissions', 'jsonb', (col) => col.defaultTo('{}')) // Session-specific permissions
+    .addColumn('permissions', 'jsonb', (col) => col.defaultTo('{}').check(
+      sql`jsonb_typeof(permissions) = 'object'`
+    )) // Session-specific permissions with validation
     .addColumn('started_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('last_activity_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
     .addColumn('ended_at', 'timestamptz')
@@ -70,8 +92,14 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
     .addColumn('whiteboard_id', 'uuid', (col) => col.notNull().references('whiteboards.id').onDelete('cascade'))
     .addColumn('user_id', 'uuid', (col) => col.notNull())
-    .addColumn('role', 'varchar(50)', (col) => col.notNull()) // owner, editor, viewer, commenter
-    .addColumn('permissions', 'jsonb', (col) => col.notNull()) // Detailed permissions object
+    .addColumn('role', 'varchar(50)', (col) => col.notNull().check(
+      sql`role IN ('owner', 'editor', 'commenter', 'viewer', 'custom')`
+    )) // Restricted role values
+    .addColumn('permissions', 'jsonb', (col) => col.notNull().check(
+      sql`jsonb_typeof(permissions) = 'object' AND 
+          permissions ? 'canView' AND 
+          jsonb_typeof(permissions->'canView') = 'boolean'`
+    )) // Detailed permissions object with validation
     .addColumn('granted_by', 'uuid', (col) => col.notNull())
     .addColumn('expires_at', 'timestamptz') // Optional expiration for temporary access
     .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull())
