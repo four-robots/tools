@@ -51,6 +51,12 @@ import {
   validatePresenceUpdateRequest,
   validateSelectionData
 } from '@mcp-tools/core/utils/input-validation';
+import { 
+  WhiteboardAnalyticsIntegration,
+  withAnalytics,
+  createAnalyticsMiddleware,
+  AnalyticsBatcher 
+} from './whiteboard-analytics-integration.js';
 
 interface WhiteboardAuthenticatedSocket extends AuthenticatedSocket {
   whiteboardSession?: {
@@ -198,6 +204,29 @@ export function setupWhiteboardWebSocket(
     logger
   );
 
+  // Initialize analytics integration for comprehensive tracking
+  const analyticsIntegration = new WhiteboardAnalyticsIntegration(db, {
+    performanceThresholds: {
+      canvas_operation: 100,
+      ot_transform: 50,
+      comment_create: 200,
+      presence_update: 25,
+      session_join: 1000,
+      session_leave: 500,
+    },
+    enableDebugLogging: process.env.NODE_ENV === 'development',
+  });
+
+  // Initialize analytics batcher for high-frequency events
+  const analyticsBatcher = new AnalyticsBatcher(
+    analyticsIntegration,
+    logger,
+    {
+      batchTimeout: 2000, // 2 seconds
+      maxBatchSize: 25,
+    }
+  );
+
   // Track operation queues and context for each whiteboard
   const whiteboardContexts = createLRUCache<string, EnhancedTransformContext>('contexts');
   const operationQueues = createLRUCache<string, EnhancedWhiteboardOperation[]>('operations');
@@ -266,10 +295,13 @@ export function setupWhiteboardWebSocket(
       userId: socket.user?.id 
     });
 
+    // Initialize analytics tracking for this socket
+    analyticsIntegration.initializeSocketAnalytics(socket);
+
     // ==================== WHITEBOARD SESSIONS ====================
 
     // Join whiteboard
-    socket.on('whiteboard:join', async (data: { 
+    socket.on('whiteboard:join', withAnalytics(analyticsIntegration, 'session_join', async (socket: WhiteboardAuthenticatedSocket, data: { 
       whiteboardId: string; 
       workspaceId: string;
       clientInfo?: any;
@@ -335,6 +367,19 @@ export function setupWhiteboardWebSocket(
         // Store in session storage
         await sessionStorage.set(socket.id, whiteboardSession, sessionTtl);
         activeWhiteboardSessions.set(socket.id, whiteboardSession);
+
+        // Start session analytics tracking
+        await analyticsIntegration.startSessionAnalytics(socket);
+        
+        // Track user join action
+        await analyticsIntegration.trackUserAction(socket, 'join', 'whiteboard', {
+          targetId: whiteboardId,
+          metadata: {
+            workspaceId,
+            hasClientInfo: !!clientInfo,
+            sessionToken: whiteboardSession.sessionToken,
+          },
+        });
 
         // Initialize canvas version if not exists
         if (!canvasVersions.has(sanitizedWhiteboardId)) {
@@ -433,7 +478,7 @@ export function setupWhiteboardWebSocket(
           details: error instanceof Error ? error.message : String(error)
         });
       }
-    });
+    }));
 
     // Leave whiteboard
     socket.on('whiteboard:leave', async (data: { whiteboardId: string; reason?: string }) => {
@@ -628,6 +673,12 @@ export function setupWhiteboardWebSocket(
       };
     }) => {
       const processingStartTime = Date.now();
+      const trackerId = analyticsIntegration.startPerformanceTracking(socket, 'canvas_operation', {
+        operationType: data.operation.type,
+        elementType: data.operation.elementType,
+        clientVersion: data.clientVersion,
+        networkLatency: data.metadata?.networkLatency,
+      });
       
       try {
         // Validate token freshness for critical operations
@@ -1301,6 +1352,34 @@ export function setupWhiteboardWebSocket(
 
       } catch (error) {
         logger.error('Failed to provide canvas sync', { error, data });
+        
+        // End performance tracking with error
+        await analyticsIntegration.endPerformanceTracking(trackerId, false, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+
+        // Track error
+        await analyticsIntegration.trackError(socket, error, {
+          operation: 'canvas_change',
+          targetType: data.operation?.type || 'unknown',
+          targetId: data.operation?.elementId,
+        });
+      } finally {
+        // Track user action
+        if (socket.whiteboardSession && data.operation) {
+          await analyticsIntegration.trackUserAction(socket, data.operation.type, 'element', {
+            targetId: data.operation.elementId,
+            elementType: data.operation.elementType,
+            coordinates: data.operation.position,
+            metadata: {
+              clientVersion: data.clientVersion,
+              networkLatency: data.metadata?.networkLatency,
+            },
+          });
+
+          // End performance tracking with success
+          await analyticsIntegration.endPerformanceTracking(trackerId, true);
+        }
       }
     });
 
@@ -1316,6 +1395,13 @@ export function setupWhiteboardWebSocket(
         if (!socket.whiteboardSession || !socket.user) {
           return;
         }
+
+        // Use analytics batcher for high-frequency presence events
+        analyticsBatcher.addToBatch(socket, 'presence_update', 'cursor', {
+          coordinates: data.cursor,
+          viewport: data.viewport,
+          selectionCount: data.selection?.length || 0,
+        });
 
         // Check rate limiting for presence updates with user feedback
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:presence');
@@ -2284,7 +2370,7 @@ export function setupWhiteboardWebSocket(
     // ==================== ENHANCED COLLABORATIVE COMMENTS WITH THREADING & @MENTIONS ====================
 
     // Create comment (supports threading and @mentions)
-    socket.on('whiteboard:create_comment', async (data: any) => {
+    socket.on('whiteboard:create_comment', withAnalytics(analyticsIntegration, 'comment_create', async (socket: WhiteboardAuthenticatedSocket, data: any) => {
       try {
         if (!socket.whiteboardSession || !socket.user) {
           socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
@@ -2316,6 +2402,27 @@ export function setupWhiteboardWebSocket(
             warnings: result.warnings,
           });
           return;
+        }
+
+        // Track comment creation for analytics
+        await analyticsIntegration.trackUserAction(socket, 'create', 'comment', {
+          targetId: result.comment?.id,
+          coordinates: data.position,
+          metadata: {
+            elementId: data.elementId,
+            parentId: data.parentId,
+            mentionCount: result.mentions?.length || 0,
+            contentLength: data.content?.length || 0,
+            hasAttachments: data.attachments && Object.keys(data.attachments).length > 0,
+          },
+        });
+
+        // Track collaboration event if this is a threaded comment
+        if (data.parentId) {
+          await analyticsIntegration.trackCollaborationEvent(socket, 'reply', 'comment', {
+            targetId: data.parentId,
+            metadata: { replyId: result.comment?.id },
+          });
         }
 
         // Broadcast comment creation to all participants
@@ -2363,7 +2470,7 @@ export function setupWhiteboardWebSocket(
           error: 'Failed to create comment',
         });
       }
-    });
+    }));
 
     // Update comment (with revision tracking)
     socket.on('whiteboard:update_comment', async (data: {
