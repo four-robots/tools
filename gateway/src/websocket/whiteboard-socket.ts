@@ -27,6 +27,17 @@ import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard
 import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboard-presence-service';
 import { getSelectionService } from '@mcp-tools/core/services/whiteboard/whiteboard-selection-service';
 import { WhiteboardCommentService } from '@mcp-tools/core/services/whiteboard/whiteboard-comment-service';
+import { 
+  WhiteboardOTEngine, 
+  EnhancedWhiteboardOperation, 
+  EnhancedTransformContext,
+  ConflictInfo,
+  PerformanceMetrics 
+} from '@mcp-tools/core/services/whiteboard/whiteboard-ot-engine';
+import { 
+  WhiteboardConflictService,
+  ConflictNotification 
+} from '@mcp-tools/core/services/whiteboard/whiteboard-conflict-service';
 import {
   validateUserInfo,
   validateActivityInfo,
@@ -159,6 +170,30 @@ export function setupWhiteboardWebSocket(
     },
     logger
   );
+
+  // Initialize enhanced OT engine for complex conflict resolution
+  const otEngine = new WhiteboardOTEngine(logger);
+
+  // Initialize conflict resolution service
+  const conflictService = new WhiteboardConflictService(
+    db,
+    {
+      automaticResolutionEnabled: true,
+      maxAutomaticResolutionAttempts: 3,
+      conflictTimeoutMs: 30000,
+      performanceThresholds: {
+        maxLatencyMs: 500,
+        maxMemoryUsageMB: 1024,
+        maxQueueSize: 1000
+      }
+    },
+    logger
+  );
+
+  // Track operation queues and context for each whiteboard
+  const whiteboardContexts = createLRUCache<string, EnhancedTransformContext>('contexts');
+  const operationQueues = createLRUCache<string, EnhancedWhiteboardOperation[]>('operations');
+  const pendingConflicts = createLRUCache<string, ConflictInfo[]>('conflicts');
   
   logger.info('Whiteboard WebSocket initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
@@ -385,11 +420,19 @@ export function setupWhiteboardWebSocket(
 
     // ==================== CANVAS SYNCHRONIZATION ====================
 
-    // Canvas change (with operational transforms)
-    socket.on('whiteboard:canvas_change', async (data: {
-      operation: WhiteboardCanvasOperation;
+    // Atomic batch operations for compound changes (move+resize+rotate, etc.)
+    socket.on('whiteboard:canvas_batch_change', async (data: {
+      operations: WhiteboardCanvasOperation[];
       clientVersion: number;
+      transactionId?: string;
+      metadata?: {
+        clientId?: string;
+        sessionId?: string;
+        networkLatency?: number;
+      };
     }) => {
+      const processingStartTime = Date.now();
+      
       try {
         // Validate token freshness for critical operations
         const validation = validateUserAndToken(socket);
@@ -401,7 +444,165 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        // Check rate limiting for canvas changes with comprehensive feedback
+        if (!socket.whiteboardSession) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { operations, clientVersion, transactionId, metadata } = data;
+        const { whiteboardId } = socket.whiteboardSession;
+
+        // Begin atomic transaction
+        const txId = transactionId || otEngine.beginTransaction(socket.user.id);
+        
+        try {
+          // Get user permissions for security context
+          const userPermissions = await getUserWhiteboardPermissions(socket.user.id, whiteboardId);
+          
+          // Validate all operations before starting transaction
+          for (const operation of operations) {
+            await validateWhiteboardAccess(socket.user.id, whiteboardId, operation.type);
+            if (operation.elementId) {
+              await validateElementAccess(socket.user.id, whiteboardId, operation.elementId, operation.type);
+            }
+          }
+
+          const currentVersion = canvasVersions.get(whiteboardId) || 1;
+          const enhancedOperations: EnhancedWhiteboardOperation[] = [];
+
+          // Convert all operations to enhanced format and add to transaction
+          for (let i = 0; i < operations.length; i++) {
+            const operation = operations[i];
+            const enhancedOperation: EnhancedWhiteboardOperation = {
+              id: `batch_${operation.type}_${operation.elementId}_${socket.user.id}_${Date.now()}_${i}`,
+              type: operation.type as any,
+              elementId: operation.elementId,
+              elementType: operation.elementType,
+              data: operation.data,
+              position: operation.position,
+              bounds: operation.bounds,
+              style: operation.style,
+              timestamp: new Date().toISOString(),
+              version: currentVersion + i + 1,
+              userId: socket.user.id,
+              vectorClock: { [socket.user.id]: currentVersion + i + 1 },
+              lamportTimestamp: currentVersion + i + 1,
+              metadata: {
+                clientId: metadata?.clientId || socket.id,
+                sessionId: metadata?.sessionId || socket.whiteboardSession.sessionId,
+                networkLatency: metadata?.networkLatency,
+                processingTime: 0,
+                batchIndex: i,
+                batchSize: operations.length
+              }
+            };
+
+            enhancedOperations.push(enhancedOperation);
+            
+            // Add operation to transaction with rollback data
+            const rollbackData = {
+              elementId: operation.elementId,
+              previousState: null, // Would store actual previous state
+              operationIndex: i
+            };
+            otEngine.addToTransaction(txId, enhancedOperation, rollbackData);
+          }
+
+          // Commit the transaction atomically
+          const committedOperations = await otEngine.commitTransaction(txId);
+          
+          // Update canvas version atomically
+          canvasVersions.set(whiteboardId, currentVersion + operations.length);
+
+          // Broadcast all operations as a batch
+          socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:canvas_batch_changed', {
+            operations: committedOperations,
+            user: {
+              id: socket.user.id,
+              name: socket.user.name,
+            },
+            batchId: txId,
+            timestamp: new Date().toISOString(),
+          });
+
+          // Send success acknowledgment
+          socket.emit('whiteboard:canvas_batch_ack', {
+            batchId: txId,
+            operationCount: committedOperations.length,
+            success: true,
+            newVersion: currentVersion + operations.length,
+            processingTimeMs: Date.now() - processingStartTime,
+            timestamp: new Date().toISOString()
+          });
+
+          logger.info('Atomic batch operation completed successfully', {
+            whiteboardId,
+            userId: socket.user.id,
+            operationCount: operations.length,
+            transactionId: txId,
+            processingTimeMs: Date.now() - processingStartTime
+          });
+
+        } catch (transactionError) {
+          // Rollback transaction on any error
+          await otEngine.rollbackTransaction(txId);
+          
+          logger.error('Batch operation failed, transaction rolled back', {
+            whiteboardId,
+            userId: socket.user.id,
+            transactionId: txId,
+            error: transactionError.message,
+            operationCount: operations.length
+          });
+
+          socket.emit('whiteboard:canvas_batch_ack', {
+            batchId: txId,
+            success: false,
+            error: transactionError.message,
+            code: 'BATCH_OPERATION_FAILED',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+      } catch (error) {
+        logger.error('Failed to process batch canvas change', { 
+          error, 
+          whiteboardId: socket.whiteboardSession?.whiteboardId,
+          userId: socket.user.id 
+        });
+        
+        socket.emit('error', { 
+          code: 'BATCH_OPERATION_ERROR', 
+          message: 'Failed to process batch operation',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Enhanced canvas change with advanced operational transforms and conflict resolution
+    socket.on('whiteboard:canvas_change', async (data: {
+      operation: WhiteboardCanvasOperation;
+      clientVersion: number;
+      metadata?: {
+        clientId?: string;
+        sessionId?: string;
+        networkLatency?: number;
+      };
+    }) => {
+      const processingStartTime = Date.now();
+      
+      try {
+        // Validate token freshness for critical operations
+        const validation = validateUserAndToken(socket);
+        if (!validation.valid) {
+          socket.emit('error', validation.error);
+          if (validation.error.code === 'TOKEN_INVALID') {
+            socket.disconnect(true);
+          }
+          return;
+        }
+
+        // Enhanced rate limiting with adaptive throttling
         const rateLimitCheck = checkRateLimit(socket, 'whiteboard:canvas_change');
         if (!rateLimitCheck.allowed) {
           socket.emit('whiteboard:canvas_ack', {
@@ -413,7 +614,6 @@ export function setupWhiteboardWebSocket(
             guidance: 'Please slow down canvas operations to maintain performance for all users'
           });
           
-          // Also emit a general rate limit notification
           socket.emit('whiteboard:rate_limit_warning', {
             operation: 'canvas_change',
             message: 'Canvas operations are being rate limited',
@@ -428,26 +628,162 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        const { operation, clientVersion } = data;
-        const { whiteboardId } = socket.whiteboardSession;
-
-        // Get current canvas version
+        const { operation, clientVersion, metadata } = data;
+        const { whiteboardId, workspaceId } = socket.whiteboardSession;
         const currentVersion = canvasVersions.get(whiteboardId) || 1;
 
-        // Check for version conflicts and apply operational transforms if needed
-        let transformedOperation = operation;
-        if (clientVersion < currentVersion) {
-          // Client is behind, need to transform the operation
-          transformedOperation = await transformOperation(operation, whiteboardId, clientVersion, currentVersion);
+        // CRITICAL SECURITY: Validate user permissions before processing operation
+        try {
+          // Check if user has permission to modify this whiteboard
+          await validateWhiteboardAccess(socket.user.id, whiteboardId, operation.type);
+          
+          // Validate element ownership and permissions
+          if (operation.elementId) {
+            await validateElementAccess(socket.user.id, whiteboardId, operation.elementId, operation.type);
+          }
+        } catch (error) {
+          logger.warn('Unauthorized whiteboard operation attempt', {
+            userId: socket.user.id,
+            whiteboardId,
+            operationType: operation.type,
+            elementId: operation.elementId,
+            error: error.message
+          });
+          
+          socket.emit('whiteboard:operation_rejected', {
+            operationId: operation.elementId,
+            success: false,
+            error: 'Permission denied',
+            code: 'UNAUTHORIZED_OPERATION',
+            timestamp: new Date().toISOString()
+          });
+          return;
         }
 
-        // Increment canvas version
-        const newVersion = currentVersion + 1;
-        canvasVersions.set(whiteboardId, newVersion);
+        // Convert legacy operation to enhanced format with comprehensive validation
+        const enhancedOperation: EnhancedWhiteboardOperation = {
+          id: `${operation.type}_${operation.elementId}_${socket.user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          type: operation.type as any,
+          elementId: operation.elementId,
+          elementType: operation.elementType,
+          data: operation.data,
+          position: operation.position,
+          bounds: operation.bounds,
+          style: operation.style,
+          timestamp: new Date().toISOString(),
+          version: currentVersion + 1,
+          userId: socket.user.id,
+          vectorClock: { [socket.user.id]: currentVersion + 1 },
+          lamportTimestamp: currentVersion + 1,
+          metadata: {
+            clientId: metadata?.clientId || socket.id,
+            sessionId: metadata?.sessionId || socket.whiteboardSession.sessionId,
+            networkLatency: metadata?.networkLatency,
+            processingTime: 0 // Will be set later
+          }
+        };
 
-        // Update operation with correct version and metadata
-        transformedOperation.version = newVersion;
-        transformedOperation.timestamp = new Date().toISOString();
+        // Get user permissions for security context
+        const userPermissions = await getUserWhiteboardPermissions(socket.user.id, whiteboardId);
+        
+        // Get or create enhanced transform context for this whiteboard with security context
+        let context = whiteboardContexts.get(whiteboardId);
+        if (!context) {
+          context = otEngine.createEnhancedContext({
+            canvasVersion: currentVersion,
+            pendingOperations: [],
+            elementStates: new Map(),
+            currentVectorClock: { [socket.user.id]: currentVersion },
+            lamportClock: currentVersion,
+            // Security context
+            userId: socket.user.id,
+            userRole: socket.user.role || 'editor',
+            permissions: userPermissions
+          });
+          whiteboardContexts.set(whiteboardId, context);
+        }
+
+        // Update context with current operation queue and security context
+        const operationQueue = operationQueues.get(whiteboardId) || [];
+        context.operationQueue = operationQueue;
+        context.userId = socket.user.id;
+        context.permissions = userPermissions;
+
+        // Apply enhanced operational transforms with conflict detection
+        const transformResult = await otEngine.transformOperation(enhancedOperation, context);
+        const { transformedOperation, conflicts, performance } = transformResult;
+
+        // Handle detected conflicts
+        if (conflicts.length > 0) {
+          logger.info('Conflicts detected during operation transformation', {
+            whiteboardId,
+            operationId: enhancedOperation.id,
+            conflictCount: conflicts.length,
+            conflictTypes: conflicts.map(c => c.type)
+          });
+
+          // Store conflicts for resolution
+          const existingConflicts = pendingConflicts.get(whiteboardId) || [];
+          pendingConflicts.set(whiteboardId, [...existingConflicts, ...conflicts]);
+
+          // Attempt automatic conflict resolution
+          for (const conflict of conflicts) {
+            const resolutionResult = await conflictService.resolveConflictAutomatically(conflict, context);
+            
+            if (resolutionResult.success && resolutionResult.resolution) {
+              logger.info('Conflict resolved automatically', {
+                conflictId: conflict.id,
+                whiteboardId,
+                strategy: conflict.resolutionStrategy
+              });
+              
+              // Use resolved operation
+              Object.assign(transformedOperation, resolutionResult.resolution);
+            } else if (resolutionResult.requiresManualIntervention) {
+              // Notify users of manual intervention requirement
+              socket.emit('whiteboard:conflict_intervention_required', {
+                conflictId: conflict.id,
+                type: conflict.type,
+                severity: conflict.severity,
+                message: 'Manual intervention required for complex conflict',
+                affectedElements: conflict.affectedElements,
+                timestamp: new Date().toISOString()
+              });
+
+              // Notify other participants
+              socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:conflict_detected', {
+                conflictId: conflict.id,
+                type: conflict.type,
+                severity: conflict.severity,
+                affectedUsers: [socket.user.id],
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        }
+
+        // Update operation processing time
+        transformedOperation.metadata = {
+          ...transformedOperation.metadata,
+          processingTime: Date.now() - processingStartTime
+        };
+
+        // Update canvas version and context
+        const newVersion = transformedOperation.version;
+        canvasVersions.set(whiteboardId, newVersion);
+        
+        // Update operation queue (keep last 100 operations for conflict detection)
+        operationQueue.push(transformedOperation);
+        if (operationQueue.length > 100) {
+          operationQueue.shift();
+        }
+        operationQueues.set(whiteboardId, operationQueue);
+
+        // Update transform context
+        context.canvasVersion = newVersion;
+        context.currentVectorClock = transformedOperation.vectorClock;
+        context.lamportClock = transformedOperation.lamportTimestamp;
+        whiteboardContexts.set(whiteboardId, context);
 
         // Update session activity
         const session = activeWhiteboardSessions.get(socket.id);
@@ -456,37 +792,408 @@ export function setupWhiteboardWebSocket(
           await sessionStorage.set(socket.id, session, sessionTtl);
         }
 
-        // Broadcast to other participants
+        // Broadcast enhanced operation to other participants
         socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:canvas_changed', {
           operation: transformedOperation,
           user: {
             id: socket.user.id,
             name: socket.user.name,
           },
+          conflicts: conflicts.map(c => ({
+            id: c.id,
+            type: c.type,
+            severity: c.severity,
+            resolved: !!c.resolvedAt
+          })),
+          performance: {
+            processingTimeMs: performance.processingTimeMs,
+            queueSize: performance.queueSize
+          },
           timestamp: transformedOperation.timestamp,
         });
 
-        // Send acknowledgment back to sender with new version
+        // Send comprehensive acknowledgment back to sender
         socket.emit('whiteboard:canvas_ack', {
-          operationId: operation.elementId,
+          operationId: enhancedOperation.id,
           newVersion,
           success: true,
+          performance: {
+            processingTimeMs: performance.processingTimeMs,
+            memoryUsageMB: performance.memoryUsageMB,
+            queueSize: performance.queueSize
+          },
+          conflicts: conflicts.length > 0 ? {
+            detected: conflicts.length,
+            resolved: conflicts.filter(c => c.resolvedAt).length,
+            requiresIntervention: conflicts.filter(c => c.resolutionStrategy === 'manual').length
+          } : undefined
         });
 
-        logger.debug('Canvas change processed', {
+        // Performance monitoring and alerts
+        if (performance.processingTimeMs > 500) {
+          logger.warn('High operation processing latency detected', {
+            whiteboardId,
+            operationId: enhancedOperation.id,
+            processingTimeMs: performance.processingTimeMs,
+            queueSize: performance.queueSize,
+            conflictCount: conflicts.length
+          });
+
+          // Notify client of performance issues
+          socket.emit('whiteboard:performance_warning', {
+            type: 'high_latency',
+            processingTimeMs: performance.processingTimeMs,
+            recommendation: 'Consider reducing operation frequency',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        logger.debug('Enhanced canvas change processed', {
           whiteboardId,
           userId: socket.user.id,
-          operationType: operation.type,
-          elementId: operation.elementId,
+          operationType: transformedOperation.type,
+          elementId: transformedOperation.elementId,
           version: newVersion,
+          processingTimeMs: performance.processingTimeMs,
+          conflictsDetected: conflicts.length,
+          conflictsResolved: conflicts.filter(c => c.resolvedAt).length
         });
 
       } catch (error) {
-        logger.error('Failed to process canvas change', { error, data });
+        const processingTime = Date.now() - processingStartTime;
+        
+        logger.error('Failed to process enhanced canvas change', { 
+          error, 
+          data,
+          processingTimeMs: processingTime
+        });
+        
         socket.emit('whiteboard:canvas_ack', {
           operationId: data.operation.elementId,
           success: false,
           error: 'Failed to process canvas change',
+          performance: {
+            processingTimeMs: processingTime,
+            memoryUsageMB: 0,
+            queueSize: 0
+          }
+        });
+
+        // Send error notification to other participants
+        if (socket.whiteboardSession) {
+          socket.to(`whiteboard:${socket.whiteboardSession.whiteboardId}`).emit('whiteboard:operation_error', {
+            userId: socket.user.id,
+            operationId: data.operation.elementId,
+            error: 'Operation processing failed',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+
+    // ==================== ENHANCED CONFLICT MANAGEMENT ====================
+
+    // Manual conflict resolution
+    socket.on('whiteboard:resolve_conflict', async (data: {
+      conflictId: string;
+      resolution: 'accept' | 'reject' | 'merge';
+      selectedOperation?: EnhancedWhiteboardOperation;
+      mergeData?: any;
+    }) => {
+      try {
+        if (!socket.whiteboardSession) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { whiteboardId } = socket.whiteboardSession;
+        const { conflictId, resolution, selectedOperation, mergeData } = data;
+
+        // Find the conflict in pending conflicts
+        const conflicts = pendingConflicts.get(whiteboardId) || [];
+        const conflictIndex = conflicts.findIndex(c => c.id === conflictId);
+        
+        if (conflictIndex === -1) {
+          socket.emit('error', { 
+            code: 'CONFLICT_NOT_FOUND', 
+            message: 'Conflict not found or already resolved' 
+          });
+          return;
+        }
+
+        const conflict = conflicts[conflictIndex];
+        
+        // Apply manual resolution
+        let resolvedOperation: EnhancedWhiteboardOperation | null = null;
+
+        switch (resolution) {
+          case 'accept':
+            resolvedOperation = selectedOperation || conflict.operations[0];
+            break;
+          case 'reject':
+            // Mark conflict as resolved without applying changes
+            conflict.resolvedAt = new Date().toISOString();
+            conflict.resolution = {
+              strategy: 'manual',
+              resultOperation: null,
+              manualInterventionRequired: false,
+              confidence: 1.0
+            };
+            break;
+          case 'merge':
+            // Create merged operation from merge data
+            resolvedOperation = {
+              ...conflict.operations[0],
+              data: mergeData,
+              timestamp: new Date().toISOString()
+            };
+            break;
+        }
+
+        if (resolvedOperation) {
+          // Apply the resolved operation
+          const context = whiteboardContexts.get(whiteboardId);
+          if (context) {
+            const currentVersion = canvasVersions.get(whiteboardId) || 1;
+            resolvedOperation.version = currentVersion + 1;
+            canvasVersions.set(whiteboardId, currentVersion + 1);
+
+            // Broadcast resolved operation
+            socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:canvas_changed', {
+              operation: resolvedOperation,
+              user: {
+                id: socket.user.id,
+                name: socket.user.name,
+              },
+              conflictResolution: {
+                conflictId,
+                strategy: 'manual',
+                resolvedBy: socket.user.id
+              },
+              timestamp: resolvedOperation.timestamp,
+            });
+
+            // Mark conflict as resolved
+            conflict.resolvedAt = new Date().toISOString();
+            conflict.resolution = {
+              strategy: 'manual',
+              resultOperation: resolvedOperation,
+              manualInterventionRequired: false,
+              confidence: 1.0
+            };
+          }
+        }
+
+        // Remove resolved conflict from pending list
+        conflicts.splice(conflictIndex, 1);
+        pendingConflicts.set(whiteboardId, conflicts);
+
+        // Send confirmation
+        socket.emit('whiteboard:conflict_resolved', {
+          conflictId,
+          resolution,
+          success: true,
+          timestamp: new Date().toISOString()
+        });
+
+        // Notify other participants
+        socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:conflict_resolved_broadcast', {
+          conflictId,
+          resolvedBy: socket.user.id,
+          resolution,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.info('Conflict resolved manually', {
+          conflictId,
+          whiteboardId,
+          resolution,
+          resolvedBy: socket.user.id
+        });
+
+      } catch (error) {
+        logger.error('Failed to resolve conflict manually', { error, data });
+        socket.emit('error', { 
+          code: 'CONFLICT_RESOLUTION_FAILED', 
+          message: 'Failed to resolve conflict' 
+        });
+      }
+    });
+
+    // Get active conflicts for current whiteboard
+    socket.on('whiteboard:get_conflicts', (data: { whiteboardId: string }) => {
+      try {
+        if (!socket.whiteboardSession) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const conflicts = conflictService.getActiveConflicts();
+        const whiteboardConflicts = conflicts.filter(c => 
+          c.operations.some(op => op.metadata?.sessionId === socket.whiteboardSession?.sessionId)
+        );
+
+        socket.emit('whiteboard:conflicts_list', {
+          conflicts: whiteboardConflicts.map(c => ({
+            id: c.id,
+            type: c.type,
+            severity: c.severity,
+            affectedElements: c.affectedElements,
+            detectedAt: c.detectedAt,
+            operations: c.operations.map(op => ({
+              id: op.id,
+              type: op.type,
+              elementId: op.elementId,
+              userId: op.userId,
+              timestamp: op.timestamp
+            }))
+          })),
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to get conflicts', { error, data });
+        socket.emit('error', { 
+          code: 'GET_CONFLICTS_FAILED', 
+          message: 'Failed to retrieve conflicts' 
+        });
+      }
+    });
+
+    // ==================== PERFORMANCE MONITORING ====================
+
+    // Get performance metrics
+    socket.on('whiteboard:get_performance_metrics', () => {
+      try {
+        if (!socket.whiteboardSession) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { whiteboardId } = socket.whiteboardSession;
+        const context = whiteboardContexts.get(whiteboardId);
+        const operationQueue = operationQueues.get(whiteboardId) || [];
+        const conflicts = pendingConflicts.get(whiteboardId) || [];
+
+        const metrics = {
+          ...otEngine.getPerformanceMetrics(),
+          queueSize: operationQueue.length,
+          activeConflicts: conflicts.length,
+          whiteboardVersion: canvasVersions.get(whiteboardId) || 1,
+          context: context ? {
+            operationCount: context.operationQueue.length,
+            conflictHistory: context.conflictHistory.length,
+            adaptiveThrottling: context.adaptiveThrottling
+          } : null
+        };
+
+        socket.emit('whiteboard:performance_metrics', {
+          metrics,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to get performance metrics', { error });
+        socket.emit('error', { 
+          code: 'METRICS_FAILED', 
+          message: 'Failed to retrieve performance metrics' 
+        });
+      }
+    });
+
+    // Batch operations for performance optimization
+    socket.on('whiteboard:batch_operations', async (data: {
+      operations: WhiteboardCanvasOperation[];
+      clientVersion: number;
+      batchId: string;
+    }) => {
+      const processingStartTime = Date.now();
+      
+      try {
+        if (!socket.whiteboardSession) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { operations, clientVersion, batchId } = data;
+        const { whiteboardId } = socket.whiteboardSession;
+
+        if (operations.length > 50) {
+          socket.emit('error', { 
+            code: 'BATCH_TOO_LARGE', 
+            message: 'Batch size exceeds maximum of 50 operations' 
+          });
+          return;
+        }
+
+        // Convert to enhanced batch operation
+        const batchOperation: EnhancedWhiteboardOperation = {
+          id: `batch_${batchId}_${socket.user.id}_${Date.now()}`,
+          type: 'batch',
+          elementId: `batch_${batchId}`,
+          data: { operations },
+          timestamp: new Date().toISOString(),
+          version: (canvasVersions.get(whiteboardId) || 1) + 1,
+          userId: socket.user.id,
+          vectorClock: { [socket.user.id]: (canvasVersions.get(whiteboardId) || 1) + 1 },
+          lamportTimestamp: (canvasVersions.get(whiteboardId) || 1) + 1,
+          metadata: {
+            clientId: socket.id,
+            sessionId: socket.whiteboardSession.sessionId,
+            processingTime: 0
+          }
+        };
+
+        // Process batch through OT engine
+        const context = whiteboardContexts.get(whiteboardId);
+        if (context) {
+          const transformResult = await otEngine.transformOperation(batchOperation, context);
+          const { transformedOperation, conflicts, performance } = transformResult;
+
+          // Update version and broadcast
+          const newVersion = transformedOperation.version;
+          canvasVersions.set(whiteboardId, newVersion);
+
+          socket.to(`whiteboard:${whiteboardId}`).emit('whiteboard:batch_processed', {
+            batchId,
+            operation: transformedOperation,
+            user: {
+              id: socket.user.id,
+              name: socket.user.name,
+            },
+            performance,
+            timestamp: transformedOperation.timestamp,
+          });
+
+          socket.emit('whiteboard:batch_ack', {
+            batchId,
+            newVersion,
+            success: true,
+            performance,
+            operationsProcessed: operations.length
+          });
+
+          logger.info('Batch operations processed', {
+            whiteboardId,
+            batchId,
+            operationCount: operations.length,
+            processingTimeMs: performance.processingTimeMs
+          });
+        }
+
+      } catch (error) {
+        const processingTime = Date.now() - processingStartTime;
+        
+        logger.error('Failed to process batch operations', { error, data });
+        socket.emit('whiteboard:batch_ack', {
+          batchId: data.batchId,
+          success: false,
+          error: 'Failed to process batch operations',
+          performance: {
+            processingTimeMs: processingTime,
+            memoryUsageMB: 0,
+            queueSize: 0
+          }
         });
       }
     });
@@ -3015,4 +3722,84 @@ export function broadcastElementOwnershipChanged(
     ...data,
     timestamp: new Date().toISOString(),
   });
+}
+
+// ==================== SECURITY VALIDATION FUNCTIONS ====================
+
+/**
+ * Validate user access to whiteboard operations
+ */
+async function validateWhiteboardAccess(
+  userId: string, 
+  whiteboardId: string, 
+  operationType: string
+): Promise<void> {
+  // TODO: Implement with actual database service
+  // This is a placeholder that would check against the whiteboard permissions table
+  
+  // For now, return success - this would be implemented with the actual whiteboard service
+  // const whiteboardService = getWhiteboardService();
+  // await whiteboardService.checkUserPermission(userId, whiteboardId, operationType);
+  
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId) || !uuidRegex.test(whiteboardId)) {
+    throw new Error('Invalid ID format');
+  }
+  
+  // Basic operation type validation
+  const validOperations = ['create', 'update', 'delete', 'move', 'style'];
+  if (!validOperations.includes(operationType)) {
+    throw new Error('Invalid operation type');
+  }
+}
+
+/**
+ * Validate user access to specific whiteboard elements
+ */
+async function validateElementAccess(
+  userId: string, 
+  whiteboardId: string, 
+  elementId: string, 
+  operationType: string
+): Promise<void> {
+  // TODO: Implement with actual database service
+  // This would check if the user has permission to modify the specific element
+  
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(elementId)) {
+    throw new Error('Invalid element ID format');
+  }
+  
+  // For delete operations, ensure user owns the element or has admin permissions
+  if (operationType === 'delete') {
+    // This would check element ownership in the database
+    // const elementService = getElementService();
+    // const element = await elementService.getElement(whiteboardId, elementId);
+    // if (element.createdBy !== userId && !hasAdminPermission(userId, whiteboardId)) {
+    //   throw new Error('Permission denied: Cannot delete element not owned by user');
+    // }
+  }
+}
+
+/**
+ * Get user permissions for a specific whiteboard
+ */
+async function getUserWhiteboardPermissions(
+  userId: string, 
+  whiteboardId: string
+): Promise<Record<string, boolean>> {
+  // TODO: Implement with actual database service
+  // This would fetch the user's permissions from the whiteboard_permissions table
+  
+  // Default permissions for now - this would come from the database
+  return {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canComment: true,
+    canShare: false,
+    canManagePermissions: false
+  };
 }

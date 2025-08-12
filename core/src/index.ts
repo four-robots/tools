@@ -31,6 +31,9 @@ export * from './services/workspace/index.js';
 export * from './shared/types/index.js';
 export * from './shared/utils/index.js';
 
+// Export whiteboard OT utilities
+export * from './shared/whiteboard-ot.js';
+
 // Export shared utilities with explicit naming to avoid conflicts
 export type { 
   DatabaseConfig as CoreDatabaseConfig 
