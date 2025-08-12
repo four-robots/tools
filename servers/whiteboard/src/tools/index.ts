@@ -11,6 +11,7 @@ import { listWhiteboardsTool } from './list-whiteboards.js';
 import { addElementTool } from './add-element.js';
 import { updateElementTool } from './update-element.js';
 import { deleteElementTool } from './delete-element.js';
+import { analyticsTools } from './analytics/analytics-tools.js';
 
 /**
  * Whiteboard tools registry
@@ -46,6 +47,11 @@ export class WhiteboardTools {
       server.registerTool(addElementTool(this.elementService, this.logger));
       server.registerTool(updateElementTool(this.elementService, this.logger));
       server.registerTool(deleteElementTool(this.elementService, this.logger));
+
+      // Analytics tools
+      analyticsTools.forEach(tool => {
+        server.registerTool(tool);
+      });
 
       this.logger.info('All whiteboard tools registered successfully');
     } catch (error) {

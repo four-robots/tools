@@ -25,6 +25,7 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "dev": "npm run dev --workspaces --if-present",
     "dev:gateway": "npm run dev -w gateway",
     "dev:web": "npm run dev -w web",
     "dev:kanban": "npm run dev -w servers/kanban",
