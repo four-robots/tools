@@ -36,7 +36,17 @@ export const WhiteboardActivityAction = z.enum([
   
   // Collaboration
   'session_started', 'session_ended', 'cursor_moved', 'selection_changed',
-  'comment_added', 'comment_updated', 'comment_deleted', 'comment_resolved',
+  
+  // Enhanced comment actions
+  'comment_created', 'comment_updated', 'comment_deleted', 'comment_resolved',
+  'comment_status_changed', 'comment_replied', 'comment_mentioned', 'comment_edited',
+  'comment_archived', 'comment_unresolved', 'comment_reacted', 'comment_attached',
+  
+  // Threading actions
+  'thread_created', 'thread_locked', 'thread_unlocked', 'thread_merged',
+  
+  // @mention actions
+  'mention_created', 'mention_resolved', 'mention_notification_sent',
   
   // Template actions
   'template_applied', 'template_created', 'template_updated',
@@ -573,26 +583,265 @@ export const WhiteboardActivityLog = z.object({
 });
 export type WhiteboardActivityLog = z.infer<typeof WhiteboardActivityLog>;
 
-// Comments and collaboration
+// Comments and collaboration with comprehensive threading and @mention support
+
+/**
+ * Comment status tracking for workflow management
+ */
+export const CommentStatus = z.enum(['open', 'in_progress', 'resolved', 'archived']);
+export type CommentStatus = z.infer<typeof CommentStatus>;
+
+/**
+ * Comment priority levels
+ */
+export const CommentPriority = z.enum(['low', 'medium', 'high', 'urgent']);
+export type CommentPriority = z.infer<typeof CommentPriority>;
+
+/**
+ * Rich text content types with advanced formatting support
+ */
+export const CommentContentType = z.enum(['text', 'markdown', 'rich_text']);
+export type CommentContentType = z.infer<typeof CommentContentType>;
+
+/**
+ * @mention data structure with resolved user information
+ */
+export const CommentMention = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  userEmail: z.string().email().optional(),
+  mentionText: z.string(), // Original @mention text (e.g., "@johnsmith")
+  startIndex: z.number().min(0), // Character position in content
+  length: z.number().min(1), // Length of mention text
+  resolved: z.boolean().default(true), // Whether user ID was successfully resolved
+  notified: z.boolean().default(false), // Whether notification was sent
+  notifiedAt: z.string().datetime().optional(),
+});
+export type CommentMention = z.infer<typeof CommentMention>;
+
+/**
+ * Rich text formatting for comment content
+ */
+export const RichTextFormat = z.object({
+  bold: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+  })).default([]),
+  italic: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+  })).default([]),
+  underline: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+  })).default([]),
+  strikethrough: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+  })).default([]),
+  code: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+  })).default([]),
+  links: z.array(z.object({
+    start: z.number().min(0),
+    end: z.number().min(0),
+    url: z.string().url(),
+    title: z.string().optional(),
+  })).default([]),
+});
+export type RichTextFormat = z.infer<typeof RichTextFormat>;
+
+/**
+ * Comment attachment data
+ */
+export const CommentAttachment = z.object({
+  id: z.string().uuid(),
+  type: z.enum(['image', 'file', 'link']),
+  name: z.string(),
+  url: z.string(),
+  size: z.number().min(0).optional(), // File size in bytes
+  mimeType: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).default({}),
+});
+export type CommentAttachment = z.infer<typeof CommentAttachment>;
+
+/**
+ * Comment edit history for audit trail
+ */
+export const CommentRevision = z.object({
+  id: z.string().uuid(),
+  commentId: z.string().uuid(),
+  content: z.string(),
+  contentType: CommentContentType,
+  richTextFormat: RichTextFormat.optional(),
+  mentions: z.array(CommentMention).default([]),
+  editedBy: z.string().uuid(),
+  editReason: z.string().optional(),
+  createdAt: z.string().datetime(),
+});
+export type CommentRevision = z.infer<typeof CommentRevision>;
+
+/**
+ * Comment thread metadata for organization and navigation
+ */
+export const CommentThreadMetadata = z.object({
+  replyCount: z.number().min(0).default(0),
+  participantCount: z.number().min(1).default(1),
+  participants: z.array(z.object({
+    userId: z.string().uuid(),
+    userName: z.string(),
+    lastActivity: z.string().datetime(),
+  })).default([]),
+  lastReplyAt: z.string().datetime().optional(),
+  isSubscribed: z.boolean().default(true), // Whether user is subscribed to notifications
+});
+export type CommentThreadMetadata = z.infer<typeof CommentThreadMetadata>;
+
+/**
+ * Comment activity tracking for real-time indicators
+ */
+export const CommentActivity = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  activity: z.enum(['typing', 'viewing', 'composing_reply', 'editing']),
+  commentId: z.string().uuid().optional(), // For reply composition or editing
+  startedAt: z.string().datetime(),
+  lastActivity: z.string().datetime(),
+});
+export type CommentActivity = z.infer<typeof CommentActivity>;
+
+/**
+ * Comprehensive whiteboard comment with threading and @mention support
+ */
 export const WhiteboardComment = z.object({
   id: z.string().uuid(),
   whiteboardId: z.string().uuid(),
-  elementId: z.string().uuid().optional(),
-  parentId: z.string().uuid().optional(),
-  content: z.string(),
-  contentType: z.enum(['text', 'markdown']).default('text'),
+  elementId: z.string().uuid().optional(), // Comment on specific element
+  parentId: z.string().uuid().optional(), // Parent comment for threading
+  threadId: z.string().uuid(), // Root thread identifier
+  
+  // Content and formatting
+  content: z.string().min(1).max(10000), // Raw content with length limits
+  contentType: CommentContentType.default('text'),
+  richTextFormat: RichTextFormat.optional(), // Rich text formatting data
+  
+  // Position and anchoring
   position: Point.optional(), // Position on canvas
+  anchorPoint: z.object({
+    elementId: z.string().uuid().optional(),
+    relativePosition: Point.optional(), // Position relative to element
+    canvasPosition: Point, // Absolute canvas position
+  }).optional(),
+  
+  // Status and workflow
+  status: CommentStatus.default('open'),
+  priority: CommentPriority.default('medium'),
+  
+  // Resolution tracking
   resolved: z.boolean().default(false),
   resolvedBy: z.string().uuid().optional(),
   resolvedAt: z.string().datetime().optional(),
-  mentions: z.array(z.string().uuid()).default([]),
-  attachments: z.record(z.string(), z.any()).default({}),
+  resolvedReason: z.string().optional(),
+  
+  // @mentions with enhanced data
+  mentions: z.array(CommentMention).default([]),
+  mentionNotificationsSent: z.boolean().default(false),
+  
+  // Attachments and media
+  attachments: z.array(CommentAttachment).default([]),
+  
+  // Threading metadata
+  threadMetadata: CommentThreadMetadata.optional(),
+  depth: z.number().min(0).default(0), // Nesting depth in thread
+  
+  // Audit trail and history
+  revisionCount: z.number().min(0).default(0),
+  lastEditedBy: z.string().uuid().optional(),
+  lastEditedAt: z.string().datetime().optional(),
+  
+  // Permissions and access
+  isPrivate: z.boolean().default(false), // Private comment visible only to mentioned users
+  allowedViewers: z.array(z.string().uuid()).default([]), // Specific user access
+  
+  // Engagement tracking
+  reactions: z.array(z.object({
+    userId: z.string().uuid(),
+    reaction: z.string(), // Emoji or reaction type
+    createdAt: z.string().datetime(),
+  })).default([]),
+  
+  // Metadata and tags
+  tags: z.array(z.string()).default([]),
+  metadata: z.record(z.string(), z.any()).default({}),
+  
+  // Standard timestamps
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
 });
 export type WhiteboardComment = z.infer<typeof WhiteboardComment>;
+
+/**
+ * Comment with populated child replies for thread display
+ */
+export const WhiteboardCommentWithReplies = WhiteboardComment.extend({
+  replies: z.array(z.lazy(() => WhiteboardCommentWithReplies)).default([]),
+  replyCount: z.number().min(0).default(0),
+  hasMoreReplies: z.boolean().default(false),
+});
+export type WhiteboardCommentWithReplies = z.infer<typeof WhiteboardCommentWithReplies>;
+
+/**
+ * Comment notification data
+ */
+export const CommentNotification = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(), // User receiving notification
+  commentId: z.string().uuid(),
+  whiteboardId: z.string().uuid(),
+  type: z.enum(['mention', 'reply', 'resolution', 'edit', 'reaction']),
+  
+  // Notification content
+  title: z.string(),
+  message: z.string(),
+  actionUrl: z.string().url().optional(),
+  
+  // Context data
+  triggeredBy: z.string().uuid(), // User who triggered notification
+  triggeredByName: z.string(),
+  commentContent: z.string().max(200), // Truncated comment content
+  whiteboardName: z.string(),
+  
+  // Delivery tracking
+  delivered: z.boolean().default(false),
+  deliveredAt: z.string().datetime().optional(),
+  read: z.boolean().default(false),
+  readAt: z.string().datetime().optional(),
+  
+  // Preferences
+  deliveryMethod: z.array(z.enum(['in_app', 'email', 'push'])).default(['in_app']),
+  
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+});
+export type CommentNotification = z.infer<typeof CommentNotification>;
+
+/**
+ * Typing indicator for real-time comment composition
+ */
+export const CommentTypingIndicator = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  whiteboardId: z.string().uuid(),
+  commentId: z.string().uuid().optional(), // For replies
+  isTyping: z.boolean(),
+  startedAt: z.string().datetime(),
+  lastActivity: z.string().datetime(),
+});
+export type CommentTypingIndicator = z.infer<typeof CommentTypingIndicator>;
 
 // Version control
 export const WhiteboardVersionSnapshot = z.object({
@@ -673,14 +922,77 @@ export const CreateTemplateRequest = z.object({
 });
 export type CreateTemplateRequest = z.infer<typeof CreateTemplateRequest>;
 
+/**
+ * Enhanced comment creation request with threading and @mention support
+ */
 export const CreateCommentRequest = z.object({
-  content: z.string().min(1),
+  content: z.string().min(1).max(10000),
+  contentType: CommentContentType.optional(),
+  richTextFormat: RichTextFormat.optional(),
   elementId: z.string().uuid().optional(),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().uuid().optional(), // For threading
   position: Point.optional(),
-  mentions: z.array(z.string().uuid()).optional(),
+  anchorPoint: z.object({
+    elementId: z.string().uuid().optional(),
+    relativePosition: Point.optional(),
+    canvasPosition: Point,
+  }).optional(),
+  priority: CommentPriority.optional(),
+  mentions: z.array(z.string().uuid()).optional(), // Simple mention list
+  mentionData: z.array(CommentMention).optional(), // Full mention data
+  attachments: z.array(CommentAttachment).optional(),
+  isPrivate: z.boolean().optional(),
+  allowedViewers: z.array(z.string().uuid()).optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 export type CreateCommentRequest = z.infer<typeof CreateCommentRequest>;
+
+/**
+ * Comment update request with revision tracking
+ */
+export const UpdateCommentRequest = z.object({
+  content: z.string().min(1).max(10000).optional(),
+  contentType: CommentContentType.optional(),
+  richTextFormat: RichTextFormat.optional(),
+  status: CommentStatus.optional(),
+  priority: CommentPriority.optional(),
+  position: Point.optional(),
+  anchorPoint: z.object({
+    elementId: z.string().uuid().optional(),
+    relativePosition: Point.optional(),
+    canvasPosition: Point,
+  }).optional(),
+  mentionData: z.array(CommentMention).optional(),
+  attachments: z.array(CommentAttachment).optional(),
+  isPrivate: z.boolean().optional(),
+  allowedViewers: z.array(z.string().uuid()).optional(),
+  tags: z.array(z.string()).optional(),
+  editReason: z.string().optional(), // Reason for edit
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+export type UpdateCommentRequest = z.infer<typeof UpdateCommentRequest>;
+
+/**
+ * Comment resolution request
+ */
+export const ResolveCommentRequest = z.object({
+  resolved: z.boolean(),
+  reason: z.string().optional(),
+  status: CommentStatus.optional(), // Can set to 'resolved' or 'archived'
+});
+export type ResolveCommentRequest = z.infer<typeof ResolveCommentRequest>;
+
+/**
+ * @mention parsing and notification request
+ */
+export const ProcessMentionsRequest = z.object({
+  content: z.string(),
+  whiteboardId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  excludeUserIds: z.array(z.string().uuid()).default([]), // Users to exclude from mentions
+});
+export type ProcessMentionsRequest = z.infer<typeof ProcessMentionsRequest>;
 
 // Response schemas with additional data
 export const WhiteboardWithStats = Whiteboard.extend({
@@ -699,7 +1011,7 @@ export const WhiteboardWithElements = Whiteboard.extend({
 });
 export type WhiteboardWithElements = z.infer<typeof WhiteboardWithElements>;
 
-// Real-time event schemas
+// Real-time event schemas with enhanced comment support
 export const WhiteboardRealtimeEvent = z.object({
   type: z.enum([
     'whiteboard_updated',
@@ -710,9 +1022,32 @@ export const WhiteboardRealtimeEvent = z.object({
     'user_left',
     'cursor_moved',
     'selection_changed',
+    
+    // Enhanced comment events
     'comment_added',
     'comment_updated',
+    'comment_deleted',
     'comment_resolved',
+    'comment_status_changed',
+    'comment_reply_added',
+    'comment_edited',
+    'comment_reaction_added',
+    'comment_attachment_added',
+    
+    // Threading events
+    'thread_created',
+    'thread_updated',
+    'thread_locked',
+    'thread_unlocked',
+    
+    // @mention events
+    'mention_notification',
+    'mention_resolved',
+    
+    // Typing indicators
+    'comment_typing_start',
+    'comment_typing_stop',
+    
     'permission_changed',
     'version_saved',
   ]),
@@ -723,6 +1058,34 @@ export const WhiteboardRealtimeEvent = z.object({
   timestamp: z.string().datetime(),
 });
 export type WhiteboardRealtimeEvent = z.infer<typeof WhiteboardRealtimeEvent>;
+
+/**
+ * Comment-specific WebSocket events
+ */
+export const CommentWebSocketEvent = z.object({
+  type: z.enum([
+    'comment_created',
+    'comment_updated', 
+    'comment_deleted',
+    'comment_resolved',
+    'comment_status_changed',
+    'comment_reply_added',
+    'comment_edited',
+    'comment_reaction_added',
+    'comment_attachment_added',
+    'thread_updated',
+    'mention_notification',
+    'comment_typing_indicator',
+  ]),
+  whiteboardId: z.string().uuid(),
+  commentId: z.string().uuid(),
+  threadId: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  sessionId: z.string().uuid().optional(),
+  data: z.record(z.string(), z.any()).default({}),
+  timestamp: z.string().datetime(),
+});
+export type CommentWebSocketEvent = z.infer<typeof CommentWebSocketEvent>;
 
 export const WhiteboardPresenceEvent = z.object({
   sessionId: z.string().uuid(),

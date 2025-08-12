@@ -45,10 +45,53 @@ const RATE_LIMIT_CONFIGS: OperationConfig = {
     blockDurationMs: 60 * 1000, // 1 minute block
   },
   
-  'whiteboard:add_comment': {
+  // Comment system operations with enhanced security
+  'whiteboard:create_comment': {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 30, // 30 comments per minute
+    maxRequests: 10, // 10 new comments per minute to prevent spam
     blockDurationMs: 5 * 60 * 1000, // 5 minute block
+  },
+  
+  'whiteboard:update_comment': {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 20, // 20 comment edits per minute
+    blockDurationMs: 3 * 60 * 1000, // 3 minute block
+  },
+  
+  'whiteboard:resolve_comment': {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 30, // 30 resolve actions per minute
+    blockDurationMs: 2 * 60 * 1000, // 2 minute block
+  },
+  
+  'whiteboard:delete_comment': {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 15, // 15 delete actions per minute
+    blockDurationMs: 5 * 60 * 1000, // 5 minute block
+  },
+  
+  'whiteboard:get_comment_thread': {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 100, // 100 thread fetches per minute
+    blockDurationMs: 2 * 60 * 1000, // 2 minute block
+  },
+  
+  'whiteboard:get_comments': {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 50, // 50 comment list fetches per minute
+    blockDurationMs: 2 * 60 * 1000, // 2 minute block
+  },
+  
+  'whiteboard:comment_typing': {
+    windowMs: 1000, // 1 second
+    maxRequests: 5, // 5 typing indicators per second
+    blockDurationMs: 30 * 1000, // 30 second block
+  },
+  
+  'whiteboard:comment_activity': {
+    windowMs: 10 * 1000, // 10 seconds
+    maxRequests: 20, // 20 activity updates per 10 seconds
+    blockDurationMs: 60 * 1000, // 1 minute block
   },
   
   // High frequency operations
@@ -58,10 +101,16 @@ const RATE_LIMIT_CONFIGS: OperationConfig = {
     blockDurationMs: 2 * 60 * 1000, // 2 minute block
   },
   
-  // Cursor operations - very high frequency, low impact
+  // Cursor operations - very high frequency, low impact with throttling
   'whiteboard:cursor_move': {
     windowMs: 1000, // 1 second
-    maxRequests: 60, // 60 FPS max
+    maxRequests: 30, // Reduced to 30 FPS for better performance
+    blockDurationMs: 10 * 1000, // 10 second block
+  },
+  
+  'whiteboard:selection_change': {
+    windowMs: 1000, // 1 second
+    maxRequests: 20, // 20 selection changes per second
     blockDurationMs: 10 * 1000, // 10 second block
   },
   

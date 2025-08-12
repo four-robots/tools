@@ -26,6 +26,7 @@ import { LRUCache, createLRUCache } from './lru-cache.js';
 import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard-cursor-service';
 import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboard-presence-service';
 import { getSelectionService } from '@mcp-tools/core/services/whiteboard/whiteboard-selection-service';
+import { WhiteboardCommentService } from '@mcp-tools/core/services/whiteboard/whiteboard-comment-service';
 import {
   validateUserInfo,
   validateActivityInfo,
@@ -100,6 +101,7 @@ interface WhiteboardSession extends SessionData {
  */
 export function setupWhiteboardWebSocket(
   io: SocketIOServer,
+  db: any, // Database pool dependency
   options?: {
     useRedis?: boolean;
     sessionTtl?: number;
@@ -144,6 +146,19 @@ export function setupWhiteboardWebSocket(
     conflictResolutionStrategy: 'priority',
     highlightOpacity: 0.3,
   }, logger);
+
+  // Initialize comment service for comprehensive threading and @mention support
+  const commentService = new WhiteboardCommentService(
+    db, // Assuming db is available in context
+    {
+      maxThreadDepth: 5,
+      maxCommentsPerPage: 50,
+      enableMentions: true,
+      enableRichText: true,
+      enableEditHistory: true,
+    },
+    logger
+  );
   
   logger.info('Whiteboard WebSocket initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
@@ -1515,14 +1530,94 @@ export function setupWhiteboardWebSocket(
       }
     });
 
-    // ==================== COLLABORATIVE COMMENTS ====================
+    // ==================== ENHANCED COLLABORATIVE COMMENTS WITH THREADING & @MENTIONS ====================
 
-    // Add comment
-    socket.on('whiteboard:add_comment', async (data: {
-      whiteboardId: string;
-      elementId?: string;
-      position: { x: number; y: number };
-      content: string;
+    // Create comment (supports threading and @mentions)
+    socket.on('whiteboard:create_comment', async (data: any) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check rate limiting for comment creation
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:create_comment');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:comment_ack', {
+            success: false,
+            error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+          });
+          return;
+        }
+
+        const result = await commentService.createComment(
+          socket.whiteboardSession.whiteboardId,
+          socket.user.id,
+          data
+        );
+
+        if (result.errors.length > 0) {
+          socket.emit('whiteboard:comment_ack', {
+            success: false,
+            error: result.errors.join(', '),
+            warnings: result.warnings,
+          });
+          return;
+        }
+
+        // Broadcast comment creation to all participants
+        io.to(`whiteboard:${socket.whiteboardSession.whiteboardId}:comments`).emit('whiteboard:comment_created', {
+          comment: result.comment,
+          mentions: result.mentions,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Send @mention notifications
+        if (result.notifications.length > 0) {
+          for (const notification of result.notifications) {
+            // Send notification to mentioned user if they're online
+            const mentionedUserSockets = io.sockets.sockets;
+            for (const [socketId, userSocket] of mentionedUserSockets) {
+              const authenticatedSocket = userSocket as any;
+              if (authenticatedSocket.user?.id === notification.userId) {
+                userSocket.emit('whiteboard:mention_notification', notification);
+              }
+            }
+          }
+        }
+
+        // Send acknowledgment with full result
+        socket.emit('whiteboard:comment_ack', {
+          success: true,
+          comment: result.comment,
+          mentions: result.mentions,
+          notifications: result.notifications,
+          warnings: result.warnings,
+        });
+
+        logger.info('Comment created successfully', {
+          whiteboardId: socket.whiteboardSession.whiteboardId,
+          commentId: result.comment.id,
+          userId: socket.user.id,
+          hasParent: !!data.parentId,
+          mentionCount: result.mentions.length,
+        });
+
+      } catch (error) {
+        logger.error('Failed to create comment', { error, data });
+        socket.emit('whiteboard:comment_ack', {
+          success: false,
+          error: 'Failed to create comment',
+        });
+      }
+    });
+
+    // Update comment (with revision tracking)
+    socket.on('whiteboard:update_comment', async (data: {
+      commentId: string;
+      updates: any;
     }) => {
       try {
         if (!socket.whiteboardSession || !socket.user) {
@@ -1530,140 +1625,167 @@ export function setupWhiteboardWebSocket(
           return;
         }
 
-        const { whiteboardId, elementId, position, content } = data;
-
-        const comment: WhiteboardComment = {
-          id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          whiteboardId,
-          elementId,
-          position,
-          content,
-          author: {
-            id: socket.user.id,
-            name: socket.user.name,
-          },
-          replies: [],
-          resolved: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Broadcast comment to all participants
-        io.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_added', comment);
-
-        // Send acknowledgment
-        socket.emit('whiteboard:comment_ack', {
-          tempId: data.elementId, // Assume client sends temp ID
-          comment,
-          success: true,
-        });
-
-        logger.info('Comment added to whiteboard', {
-          whiteboardId,
-          commentId: comment.id,
-          userId: socket.user.id,
-        });
-
-      } catch (error) {
-        logger.error('Failed to add comment', { error, data });
-        socket.emit('whiteboard:comment_ack', {
-          success: false,
-          error: 'Failed to add comment',
-        });
-      }
-    });
-
-    // Reply to comment
-    socket.on('whiteboard:reply_comment', async (data: {
-      whiteboardId: string;
-      commentId: string;
-      content: string;
-    }) => {
-      try {
-        if (!socket.whiteboardSession || !socket.user) {
+        // Check rate limiting for comment updates
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:update_comment');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:comment_update_ack', {
+            success: false,
+            error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+          });
           return;
         }
 
-        const { whiteboardId, commentId, content } = data;
+        const result = await commentService.updateComment(
+          data.commentId,
+          socket.user.id,
+          data.updates
+        );
 
-        const reply: WhiteboardComment = {
-          id: `reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          whiteboardId,
-          position: { x: 0, y: 0 }, // Replies don't have positions
-          content,
-          author: {
-            id: socket.user.id,
-            name: socket.user.name,
-          },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+        if (result.errors.length > 0) {
+          socket.emit('whiteboard:comment_update_ack', {
+            success: false,
+            error: result.errors.join(', '),
+            warnings: result.warnings,
+          });
+          return;
+        }
 
-        // Broadcast reply to all participants
-        io.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_reply_added', {
-          commentId,
-          reply,
+        // Broadcast comment update to all participants
+        io.to(`whiteboard:${socket.whiteboardSession.whiteboardId}:comments`).emit('whiteboard:comment_updated', {
+          comment: result.comment,
+          revision: result.revision,
+          mentions: result.mentions,
+          timestamp: new Date().toISOString(),
         });
 
-        socket.emit('whiteboard:reply_ack', {
-          commentId,
-          reply,
+        // Send new @mention notifications
+        if (result.notifications.length > 0) {
+          for (const notification of result.notifications) {
+            const mentionedUserSockets = io.sockets.sockets;
+            for (const [socketId, userSocket] of mentionedUserSockets) {
+              const authenticatedSocket = userSocket as any;
+              if (authenticatedSocket.user?.id === notification.userId) {
+                userSocket.emit('whiteboard:mention_notification', notification);
+              }
+            }
+          }
+        }
+
+        socket.emit('whiteboard:comment_update_ack', {
           success: true,
+          comment: result.comment,
+          revision: result.revision,
+          mentions: result.mentions,
+          notifications: result.notifications,
+          warnings: result.warnings,
+        });
+
+        logger.info('Comment updated successfully', {
+          commentId: data.commentId,
+          userId: socket.user.id,
+          hasNewMentions: result.notifications.length > 0,
         });
 
       } catch (error) {
-        logger.error('Failed to reply to comment', { error, data });
-        socket.emit('whiteboard:reply_ack', {
+        logger.error('Failed to update comment', { error, data });
+        socket.emit('whiteboard:comment_update_ack', {
           success: false,
-          error: 'Failed to reply to comment',
+          error: 'Failed to update comment',
         });
       }
     });
 
     // Resolve/unresolve comment
     socket.on('whiteboard:resolve_comment', async (data: {
-      whiteboardId: string;
       commentId: string;
       resolved: boolean;
+      reason?: string;
+      status?: string;
     }) => {
       try {
         if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
           return;
         }
 
-        const { whiteboardId, commentId, resolved } = data;
+        const result = await commentService.resolveComment(
+          data.commentId,
+          socket.user.id,
+          {
+            resolved: data.resolved,
+            reason: data.reason,
+            status: data.status as any,
+          }
+        );
+
+        if (!result.success) {
+          socket.emit('whiteboard:comment_resolve_ack', {
+            success: false,
+            error: result.error,
+          });
+          return;
+        }
 
         // Broadcast resolution status change
-        io.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_resolved', {
-          commentId,
-          resolved,
+        io.to(`whiteboard:${socket.whiteboardSession.whiteboardId}:comments`).emit('whiteboard:comment_resolved', {
+          comment: result.comment,
+          resolved: data.resolved,
           resolvedBy: {
             id: socket.user.id,
             name: socket.user.name,
           },
+          reason: data.reason,
           timestamp: new Date().toISOString(),
+        });
+
+        socket.emit('whiteboard:comment_resolve_ack', {
+          success: true,
+          comment: result.comment,
+        });
+
+        logger.info('Comment resolution updated', {
+          commentId: data.commentId,
+          userId: socket.user.id,
+          resolved: data.resolved,
         });
 
       } catch (error) {
         logger.error('Failed to resolve comment', { error, data });
+        socket.emit('whiteboard:comment_resolve_ack', {
+          success: false,
+          error: 'Failed to resolve comment',
+        });
       }
     });
 
     // Delete comment
     socket.on('whiteboard:delete_comment', async (data: {
-      whiteboardId: string;
       commentId: string;
     }) => {
       try {
         if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
           return;
         }
 
-        const { whiteboardId, commentId } = data;
+        const result = await commentService.deleteComment(
+          data.commentId,
+          socket.user.id
+        );
+
+        if (!result.success) {
+          socket.emit('whiteboard:comment_delete_ack', {
+            success: false,
+            error: result.error,
+          });
+          return;
+        }
 
         // Broadcast comment deletion
-        io.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_deleted', {
-          commentId,
+        io.to(`whiteboard:${socket.whiteboardSession.whiteboardId}:comments`).emit('whiteboard:comment_deleted', {
+          commentId: data.commentId,
           deletedBy: {
             id: socket.user.id,
             name: socket.user.name,
@@ -1671,8 +1793,241 @@ export function setupWhiteboardWebSocket(
           timestamp: new Date().toISOString(),
         });
 
+        socket.emit('whiteboard:comment_delete_ack', {
+          success: true,
+        });
+
+        logger.info('Comment deleted successfully', {
+          commentId: data.commentId,
+          userId: socket.user.id,
+        });
+
       } catch (error) {
         logger.error('Failed to delete comment', { error, data });
+        socket.emit('whiteboard:comment_delete_ack', {
+          success: false,
+          error: 'Failed to delete comment',
+        });
+      }
+    });
+
+    // Get comment thread (with nested replies)
+    socket.on('whiteboard:get_comment_thread', async (data: {
+      commentId: string;
+      maxDepth?: number;
+      limit?: number;
+      offset?: number;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check rate limiting for thread requests
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:get_comment_thread');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:comment_thread_ack', {
+            success: false,
+            error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+          });
+          return;
+        }
+
+        const thread = await commentService.getCommentThread(
+          data.commentId,
+          socket.user.id,
+          {
+            maxDepth: data.maxDepth,
+            limit: data.limit,
+            offset: data.offset,
+          }
+        );
+
+        socket.emit('whiteboard:comment_thread_ack', {
+          success: true,
+          thread,
+        });
+
+      } catch (error) {
+        logger.error('Failed to get comment thread', { error, data });
+        socket.emit('whiteboard:comment_thread_ack', {
+          success: false,
+          error: 'Failed to get comment thread',
+        });
+      }
+    });
+
+    // Get whiteboard comments (with filtering)
+    socket.on('whiteboard:get_comments', async (data: {
+      whiteboardId?: string;
+      filters?: any;
+      limit?: number;
+      offset?: number;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check rate limiting for comment queries
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:get_comments');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:comments_ack', {
+            success: false,
+            error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+          });
+          return;
+        }
+
+        const whiteboardId = data.whiteboardId || socket.whiteboardSession.whiteboardId;
+        const comments = await commentService.getWhiteboardComments(
+          whiteboardId,
+          socket.user.id,
+          data.filters || {},
+          data.limit || 20,
+          data.offset || 0
+        );
+
+        socket.emit('whiteboard:comments_ack', {
+          success: true,
+          comments,
+        });
+
+      } catch (error) {
+        logger.error('Failed to get comments', { error, data });
+        socket.emit('whiteboard:comments_ack', {
+          success: false,
+          error: 'Failed to get comments',
+        });
+      }
+    });
+
+    // Comment typing indicator
+    socket.on('whiteboard:comment_typing', async (data: {
+      whiteboardId: string;
+      commentId?: string; // For replies
+      isTyping: boolean;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        // Check rate limiting for typing indicators
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:comment_typing');
+        if (!rateLimitCheck.allowed) {
+          return; // Silently drop typing indicators when rate limited
+        }
+
+        const { whiteboardId, commentId, isTyping } = data;
+
+        // Broadcast typing indicator to other participants
+        socket.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_typing_indicator', {
+          userId: socket.user.id,
+          userName: socket.user.name,
+          commentId,
+          isTyping,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('Comment typing indicator broadcasted', {
+          whiteboardId,
+          userId: socket.user.id,
+          commentId,
+          isTyping,
+        });
+
+      } catch (error) {
+        logger.debug('Failed to handle comment typing indicator', { error, data });
+      }
+    });
+
+    // Comment activity tracking
+    socket.on('whiteboard:comment_activity', async (data: {
+      whiteboardId: string;
+      commentId?: string;
+      activity: 'viewing' | 'composing_reply' | 'editing';
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        // Check rate limiting for activity updates
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:comment_activity');
+        if (!rateLimitCheck.allowed) {
+          return; // Silently drop activity updates when rate limited
+        }
+
+        const { whiteboardId, commentId, activity } = data;
+
+        // Broadcast activity to other participants
+        socket.to(`whiteboard:${whiteboardId}:comments`).emit('whiteboard:comment_activity_updated', {
+          userId: socket.user.id,
+          userName: socket.user.name,
+          commentId,
+          activity,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('Comment activity updated', {
+          whiteboardId,
+          userId: socket.user.id,
+          commentId,
+          activity,
+        });
+
+      } catch (error) {
+        logger.debug('Failed to handle comment activity', { error, data });
+      }
+    });
+
+    // @mention autocomplete request
+    socket.on('whiteboard:mention_search', async (data: {
+      whiteboardId: string;
+      query: string;
+      limit?: number;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Check rate limiting for mention searches
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:mention_search');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:mention_search_ack', {
+            success: false,
+            error: rateLimitCheck.error.message,
+            rateLimited: true,
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+          });
+          return;
+        }
+
+        // TODO: Implement mention search functionality
+        // This would search workspace users for @mention autocomplete
+        const users = []; // Placeholder for user search results
+
+        socket.emit('whiteboard:mention_search_ack', {
+          success: true,
+          users,
+          query: data.query,
+        });
+
+      } catch (error) {
+        logger.error('Failed to search mentions', { error, data });
+        socket.emit('whiteboard:mention_search_ack', {
+          success: false,
+          error: 'Failed to search mentions',
+        });
       }
     });
 
