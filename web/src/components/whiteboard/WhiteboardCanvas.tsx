@@ -10,6 +10,7 @@ import { useWhiteboardCanvas } from './hooks/useWhiteboardCanvas';
 import { useWhiteboardPersistence } from './hooks/useWhiteboardPersistence';
 import { useWhiteboardCursors } from './hooks/useWhiteboardCursors';
 import { CursorManager } from './WhiteboardCursor';
+import { WhiteboardSelectionIntegration } from './WhiteboardSelectionIntegration';
 import { serializeCanvasData, deserializeCanvasData } from './utils/tldraw-serialization';
 
 interface WhiteboardCanvasProps {
@@ -27,6 +28,9 @@ interface WhiteboardCanvasProps {
   };
   sessionId?: string;
   enableCursors?: boolean;
+  enableSelectionHighlighting?: boolean;
+  selectionServerUrl?: string;
+  authToken?: string;
 }
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
@@ -40,6 +44,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   userInfo,
   sessionId,
   enableCursors = true,
+  enableSelectionHighlighting = true,
+  selectionServerUrl,
+  authToken,
 }) => {
   const editorRef = useRef<Editor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -128,7 +135,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       // Auto-save after 5 seconds of inactivity
       saveCanvasData(serializedData);
 
-      // Update viewport for cursor tracking
+      // Update viewport for cursor tracking and selection highlighting
       if (containerRef.current) {
         const camera = editor.getCamera();
         const containerRect = containerRef.current.getBoundingClientRect();
@@ -243,6 +250,45 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           viewport={viewport}
           showLabels={true}
           maxCursors={25}
+        />
+      )}
+
+      {/* Multi-user selection highlighting */}
+      {enableSelectionHighlighting && editorRef.current && userInfo && selectionServerUrl && authToken && (
+        <WhiteboardSelectionIntegration
+          editor={editorRef.current}
+          whiteboardId={whiteboardId}
+          sessionId={sessionId || `session_${Date.now()}`}
+          user={{
+            id: userInfo.userId,
+            name: userInfo.userName,
+            color: userInfo.userColor,
+          }}
+          viewport={viewport}
+          canvasTransform={{
+            x: viewport.x,
+            y: viewport.y,
+            zoom: viewport.zoom,
+          }}
+          socketConfig={{
+            serverUrl: selectionServerUrl,
+            token: authToken,
+          }}
+          settings={{
+            performanceMode: 'balanced',
+            maxSelections: 25,
+            enableConflictResolution: true,
+            autoResolveConflicts: true,
+            debug: process.env.NODE_ENV === 'development',
+          }}
+          onSelectionConflict={(conflictId, elementIds) => {
+            console.log('Selection conflict detected:', { conflictId, elementIds });
+            // Could show a toast notification or conflict resolution UI
+          }}
+          onOwnershipChanged={(elementId, ownerId) => {
+            console.log('Element ownership changed:', { elementId, ownerId });
+            // Could update UI to show ownership indicators
+          }}
         />
       )}
     </div>
