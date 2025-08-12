@@ -364,12 +364,78 @@ export const CursorInterpolationConfig = z.object({
 });
 export type CursorInterpolationConfig = z.infer<typeof CursorInterpolationConfig>;
 
+// Selection and highlighting schemas for multi-user collaboration
+export const SelectionHighlightStyle = z.enum(['solid', 'dashed', 'dotted']);
+export type SelectionHighlightStyle = z.infer<typeof SelectionHighlightStyle>;
+
+export const SelectionHighlightAnimation = z.enum(['none', 'pulse', 'glow']);
+export type SelectionHighlightAnimation = z.infer<typeof SelectionHighlightAnimation>;
+
+export const SelectionConflictResolution = z.enum(['ownership', 'shared', 'timeout', 'manual']);
+export type SelectionConflictResolution = z.infer<typeof SelectionConflictResolution>;
+
 export const WhiteboardSelectionData = z.object({
   elementIds: z.array(z.string().uuid()).default([]),
   bounds: Bounds.optional(),
   isMultiSelect: z.boolean().default(false),
 });
 export type WhiteboardSelectionData = z.infer<typeof WhiteboardSelectionData>;
+
+export const SelectionState = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  userColor: z.string(),
+  whiteboardId: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  elementIds: z.array(z.string().uuid()),
+  selectionBounds: Bounds.optional(),
+  timestamp: z.number(),
+  isMultiSelect: z.boolean().default(false),
+  priority: z.number().default(0),
+  isActive: z.boolean().default(true),
+  lastSeen: z.number(),
+});
+export type SelectionState = z.infer<typeof SelectionState>;
+
+export const SelectionHighlightData = z.object({
+  userId: z.string().uuid(),
+  userName: z.string(),
+  userColor: z.string(),
+  elementIds: z.array(z.string().uuid()),
+  bounds: Bounds.optional(),
+  timestamp: z.number(),
+  opacity: z.number().min(0).max(1).default(0.3),
+  style: SelectionHighlightStyle.default('solid'),
+  animation: SelectionHighlightAnimation.default('none'),
+});
+export type SelectionHighlightData = z.infer<typeof SelectionHighlightData>;
+
+export const SelectionConflictData = z.object({
+  conflictId: z.string().uuid(),
+  elementId: z.string().uuid(),
+  conflictingUsers: z.array(z.object({
+    userId: z.string().uuid(),
+    userName: z.string(),
+    priority: z.number(),
+    timestamp: z.number(),
+  })),
+  resolvedBy: z.string().uuid().optional(),
+  resolution: SelectionConflictResolution,
+  resolvedAt: z.number().optional(),
+});
+export type SelectionConflictData = z.infer<typeof SelectionConflictData>;
+
+export const SelectionOwnership = z.object({
+  elementId: z.string().uuid(),
+  ownerId: z.string().uuid(),
+  ownerName: z.string(),
+  ownerColor: z.string(),
+  acquiredAt: z.number(),
+  expiresAt: z.number(),
+  isLocked: z.boolean().default(false),
+  lockReason: z.enum(['editing', 'moving', 'styling', 'manual']).optional(),
+});
+export type SelectionOwnership = z.infer<typeof SelectionOwnership>;
 
 export const WhiteboardPresenceData = z.object({
   userId: z.string().uuid(),

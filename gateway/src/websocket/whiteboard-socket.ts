@@ -25,12 +25,14 @@ import { getGlobalRateLimiter } from './rate-limiter.js';
 import { LRUCache, createLRUCache } from './lru-cache.js';
 import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard-cursor-service';
 import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboard-presence-service';
+import { getSelectionService } from '@mcp-tools/core/services/whiteboard/whiteboard-selection-service';
 import {
   validateUserInfo,
   validateActivityInfo,
   validateWhiteboardId,
   validateSessionId,
-  validatePresenceUpdateRequest
+  validatePresenceUpdateRequest,
+  validateSelectionData
 } from '@mcp-tools/core/utils/input-validation';
 
 interface WhiteboardAuthenticatedSocket extends AuthenticatedSocket {
@@ -61,6 +63,7 @@ interface WhiteboardPresence {
   cursor: { x: number; y: number };
   viewport: { x: number; y: number; width: number; height: number; zoom: number };
   selection: string[];
+  selectionBounds?: { x: number; y: number; width: number; height: number };
   color: string;
   timestamp: string;
 }
@@ -129,6 +132,17 @@ export function setupWhiteboardWebSocket(
     enableActivityAwareness: true,
     enableAvatars: true,
     presenceUpdateThrottleMs: 1000,
+  }, logger);
+  
+  // Initialize selection service
+  const selectionService = getSelectionService({
+    maxConcurrentUsers: 25,
+    selectionTimeoutMs: 30 * 1000, // 30 seconds
+    conflictResolutionTimeoutMs: 5 * 1000, // 5 seconds
+    syncLatencyTargetMs: 200,
+    enableAutomaticConflictResolution: true,
+    conflictResolutionStrategy: 'priority',
+    highlightOpacity: 0.3,
   }, logger);
   
   logger.info('Whiteboard WebSocket initialized', { 
@@ -1027,6 +1041,480 @@ export function setupWhiteboardWebSocket(
       }
     });
 
+    // ==================== SELECTION HIGHLIGHTING ====================
+
+    // Update selection (multi-user selection tracking)
+    socket.on('whiteboard:selection_changed', async (data: {
+      whiteboardId: string;
+      elementIds: string[];
+      bounds?: { x: number; y: number; width: number; height: number };
+      isMultiSelect?: boolean;
+      sessionId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        // Validate token freshness
+        const validation = validateUserAndToken(socket);
+        if (!validation.valid) {
+          socket.emit('error', validation.error);
+          if (validation.error.code === 'TOKEN_INVALID') {
+            socket.disconnect(true);
+          }
+          return;
+        }
+
+        // Check rate limiting for selection updates
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:selection_changed');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:selection_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Selection updates are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please reduce the frequency of selection changes',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const { whiteboardId, elementIds, bounds, isMultiSelect = false, sessionId } = data;
+
+        // Validate whiteboard ID
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+
+        // Validate selection data
+        const selectionValidation = validateSelectionData({
+          elementIds,
+          bounds,
+          isMultiSelect
+        });
+        if (!selectionValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid selection data',
+            details: selectionValidation.errors.join(', ')
+          });
+          return;
+        }
+
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+        const sanitizedSelection = selectionValidation.sanitizedData;
+
+        // Update selection using the selection service
+        const result = await selectionService.updateSelection(
+          socket.user.id,
+          socket.user.name,
+          assignedColors.get(socket.user.id) || userColors[0],
+          sanitizedWhiteboardId,
+          sessionId,
+          sanitizedSelection.elementIds || [],
+          sanitizedSelection.bounds
+        );
+
+        if (!result.success) {
+          socket.emit('whiteboard:selection_ack', {
+            success: false,
+            error: result.error,
+            latency: result.latency,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        // Update session activity
+        const session = activeWhiteboardSessions.get(socket.id);
+        if (session) {
+          session.lastActivity = new Date();
+          // Update selection data in presence
+          if (session.presence) {
+            session.presence.selection = sanitizedSelection.elementIds || [];
+            session.presence.selectionBounds = sanitizedSelection.bounds;
+            session.presence.timestamp = new Date().toISOString();
+          }
+          await sessionStorage.set(socket.id, session, sessionTtl);
+        }
+
+        // Broadcast selection change to other participants
+        socket.to(`whiteboard:${sanitizedWhiteboardId}:presence`).emit('whiteboard:selection_updated', {
+          userId: socket.user.id,
+          userName: socket.user.name,
+          userColor: assignedColors.get(socket.user.id) || userColors[0],
+          elementIds: sanitizedSelection.elementIds || [],
+          bounds: sanitizedSelection.bounds,
+          isMultiSelect: sanitizedSelection.isMultiSelect || false,
+          timestamp: new Date().toISOString(),
+          selectionState: result.selectionState,
+        });
+
+        // Handle conflicts if any
+        if (result.conflicts && result.conflicts.length > 0) {
+          // Broadcast conflicts to all participants
+          io.to(`whiteboard:${sanitizedWhiteboardId}`).emit('whiteboard:selection_conflicts', {
+            conflicts: result.conflicts,
+            timestamp: new Date().toISOString(),
+          });
+
+          logger.info('Selection conflicts detected', {
+            whiteboardId: sanitizedWhiteboardId,
+            userId: socket.user.id,
+            conflictCount: result.conflicts.length,
+            elementIds: result.conflicts.map(c => c.elementId)
+          });
+        }
+
+        // Handle ownerships if any
+        if (result.ownerships && result.ownerships.length > 0) {
+          // Broadcast ownership changes
+          io.to(`whiteboard:${sanitizedWhiteboardId}`).emit('whiteboard:element_ownership_changed', {
+            ownerships: result.ownerships,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // Send acknowledgment
+        socket.emit('whiteboard:selection_ack', {
+          success: true,
+          latency: result.latency,
+          selectionState: result.selectionState,
+          conflicts: result.conflicts,
+          ownerships: result.ownerships,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.debug('Selection updated', {
+          whiteboardId: sanitizedWhiteboardId,
+          userId: socket.user.id,
+          elementCount: sanitizedSelection.elementIds?.length || 0,
+          hasConflicts: (result.conflicts?.length || 0) > 0,
+          latency: result.latency
+        });
+
+      } catch (error) {
+        logger.error('Failed to update selection', { error, data });
+        socket.emit('whiteboard:selection_ack', {
+          success: false,
+          error: 'Failed to update selection',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Clear user selections
+    socket.on('whiteboard:selection_cleared', async (data: {
+      whiteboardId: string;
+      sessionId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { whiteboardId, sessionId } = data;
+
+        // Validate whiteboard ID
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+
+        // Validate session ID
+        const sessionValidation = validateSessionId(sessionId);
+        if (!sessionValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid session ID',
+            details: sessionValidation.error
+          });
+          return;
+        }
+
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+        const sanitizedSessionId = sessionValidation.sanitized;
+
+        // Clear selections using the selection service
+        const result = await selectionService.clearUserSelections(
+          socket.user.id,
+          sanitizedWhiteboardId,
+          sanitizedSessionId
+        );
+
+        if (result.success) {
+          // Update session presence
+          const session = activeWhiteboardSessions.get(socket.id);
+          if (session && session.presence) {
+            session.presence.selection = [];
+            session.presence.selectionBounds = undefined;
+            session.presence.timestamp = new Date().toISOString();
+            await sessionStorage.set(socket.id, session, sessionTtl);
+          }
+
+          // Broadcast selection clear to other participants
+          socket.to(`whiteboard:${sanitizedWhiteboardId}:presence`).emit('whiteboard:selection_cleared', {
+            userId: socket.user.id,
+            userName: socket.user.name,
+            clearedCount: result.cleared,
+            timestamp: new Date().toISOString(),
+          });
+
+          logger.debug('Selection cleared', {
+            whiteboardId: sanitizedWhiteboardId,
+            userId: socket.user.id,
+            cleared: result.cleared
+          });
+        }
+
+        // Send acknowledgment
+        socket.emit('whiteboard:selection_clear_ack', {
+          success: result.success,
+          cleared: result.cleared,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to clear selection', { error, data });
+        socket.emit('whiteboard:selection_clear_ack', {
+          success: false,
+          error: 'Failed to clear selection',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Request current selections (for new users or reconnection)
+    socket.on('whiteboard:request_selections', async (data: { 
+      whiteboardId: string 
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        // Check rate limiting
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:request_selections');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:selections_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Selection requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            guidance: 'Please wait before requesting selections again',
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const { whiteboardId } = data;
+
+        // Validate whiteboard ID
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+
+        // Get all active selections for the whiteboard
+        const selections = selectionService.getWhiteboardSelections(sanitizedWhiteboardId);
+        const highlights = selectionService.getSelectionHighlights(sanitizedWhiteboardId);
+        const conflicts = selectionService.getWhiteboardConflicts(sanitizedWhiteboardId);
+
+        // Send current state to requesting user
+        socket.emit('whiteboard:selections_state', {
+          selections,
+          highlights,
+          conflicts,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.debug('Selections state sent', {
+          whiteboardId: sanitizedWhiteboardId,
+          userId: socket.user.id,
+          selectionCount: selections.length,
+          highlightCount: highlights.length,
+          conflictCount: conflicts.length
+        });
+
+      } catch (error) {
+        logger.error('Failed to get selections state', { error, data });
+        socket.emit('error', {
+          code: 'SELECTIONS_REQUEST_FAILED',
+          message: 'Failed to get selections state'
+        });
+      }
+    });
+
+    // Resolve selection conflict (manual resolution)
+    socket.on('whiteboard:resolve_selection_conflict', async (data: {
+      whiteboardId: string;
+      conflictId: string;
+      resolution: 'ownership' | 'shared' | 'cancel';
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          socket.emit('error', { code: 'NO_SESSION', message: 'No active whiteboard session' });
+          return;
+        }
+
+        const { whiteboardId, conflictId, resolution } = data;
+
+        // Validate whiteboard ID
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+
+        // Validate conflict ID
+        if (!conflictId || typeof conflictId !== 'string' || conflictId.length > 100) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid conflict ID'
+          });
+          return;
+        }
+
+        // Validate resolution type
+        const validResolutions = ['ownership', 'shared', 'cancel'];
+        if (!resolution || !validResolutions.includes(resolution)) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid resolution type'
+          });
+          return;
+        }
+
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+
+        // Resolve conflict using the selection service
+        const result = await selectionService.resolveConflict(
+          conflictId,
+          socket.user.id,
+          resolution
+        );
+
+        if (result.success) {
+          // Broadcast conflict resolution to all participants
+          io.to(`whiteboard:${sanitizedWhiteboardId}`).emit('whiteboard:selection_conflict_resolved', {
+            conflictId,
+            resolution,
+            resolvedBy: {
+              id: socket.user.id,
+              name: socket.user.name,
+            },
+            ownership: result.ownership,
+            timestamp: new Date().toISOString(),
+          });
+
+          logger.info('Selection conflict resolved', {
+            whiteboardId: sanitizedWhiteboardId,
+            conflictId,
+            resolution,
+            resolvedBy: socket.user.id
+          });
+        }
+
+        // Send acknowledgment
+        socket.emit('whiteboard:conflict_resolve_ack', {
+          success: result.success,
+          conflictId,
+          resolution,
+          ownership: result.ownership,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to resolve selection conflict', { error, data });
+        socket.emit('whiteboard:conflict_resolve_ack', {
+          success: false,
+          conflictId: data.conflictId,
+          error: 'Failed to resolve conflict',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Get element ownership status
+    socket.on('whiteboard:request_element_ownership', async (data: {
+      whiteboardId: string;
+      elementId: string;
+    }) => {
+      try {
+        if (!socket.whiteboardSession || !socket.user) {
+          return;
+        }
+
+        const { whiteboardId, elementId } = data;
+
+        // Validate whiteboard ID
+        const whiteboardValidation = validateWhiteboardId(whiteboardId);
+        if (!whiteboardValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid whiteboard ID',
+            details: whiteboardValidation.error
+          });
+          return;
+        }
+
+        // Validate element ID
+        const elementIdValidation = validateElementId(elementId);
+        if (!elementIdValidation.valid) {
+          socket.emit('error', {
+            code: 'INVALID_INPUT',
+            message: 'Invalid element ID',
+            details: elementIdValidation.error
+          });
+          return;
+        }
+
+        const sanitizedWhiteboardId = whiteboardValidation.sanitized;
+        const sanitizedElementId = elementIdValidation.sanitized;
+
+        // Get ownership information
+        const ownership = selectionService.getElementOwnership(sanitizedElementId, sanitizedWhiteboardId);
+
+        // Send ownership info
+        socket.emit('whiteboard:element_ownership_info', {
+          elementId: sanitizedElementId,
+          ownership,
+          timestamp: new Date().toISOString(),
+        });
+
+      } catch (error) {
+        logger.error('Failed to get element ownership', { error, data });
+        socket.emit('error', {
+          code: 'OWNERSHIP_REQUEST_FAILED',
+          message: 'Failed to get element ownership'
+        });
+      }
+    });
+
     // ==================== COLLABORATIVE COMMENTS ====================
 
     // Add comment
@@ -1639,7 +2127,18 @@ export function setupWhiteboardWebSocket(
       // Continue with other cleanup operations
     }
 
-    // Step 2: Clean up presence tracking (critical)
+    // Step 2: Clean up selection tracking (critical)
+    try {
+      await selectionService.clearUserSelections(userId, whiteboardId, sessionId);
+      logger.debug('Selection cleanup completed', { userId, whiteboardId, sessionId });
+    } catch (selectionError) {
+      const errorMsg = `Selection cleanup failed: ${selectionError instanceof Error ? selectionError.message : String(selectionError)}`;
+      cleanupErrors.push(errorMsg);
+      logger.error('Selection cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
+      // Continue despite error - we need to complete other cleanup
+    }
+
+    // Step 3: Clean up presence tracking (critical)
     try {
       await presenceService.leaveWhiteboard(userId, whiteboardId, sessionId, socket.id);
       logger.debug('Presence cleanup completed', { userId, whiteboardId, sessionId });
@@ -1650,7 +2149,7 @@ export function setupWhiteboardWebSocket(
       // Continue despite error - we need to complete other cleanup
     }
 
-    // Step 3: Leave rooms (critical for preventing memory leaks)
+    // Step 4: Leave rooms (critical for preventing memory leaks)
     try {
       socket.leave(`whiteboard:${whiteboardId}`);
       socket.leave(`whiteboard:${whiteboardId}:presence`);
@@ -1662,7 +2161,7 @@ export function setupWhiteboardWebSocket(
       logger.error('Room cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
     }
 
-    // Step 4: Clean up session data (critical for memory management)
+    // Step 5: Clean up session data (critical for memory management)
     try {
       socket.whiteboardSession = undefined;
       activeWhiteboardSessions.delete(socket.id);
@@ -1674,7 +2173,7 @@ export function setupWhiteboardWebSocket(
       logger.error('Session cleanup error (critical)', { userId, whiteboardId, error: errorMsg });
     }
 
-    // Step 5: Broadcast notifications (best effort)
+    // Step 6: Broadcast notifications (best effort)
     try {
       // Broadcast cursor disconnect
       socket.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:cursor_disconnected', {
@@ -2065,6 +2564,99 @@ export function broadcastBulkSyncCompleted(
   }
 ): void {
   io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:bulk_sync_completed', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+// ==================== SELECTION HIGHLIGHTING BROADCAST UTILITIES ====================
+
+/**
+ * Broadcast selection update to whiteboard participants
+ */
+export function broadcastSelectionUpdate(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    userId: string;
+    userName: string;
+    userColor: string;
+    elementIds: string[];
+    bounds?: { x: number; y: number; width: number; height: number };
+    isMultiSelect: boolean;
+    selectionState?: any;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:selection_updated', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast selection clear to whiteboard participants
+ */
+export function broadcastSelectionClear(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    userId: string;
+    userName: string;
+    clearedCount: number;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:selection_cleared', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast selection conflicts to whiteboard participants
+ */
+export function broadcastSelectionConflicts(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    conflicts: any[];
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:selection_conflicts', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast selection conflict resolution to whiteboard participants
+ */
+export function broadcastSelectionConflictResolution(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    conflictId: string;
+    resolution: 'ownership' | 'shared' | 'cancel';
+    resolvedBy: { id: string; name: string };
+    ownership?: any;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:selection_conflict_resolved', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast element ownership changes to whiteboard participants
+ */
+export function broadcastElementOwnershipChanged(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    ownerships: any[];
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}`).emit('whiteboard:element_ownership_changed', {
     ...data,
     timestamp: new Date().toISOString(),
   });

@@ -341,6 +341,84 @@ export const validateActivityInfo = (activity: {
 };
 
 /**
+ * Validates selection data for multi-user selection highlighting
+ */
+export const validateSelectionData = (selection: {
+  elementIds: string[];
+  bounds?: { x: number; y: number; width: number; height: number };
+  isMultiSelect?: boolean;
+}): ValidationResult => {
+  const errors: string[] = [];
+  const sanitizedData: any = {};
+
+  // Validate element IDs array
+  if (!Array.isArray(selection.elementIds)) {
+    errors.push('Element IDs must be an array');
+  } else {
+    const maxElements = 100; // Reasonable limit for selection
+    if (selection.elementIds.length > maxElements) {
+      errors.push(`Cannot select more than ${maxElements} elements`);
+    } else {
+      const validElementIds: string[] = [];
+      
+      for (const elementId of selection.elementIds) {
+        const validation = validateElementId(elementId);
+        if (validation.valid) {
+          validElementIds.push(validation.sanitized);
+        } else {
+          errors.push(`Invalid element ID: ${validation.error}`);
+        }
+      }
+      
+      sanitizedData.elementIds = validElementIds;
+    }
+  }
+
+  // Validate bounds (optional)
+  if (selection.bounds) {
+    const bounds = selection.bounds;
+    if (
+      typeof bounds.x === 'number' &&
+      typeof bounds.y === 'number' &&
+      typeof bounds.width === 'number' &&
+      typeof bounds.height === 'number' &&
+      Number.isFinite(bounds.x) &&
+      Number.isFinite(bounds.y) &&
+      Number.isFinite(bounds.width) &&
+      Number.isFinite(bounds.height) &&
+      bounds.width >= 0 &&
+      bounds.height >= 0
+    ) {
+      // Clamp bounds to reasonable limits
+      const maxCoordinate = 1000000; // 1M pixels
+      sanitizedData.bounds = {
+        x: Math.max(-maxCoordinate, Math.min(maxCoordinate, bounds.x)),
+        y: Math.max(-maxCoordinate, Math.min(maxCoordinate, bounds.y)),
+        width: Math.min(maxCoordinate, bounds.width),
+        height: Math.min(maxCoordinate, bounds.height),
+      };
+    } else {
+      errors.push('Invalid selection bounds');
+    }
+  }
+
+  // Validate isMultiSelect flag
+  if (selection.isMultiSelect !== undefined) {
+    if (typeof selection.isMultiSelect === 'boolean') {
+      sanitizedData.isMultiSelect = selection.isMultiSelect;
+    } else {
+      errors.push('isMultiSelect must be a boolean');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    sanitizedData,
+    errors
+  };
+};
+
+/**
  * Rate limiting enhancement - validates requests to prevent abuse
  */
 export const validatePresenceUpdateRequest = (data: any): ValidationResult => {
