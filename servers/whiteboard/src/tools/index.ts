@@ -12,6 +12,7 @@ import { addElementTool } from './add-element.js';
 import { updateElementTool } from './update-element.js';
 import { deleteElementTool } from './delete-element.js';
 import { analyticsTools } from './analytics/analytics-tools.js';
+import { searchTools } from './search/search-tools.js';
 
 /**
  * Whiteboard tools registry
@@ -51,6 +52,11 @@ export class WhiteboardTools {
       // Analytics tools
       analyticsTools.forEach(tool => {
         server.registerTool(tool);
+      });
+
+      // Search tools
+      searchTools.forEach(toolFactory => {
+        server.registerTool(toolFactory(this.db, this.logger));
       });
 
       this.logger.info('All whiteboard tools registered successfully');

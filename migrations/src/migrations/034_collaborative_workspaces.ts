@@ -4,12 +4,12 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Collaborative Workspaces table
   await db.schema
     .createTable('collaborative_workspaces')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text')
-    .addColumn('tenant_id', 'varchar(255)', (col) => col.notNull())
-    .addColumn('owner_id', 'varchar(255)', (col) => col.notNull())
-    .addColumn('template_id', 'varchar(255)')
+    .addColumn('tenant_id', 'uuid', (col) => col.notNull())
+    .addColumn('owner_id', 'uuid', (col) => col.notNull())
+    .addColumn('template_id', 'uuid')
     .addColumn('status', 'varchar(50)', (col) => col.notNull().defaultTo('active'))
     .addColumn('settings', 'jsonb', (col) => col.defaultTo('{}'))
     .addColumn('metadata', 'jsonb', (col) => col.defaultTo('{}'))
@@ -24,12 +24,12 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace members table for role management
   await db.schema
     .createTable('workspace_members')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('role', 'varchar(50)', (col) => col.notNull().defaultTo('member'))
     .addColumn('permissions', 'jsonb', (col) => col.defaultTo('{}'))
-    .addColumn('invited_by', 'varchar(255)')
+    .addColumn('invited_by', 'uuid')
     .addColumn('joined_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
     .addColumn('status', 'varchar(20)', (col) => col.notNull().defaultTo('active'))
     .addColumn('last_active_at', 'timestamptz')
@@ -41,9 +41,9 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace sessions for real-time collaboration
   await db.schema
     .createTable('workspace_sessions')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('session_token', 'varchar(255)', (col) => col.notNull().unique())
     .addColumn('connection_id', 'varchar(255)')
     .addColumn('client_info', 'jsonb', (col) => col.defaultTo('{}'))
@@ -60,7 +60,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace templates for reusable configurations
   await db.schema
     .createTable('workspace_templates')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('category', 'varchar(100)', (col) => col.notNull())
@@ -68,7 +68,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('default_settings', 'jsonb', (col) => col.defaultTo('{}'))
     .addColumn('required_tools', 'text[]', (col) => col.defaultTo(sql`ARRAY[]::text[]`))
     .addColumn('is_public', 'boolean', (col) => col.defaultTo(false))
-    .addColumn('created_by', 'varchar(255)')
+    .addColumn('created_by', 'uuid')
     .addColumn('usage_count', 'integer', (col) => col.defaultTo(0))
     .addColumn('rating', 'decimal(2,1)')
     .addColumn('tags', 'text[]', (col) => col.defaultTo(sql`ARRAY[]::text[]`))
@@ -79,9 +79,9 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace activity log for audit trails
   await db.schema
     .createTable('workspace_activity_log')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
-    .addColumn('user_id', 'varchar(255)', (col) => col.notNull())
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('user_id', 'uuid', (col) => col.notNull())
     .addColumn('action', 'varchar(100)', (col) => col.notNull())
     .addColumn('resource_type', 'varchar(50)')
     .addColumn('resource_id', 'varchar(255)')
@@ -96,8 +96,8 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace settings for configuration storage
   await db.schema
     .createTable('workspace_settings')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
     .addColumn('category', 'varchar(100)', (col) => col.notNull())
     .addColumn('key', 'varchar(255)', (col) => col.notNull())
     .addColumn('value', 'jsonb', (col) => col.notNull())
@@ -113,8 +113,8 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace resources for file/asset management
   await db.schema
     .createTable('workspace_resources')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
     .addColumn('name', 'varchar(255)', (col) => col.notNull())
     .addColumn('type', 'varchar(50)', (col) => col.notNull())
     .addColumn('file_path', 'text')
@@ -123,7 +123,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('checksum', 'varchar(255)')
     .addColumn('metadata', 'jsonb', (col) => col.defaultTo('{}'))
     .addColumn('tags', 'text[]', (col) => col.defaultTo(sql`ARRAY[]::text[]`))
-    .addColumn('uploaded_by', 'varchar(255)', (col) => col.notNull())
+    .addColumn('uploaded_by', 'uuid', (col) => col.notNull())
     .addColumn('access_level', 'varchar(20)', (col) => col.notNull().defaultTo('workspace'))
     .addColumn('download_count', 'integer', (col) => col.defaultTo(0))
     .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
@@ -134,8 +134,8 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Workspace integrations for external tool connections
   await db.schema
     .createTable('workspace_integrations')
-    .addColumn('id', 'varchar(255)', (col) => col.primaryKey())
-    .addColumn('workspace_id', 'varchar(255)', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
+    .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
+    .addColumn('workspace_id', 'uuid', (col) => col.notNull().references('collaborative_workspaces.id').onDelete('cascade'))
     .addColumn('integration_type', 'varchar(100)', (col) => col.notNull())
     .addColumn('external_id', 'varchar(255)')
     .addColumn('configuration', 'jsonb', (col) => col.notNull())
@@ -145,7 +145,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('sync_frequency', 'varchar(50)')
     .addColumn('error_count', 'integer', (col) => col.defaultTo(0))
     .addColumn('last_error', 'text')
-    .addColumn('created_by', 'varchar(255)', (col) => col.notNull())
+    .addColumn('created_by', 'uuid', (col) => col.notNull())
     .addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
     .addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`NOW()`).notNull())
     .execute();

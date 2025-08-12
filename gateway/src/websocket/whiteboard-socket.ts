@@ -27,6 +27,7 @@ import { getCursorService } from '@mcp-tools/core/services/whiteboard/whiteboard
 import { getPresenceService } from '@mcp-tools/core/services/whiteboard/whiteboard-presence-service';
 import { getSelectionService } from '@mcp-tools/core/services/whiteboard/whiteboard-selection-service';
 import { WhiteboardCommentService } from '@mcp-tools/core/services/whiteboard/whiteboard-comment-service';
+import { WhiteboardSearchService } from '@mcp-tools/core/services/whiteboard/whiteboard-search-service';
 import { 
   WhiteboardPermissionService,
   PermissionCheckRequest,
@@ -181,6 +182,9 @@ export function setupWhiteboardWebSocket(
     },
     logger
   );
+
+  // Initialize search service for real-time search index updates
+  const searchService = new WhiteboardSearchService(db, logger);
 
   // Initialize granular permission service for comprehensive RBAC
   const permissionService = new WhiteboardPermissionService(db, logger);
@@ -3380,6 +3384,292 @@ export function setupWhiteboardWebSocket(
       }
     });
 
+    // ==================== ADVANCED SEARCH FUNCTIONALITY ====================
+
+    // Advanced whiteboard search
+    socket.on('whiteboard:advanced_search', async (data: {
+      workspaceId: string;
+      searchQuery: any;
+      sort?: any;
+      limit?: number;
+      offset?: number;
+      requestId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { workspaceId, searchQuery, sort, limit = 20, offset = 0, requestId } = data;
+
+        // Check rate limiting for search requests
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:advanced_search');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:search_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Search requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const searchResults = await searchService.advancedSearch(
+          workspaceId,
+          socket.user.id,
+          searchQuery,
+          sort,
+          limit,
+          offset
+        );
+
+        socket.emit('whiteboard:search_results', {
+          requestId: requestId || crypto.randomUUID(),
+          results: searchResults,
+          timestamp: new Date().toISOString()
+        });
+
+        // Track search analytics
+        if (socket.whiteboardSession) {
+          await analyticsIntegration.trackUserAction(socket, 'search', 'whiteboard', {
+            query: searchQuery.query,
+            resultsCount: searchResults.total,
+            executionTime: searchResults.searchMetadata.executionTimeMs,
+            searchType: 'advanced',
+            filters: searchResults.searchMetadata.filters,
+          });
+        }
+
+      } catch (error) {
+        logger.error('Failed to perform advanced search', { error, data });
+        socket.emit('whiteboard:search_error', {
+          requestId: data.requestId,
+          error: 'Search failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Full-text search across whiteboards
+    socket.on('whiteboard:fulltext_search', async (data: {
+      workspaceId: string;
+      query: string;
+      filters?: any;
+      limit?: number;
+      offset?: number;
+      requestId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { workspaceId, query, filters, limit = 20, offset = 0, requestId } = data;
+
+        // Check rate limiting
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:fulltext_search');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:search_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Search requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const searchResults = await searchService.fullTextSearch(
+          workspaceId,
+          socket.user.id,
+          query,
+          filters,
+          limit,
+          offset
+        );
+
+        socket.emit('whiteboard:fulltext_results', {
+          requestId: requestId || crypto.randomUUID(),
+          results: searchResults,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to perform full-text search', { error, data });
+        socket.emit('whiteboard:search_error', {
+          requestId: data.requestId,
+          error: 'Full-text search failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Search whiteboard elements
+    socket.on('whiteboard:search_elements', async (data: {
+      whiteboardId: string;
+      query: string;
+      elementTypes?: string[];
+      limit?: number;
+      offset?: number;
+      requestId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { whiteboardId, query, elementTypes, limit = 50, offset = 0, requestId } = data;
+
+        // Check rate limiting
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:search_elements');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:search_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Element search requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const searchResults = await searchService.searchElements(
+          whiteboardId,
+          socket.user.id,
+          query,
+          elementTypes,
+          limit,
+          offset
+        );
+
+        socket.emit('whiteboard:element_search_results', {
+          requestId: requestId || crypto.randomUUID(),
+          whiteboardId,
+          results: searchResults,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to search whiteboard elements', { error, data });
+        socket.emit('whiteboard:search_error', {
+          requestId: data.requestId,
+          error: 'Element search failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Get search suggestions
+    socket.on('whiteboard:search_suggestions', async (data: {
+      workspaceId: string;
+      partialQuery: string;
+      limit?: number;
+      requestId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { workspaceId, partialQuery, limit = 10, requestId } = data;
+
+        // Check rate limiting - allow more frequent requests for suggestions
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:search_suggestions');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:search_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Search suggestion requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const suggestions = await searchService.generateSearchSuggestions(
+          partialQuery,
+          workspaceId,
+          socket.user.id,
+          limit
+        );
+
+        socket.emit('whiteboard:search_suggestions_results', {
+          requestId: requestId || crypto.randomUUID(),
+          partialQuery,
+          suggestions,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (error) {
+        logger.error('Failed to generate search suggestions', { error, data });
+        socket.emit('whiteboard:search_error', {
+          requestId: data.requestId,
+          error: 'Search suggestions failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Unified cross-service search
+    socket.on('whiteboard:unified_search', async (data: {
+      workspaceId: string;
+      searchRequest: any;
+      requestId?: string;
+    }) => {
+      try {
+        if (!socket.user) {
+          socket.emit('error', { code: 'NO_AUTH', message: 'Authentication required' });
+          return;
+        }
+
+        const { workspaceId, searchRequest, requestId } = data;
+
+        // Check rate limiting
+        const rateLimitCheck = checkRateLimit(socket, 'whiteboard:unified_search');
+        if (!rateLimitCheck.allowed) {
+          socket.emit('whiteboard:search_rate_limited', {
+            code: rateLimitCheck.error.code,
+            message: 'Unified search requests are being rate limited',
+            retryAfterMs: rateLimitCheck.error.retryAfterMs,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const searchResults = await searchService.unifiedSearch(
+          workspaceId,
+          socket.user.id,
+          searchRequest
+        );
+
+        socket.emit('whiteboard:unified_search_results', {
+          requestId: requestId || crypto.randomUUID(),
+          results: searchResults.results,
+          metadata: searchResults.searchMetadata,
+          timestamp: new Date().toISOString()
+        });
+
+        // Track cross-service search analytics
+        if (socket.whiteboardSession) {
+          await analyticsIntegration.trackUserAction(socket, 'unified_search', 'cross_service', {
+            query: searchRequest.query,
+            services: searchRequest.services,
+            resultsCount: searchResults.results.length,
+            executionTime: searchResults.searchMetadata.executionTimeMs,
+          });
+        }
+
+      } catch (error) {
+        logger.error('Failed to perform unified search', { error, data });
+        socket.emit('whiteboard:search_error', {
+          requestId: data.requestId,
+          error: 'Unified search failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // Unified search initiated (for awareness)
     socket.on('whiteboard:search_initiated', async (data: {
       whiteboardId: string;
@@ -4116,6 +4406,91 @@ export function broadcastSearchActivity(
   }
 ): void {
   io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_activity', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast search results to whiteboard participants for collaborative awareness
+ */
+export function broadcastSearchResults(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    searchedBy: { id: string; name: string };
+    query: string;
+    resultsCount: number;
+    searchType: string;
+    executionTime: number;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_results_shared', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast search filter updates for collaborative filtering
+ */
+export function broadcastSearchFilterUpdate(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    updatedBy: { id: string; name: string };
+    filterType: string;
+    filterValue: any;
+    active: boolean;
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_filter_updated', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast search performance metrics for optimization
+ */
+export function broadcastSearchMetrics(
+  io: SocketIOServer,
+  workspaceId: string,
+  data: {
+    searchType: string;
+    avgExecutionTime: number;
+    totalSearches: number;
+    popularQueries: string[];
+    performanceAlert?: boolean;
+  }
+): void {
+  io.to(`workspace:${workspaceId}:admins`).emit('whiteboard:search_metrics', {
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Broadcast real-time search index updates
+ */
+export function broadcastSearchIndexUpdate(
+  io: SocketIOServer,
+  whiteboardId: string,
+  data: {
+    updatedBy: { id: string; name: string };
+    updateType: 'content_added' | 'content_updated' | 'content_deleted';
+    affectedContent: {
+      type: 'whiteboard' | 'element' | 'comment';
+      id: string;
+      title?: string;
+    };
+    searchImpact: {
+      indexUpdated: boolean;
+      affectedQueries: string[];
+    };
+  }
+): void {
+  io.to(`whiteboard:${whiteboardId}:presence`).emit('whiteboard:search_index_updated', {
     ...data,
     timestamp: new Date().toISOString(),
   });
