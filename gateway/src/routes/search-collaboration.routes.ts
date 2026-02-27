@@ -459,7 +459,7 @@ export function createSearchCollaborationRoutes(
       });
 
       // Handle specific error messages
-      if (error.message.includes('maximum capacity')) {
+      if (error instanceof Error && error.message.includes('maximum capacity')) {
         return res.status(409).json({
           error: {
             code: 'SESSION_FULL',
@@ -468,7 +468,7 @@ export function createSearchCollaborationRoutes(
         });
       }
 
-      if (error.message.includes('already a participant')) {
+      if (error instanceof Error && error.message.includes('already a participant')) {
         return res.status(409).json({
           error: {
             code: 'ALREADY_PARTICIPANT',
@@ -514,7 +514,7 @@ export function createSearchCollaborationRoutes(
         userId: req.user!.id 
       });
 
-      if (error.message.includes('not a participant')) {
+      if (error instanceof Error && error.message.includes('not a participant')) {
         return res.status(404).json({
           error: {
             code: 'NOT_PARTICIPANT',
