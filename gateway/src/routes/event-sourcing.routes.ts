@@ -419,10 +419,10 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
     } catch (error) {
       logger.error('Failed to get user engagement patterns', {
-        userId: req.params.userId,
+        targetUserId: req.params.userId,
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
-        error: error.message,
-        userId: req.user?.id
+        error: error instanceof Error ? error.message : String(error),
+        authenticatedUserId: req.user?.id
       });
 
       res.status(500).json({

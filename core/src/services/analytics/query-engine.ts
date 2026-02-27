@@ -606,7 +606,11 @@ export class AnalyticsQueryEngine {
     ];
     
     if (fieldName.startsWith('dimensions->')) {
-      return fieldName; // Allow JSON field access
+      // Validate JSON field access pattern: dimensions->'key' or dimensions->>'key'
+      if (!/^dimensions->>?'[a-zA-Z0-9_-]+'$/.test(fieldName)) {
+        throw new Error(`Invalid dimensions field access: ${fieldName}`);
+      }
+      return fieldName;
     }
     
     if (allowedFields.includes(fieldName)) {

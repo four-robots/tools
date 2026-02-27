@@ -83,12 +83,10 @@ export function setupEnhancedWhiteboardWebSocket(
         return next(new Error('Authentication required'));
       }
 
-      const authResult = await authenticateWebSocketConnection(token);
-      if (!authResult.valid || !authResult.user) {
+      const authResult = await authenticateWebSocketConnection(socket, token);
+      if (!authResult.success) {
         return next(new Error('Invalid authentication'));
       }
-
-      socket.user = authResult.user;
 
       // Extract whiteboard context from handshake
       const whiteboardId = socket.handshake.query.whiteboardId as string;
@@ -102,7 +100,7 @@ export function setupEnhancedWhiteboardWebSocket(
       await permissionMiddleware.initializePermissionContext(
         socket,
         whiteboardId,
-        authResult.user.id,
+        socket.user!.id,
         sessionId || generateSessionId()
       );
 
