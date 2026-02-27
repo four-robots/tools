@@ -120,94 +120,6 @@ router.post('/generate', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/v1/facets/:id - Get specific facet details
- */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Validate UUID
-    if (!z.string().uuid().safeParse(id).success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid facet ID format'
-      });
-    }
-
-    // In a full implementation, this would query the database
-    const facet = null; // Would fetch from facet_definitions table
-
-    if (!facet) {
-      return res.status(404).json({
-        success: false,
-        error: 'Facet not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: facet
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch facet',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-/**
- * PUT /api/v1/facets/:id - Update facet configuration
- */
-router.put('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Validate UUID
-    if (!z.string().uuid().safeParse(id).success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid facet ID format'
-      });
-    }
-
-    // Validate update data
-    const updateSchema = z.object({
-      displayName: z.string().max(200).optional(),
-      description: z.string().optional(),
-      isActive: z.boolean().optional(),
-      sortOrder: z.number().int().optional(),
-      configuration: z.record(z.string(), z.any()).optional()
-    });
-
-    const updateData = updateSchema.parse(req.body);
-
-    // In a full implementation, this would update the database
-    const updatedFacet = { id, ...updateData }; // Would update facet_definitions table
-
-    res.json({
-      success: true,
-      data: updatedFacet
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: 'Validation error',
-        details: error.errors
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update facet',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-});
-
 // ============================================================================
 // Facet Discovery and Analysis
 // ============================================================================
@@ -674,6 +586,98 @@ router.put('/user-preferences', async (req: Request, res: Response) => {
       res.status(500).json({
         success: false,
         error: 'Failed to update user preferences',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+});
+
+// ============================================================================
+// Parameterized Facet Operations (must be registered after all static routes)
+// ============================================================================
+
+/**
+ * GET /api/v1/facets/:id - Get specific facet details
+ */
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Validate UUID
+    if (!z.string().uuid().safeParse(id).success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid facet ID format'
+      });
+    }
+
+    // In a full implementation, this would query the database
+    const facet = null; // Would fetch from facet_definitions table
+
+    if (!facet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Facet not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: facet
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch facet',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/facets/:id - Update facet configuration
+ */
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Validate UUID
+    if (!z.string().uuid().safeParse(id).success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid facet ID format'
+      });
+    }
+
+    // Validate update data
+    const updateSchema = z.object({
+      displayName: z.string().max(200).optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional(),
+      sortOrder: z.number().int().optional(),
+      configuration: z.record(z.string(), z.any()).optional()
+    });
+
+    const updateData = updateSchema.parse(req.body);
+
+    // In a full implementation, this would update the database
+    const updatedFacet = { id, ...updateData }; // Would update facet_definitions table
+
+    res.json({
+      success: true,
+      data: updatedFacet
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update facet',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }

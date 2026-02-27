@@ -107,7 +107,7 @@ const SummaryAnalyticsQuerySchema = z.object({
 
 /**
  * POST /api/v1/ai-summaries - Generate AI summary from search results
- * 
+ *
  * Creates an AI-powered summary from provided search results with
  * comprehensive analysis, fact checking, and source attribution.
  */
@@ -119,13 +119,13 @@ router.post('/', [
   const summaryRequest = req.body;
   const userId = req.headers['user-id'] as string;
   const sessionId = req.headers['session-id'] as string;
-  
+
   console.log(`🤖 AI Summary request received: "${summaryRequest.query}" (${summaryRequest.summaryType}) from user ${userId}`);
-  
+
   try {
     // Get AI summary service from app locals
     const aiSummaryService = req.app.locals.aiSummaryService;
-    
+
     if (!aiSummaryService) {
       return res.status(503).error(
         'SERVICE_UNAVAILABLE',
@@ -140,23 +140,24 @@ router.post('/', [
     if (sessionId) {
       summaryRequest.sessionId = sessionId;
     }
-    
+
     // Execute summary generation with timeout
     const summaryPromise = aiSummaryService.generateResultSummary(summaryRequest);
-    
+
+    let timeoutId: ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         reject(new Error('Summary generation timed out'));
       }, 60000); // 60 second timeout for AI processing
     });
-    
+
     const summaryResponse = await Promise.race([
       summaryPromise,
       timeoutPromise
-    ]) as any;
-    
+    ]).finally(() => clearTimeout(timeoutId)) as any;
+
     const processingTime = Date.now() - startTime;
-    
+
     // Add performance headers
     res.set({
       'X-Summary-Processing-Time': processingTime.toString(),
@@ -170,15 +171,15 @@ router.post('/', [
       return res.status(400).error(
         'SUMMARY_GENERATION_FAILED',
         summaryResponse.error || 'Failed to generate summary',
-        { 
+        {
           processing_time_ms: processingTime,
           summary_type: summaryRequest.summaryType
         }
       );
     }
-    
+
     console.log(`✅ AI Summary generated in ${processingTime}ms with confidence ${summaryResponse.summary?.overallConfidence.toFixed(2)}`);
-    
+
     // Return successful summary response
     res.success({
       ...summaryResponse,
@@ -188,17 +189,17 @@ router.post('/', [
         total_processing_time_ms: processingTime
       }
     });
-    
+
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error('❌ AI Summary request failed:', error);
-    
+
     // Set performance headers even on error
     res.set({
       'X-Summary-Processing-Time': processingTime.toString(),
       'X-Summary-Error': 'true'
     });
-    
+
     if (error instanceof Error && error.message === 'Summary generation timed out') {
       return res.status(408).error(
         'SUMMARY_TIMEOUT',
@@ -206,12 +207,12 @@ router.post('/', [
         { processing_time_ms: processingTime }
       );
     }
-    
+
     // Return generic summary error
     res.status(500).error(
       'SUMMARY_FAILED',
       'An error occurred while generating the AI summary.',
-      { 
+      {
         processing_time_ms: processingTime,
         error_type: error?.constructor?.name || 'Unknown'
       }
@@ -220,63 +221,8 @@ router.post('/', [
 }));
 
 /**
- * GET /api/v1/ai-summaries/:id - Get specific summary by ID
- * 
- * Retrieves a previously generated summary with all associated metadata,
- * fact checks, and source attribution.
- */
-router.get('/:id', [
-  summaryRetrievalRateLimit
-], asyncHandler(async (req: any, res: any) => {
-  const summaryId = req.params.id;
-  
-  if (!summaryId || !z.string().uuid().safeParse(summaryId).success) {
-    return res.status(400).error(
-      'INVALID_SUMMARY_ID',
-      'Please provide a valid summary ID.'
-    );
-  }
-  
-  try {
-    const aiSummaryService = req.app.locals.aiSummaryService;
-    
-    if (!aiSummaryService) {
-      return res.status(503).error(
-        'SERVICE_UNAVAILABLE',
-        'AI Summary service is not available.'
-      );
-    }
-    
-    const summary = await aiSummaryService.getSummaryById(summaryId);
-    
-    if (!summary) {
-      return res.status(404).error(
-        'SUMMARY_NOT_FOUND',
-        'The requested summary was not found.'
-      );
-    }
-
-    // Update access tracking
-    summary.accessCount = (summary.accessCount || 0) + 1;
-    summary.lastAccessedAt = new Date();
-    
-    res.success({
-      summary,
-      retrieved_at: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to retrieve summary:', error);
-    res.status(500).error(
-      'SUMMARY_RETRIEVAL_FAILED',
-      'Failed to retrieve the requested summary.'
-    );
-  }
-}));
-
-/**
  * GET /api/v1/ai-summaries - Get user summaries
- * 
+ *
  * Retrieves summaries for a specific user with pagination and filtering.
  */
 router.get('/', [
@@ -284,31 +230,31 @@ router.get('/', [
   validateRequest(GetSummaryQuerySchema, 'query')
 ], asyncHandler(async (req: any, res: any) => {
   const { user_id, limit, offset, summary_type } = req.query as any;
-  
+
   try {
     const aiSummaryService = req.app.locals.aiSummaryService;
-    
+
     if (!aiSummaryService) {
       return res.status(503).error(
         'SERVICE_UNAVAILABLE',
         'AI Summary service is not available.'
       );
     }
-    
+
     if (!user_id) {
       return res.status(400).error(
         'USER_ID_REQUIRED',
         'User ID is required to retrieve summaries.'
       );
     }
-    
+
     const summaries = await aiSummaryService.getUserSummaries(user_id, limit, offset);
-    
+
     // Filter by summary type if specified
-    const filteredSummaries = summary_type ? 
-      summaries.filter(s => s.summaryType === summary_type) : 
+    const filteredSummaries = summary_type ?
+      summaries.filter(s => s.summaryType === summary_type) :
       summaries;
-    
+
     res.success({
       summaries: filteredSummaries,
       pagination: {
@@ -323,7 +269,7 @@ router.get('/', [
       },
       retrieved_at: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to retrieve user summaries:', error);
     res.status(500).error(
@@ -334,89 +280,25 @@ router.get('/', [
 }));
 
 /**
- * POST /api/v1/ai-summaries/:id/feedback - Submit feedback on summary
- * 
- * Allows users to provide feedback on summary quality, accuracy, and usefulness.
- */
-router.post('/:id/feedback', [
-  feedbackRateLimit,
-  validateRequest(SummaryFeedbackSchema, 'body')
-], asyncHandler(async (req: any, res: any) => {
-  const summaryId = req.params.id;
-  const feedbackData = req.body;
-  
-  if (!summaryId || !z.string().uuid().safeParse(summaryId).success) {
-    return res.status(400).error(
-      'INVALID_SUMMARY_ID',
-      'Please provide a valid summary ID.'
-    );
-  }
-  
-  try {
-    const aiSummaryService = req.app.locals.aiSummaryService;
-    
-    if (!aiSummaryService) {
-      return res.status(503).error(
-        'SERVICE_UNAVAILABLE',
-        'AI Summary service is not available.'
-      );
-    }
-    
-    // Verify summary exists
-    const summary = await aiSummaryService.getSummaryById(summaryId);
-    
-    if (!summary) {
-      return res.status(404).error(
-        'SUMMARY_NOT_FOUND',
-        'The summary you are trying to provide feedback for was not found.'
-      );
-    }
-    
-    // Store feedback (this would typically go to a dedicated feedback service)
-    const feedback = {
-      ...feedbackData,
-      summaryId,
-      createdAt: new Date()
-    };
-    
-    // In a real implementation, you would store this in a database
-    console.log('📝 Summary feedback received:', feedback);
-    
-    res.success({
-      message: 'Feedback submitted successfully',
-      feedback_id: crypto.randomUUID(),
-      submitted_at: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to submit summary feedback:', error);
-    res.status(500).error(
-      'FEEDBACK_SUBMISSION_FAILED',
-      'Failed to submit summary feedback.'
-    );
-  }
-}));
-
-/**
  * GET /api/v1/ai-summaries/analytics - Get summary analytics
- * 
+ *
  * Returns analytics data about summary generation, usage patterns, and quality metrics.
  */
 router.get('/analytics', [
   validateRequest(SummaryAnalyticsQuerySchema, 'query')
 ], asyncHandler(async (req: any, res: any) => {
   const { user_id, date_from, date_to, summary_type, include_quality_metrics } = req.query as any;
-  
+
   try {
     const aiSummaryService = req.app.locals.aiSummaryService;
-    
+
     if (!aiSummaryService) {
       return res.status(503).error(
         'SERVICE_UNAVAILABLE',
         'AI Summary analytics service is not available.'
       );
     }
-    
+
     // Get real analytics from the service
     const analyticsData = await aiSummaryService.getAnalytics({
       dateFrom: date_from,
@@ -425,7 +307,7 @@ router.get('/analytics', [
       summaryType: summary_type,
       includeQualityMetrics: include_quality_metrics
     });
-    
+
     res.success({
       analytics: analyticsData,
       date_range: {
@@ -438,7 +320,7 @@ router.get('/analytics', [
       },
       generated_at: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ Summary analytics failed:', error);
     res.status(500).error(
@@ -451,7 +333,7 @@ router.get('/analytics', [
 
 /**
  * POST /api/v1/ai-summaries/extract-key-points - Extract key points from content
- * 
+ *
  * Standalone endpoint for extracting key points from provided content.
  */
 router.post('/extract-key-points', [
@@ -464,22 +346,22 @@ router.post('/extract-key-points', [
 ], asyncHandler(async (req: any, res: any) => {
   const startTime = Date.now();
   const { content, maxPoints, userId } = req.body;
-  
+
   try {
     const aiSummaryService = req.app.locals.aiSummaryService;
-    
+
     if (!aiSummaryService) {
       return res.status(503).error(
         'SERVICE_UNAVAILABLE',
         'AI Summary service is not available.'
       );
     }
-    
+
     const keyPoints = await aiSummaryService.extractKeyPoints(content);
     const limitedKeyPoints = keyPoints.slice(0, maxPoints);
-    
+
     const processingTime = Date.now() - startTime;
-    
+
     res.success({
       key_points: limitedKeyPoints,
       total_points_found: keyPoints.length,
@@ -487,11 +369,11 @@ router.post('/extract-key-points', [
       processing_time_ms: processingTime,
       extracted_at: new Date().toISOString()
     });
-    
+
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error('❌ Key points extraction failed:', error);
-    
+
     res.status(500).error(
       'KEY_POINTS_EXTRACTION_FAILED',
       'Failed to extract key points from content.',
@@ -511,7 +393,7 @@ router.get('/health', asyncHandler(async (req: any, res: any) => {
   try {
     const aiSummaryService = req.app.locals.aiSummaryService;
     const isAvailable = !!aiSummaryService;
-    
+
     let llmStatus = 'unknown';
     try {
       if (aiSummaryService && aiSummaryService.llmService) {
@@ -522,7 +404,7 @@ router.get('/health', asyncHandler(async (req: any, res: any) => {
     } catch {
       llmStatus = 'unavailable';
     }
-    
+
     res.success({
       status: isAvailable ? 'healthy' : 'unhealthy',
       ai_summary_service: isAvailable ? 'available' : 'unavailable',
@@ -535,12 +417,131 @@ router.get('/health', asyncHandler(async (req: any, res: any) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ AI Summary health check failed:', error);
     res.status(503).error(
       'HEALTH_CHECK_FAILED',
       'AI Summary service health check failed.'
+    );
+  }
+}));
+
+/**
+ * GET /api/v1/ai-summaries/:id - Get specific summary by ID
+ *
+ * Retrieves a previously generated summary with all associated metadata,
+ * fact checks, and source attribution.
+ */
+router.get('/:id', [
+  summaryRetrievalRateLimit
+], asyncHandler(async (req: any, res: any) => {
+  const summaryId = req.params.id;
+
+  if (!summaryId || !z.string().uuid().safeParse(summaryId).success) {
+    return res.status(400).error(
+      'INVALID_SUMMARY_ID',
+      'Please provide a valid summary ID.'
+    );
+  }
+
+  try {
+    const aiSummaryService = req.app.locals.aiSummaryService;
+
+    if (!aiSummaryService) {
+      return res.status(503).error(
+        'SERVICE_UNAVAILABLE',
+        'AI Summary service is not available.'
+      );
+    }
+
+    const summary = await aiSummaryService.getSummaryById(summaryId);
+
+    if (!summary) {
+      return res.status(404).error(
+        'SUMMARY_NOT_FOUND',
+        'The requested summary was not found.'
+      );
+    }
+
+    // Update access tracking
+    summary.accessCount = (summary.accessCount || 0) + 1;
+    summary.lastAccessedAt = new Date();
+
+    res.success({
+      summary,
+      retrieved_at: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to retrieve summary:', error);
+    res.status(500).error(
+      'SUMMARY_RETRIEVAL_FAILED',
+      'Failed to retrieve the requested summary.'
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/ai-summaries/:id/feedback - Submit feedback on summary
+ *
+ * Allows users to provide feedback on summary quality, accuracy, and usefulness.
+ */
+router.post('/:id/feedback', [
+  feedbackRateLimit,
+  validateRequest(SummaryFeedbackSchema, 'body')
+], asyncHandler(async (req: any, res: any) => {
+  const summaryId = req.params.id;
+  const feedbackData = req.body;
+
+  if (!summaryId || !z.string().uuid().safeParse(summaryId).success) {
+    return res.status(400).error(
+      'INVALID_SUMMARY_ID',
+      'Please provide a valid summary ID.'
+    );
+  }
+
+  try {
+    const aiSummaryService = req.app.locals.aiSummaryService;
+
+    if (!aiSummaryService) {
+      return res.status(503).error(
+        'SERVICE_UNAVAILABLE',
+        'AI Summary service is not available.'
+      );
+    }
+
+    // Verify summary exists
+    const summary = await aiSummaryService.getSummaryById(summaryId);
+
+    if (!summary) {
+      return res.status(404).error(
+        'SUMMARY_NOT_FOUND',
+        'The summary you are trying to provide feedback for was not found.'
+      );
+    }
+
+    // Store feedback (this would typically go to a dedicated feedback service)
+    const feedback = {
+      ...feedbackData,
+      summaryId,
+      createdAt: new Date()
+    };
+
+    // In a real implementation, you would store this in a database
+    console.log('📝 Summary feedback received:', feedback);
+
+    res.success({
+      message: 'Feedback submitted successfully',
+      feedback_id: crypto.randomUUID(),
+      submitted_at: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to submit summary feedback:', error);
+    res.status(500).error(
+      'FEEDBACK_SUBMISSION_FAILED',
+      'Failed to submit summary feedback.'
     );
   }
 }));

@@ -107,9 +107,10 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       logger.error('Event store health check failed', {
-        error: error.message,
+        error: errorMessage,
         responseTime
       });
 
@@ -118,7 +119,7 @@ export class EventSourcingHealthCheck {
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: errorMessage,
           canWrite: false,
           canRead: false,
           canDelete: false
@@ -164,13 +165,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           canStream: false
         }
       };
@@ -201,13 +202,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           sagaProcessing: false
         }
       };
@@ -251,13 +252,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           canReconstruct: false
         }
       };
@@ -297,13 +298,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           canEncrypt: false,
           canDecrypt: false
         }
@@ -367,13 +368,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           canConnect: false,
           canQuery: false
         }
@@ -408,13 +409,13 @@ export class EventSourcingHealthCheck {
 
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         responseTime,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           metricsCollecting: false
         }
       };
@@ -534,12 +535,13 @@ router.get('/health', async (req: Request, res: Response) => {
     res.status(statusCode).json(health);
     
   } catch (error) {
-    logger.error('Health check failed', { error: error.message });
-    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Health check failed', { error: errorMessage });
+
     res.status(500).json({
       status: 'unhealthy',
       timestamp: new Date(),
-      error: error.message
+      error: errorMessage
     });
   }
 });
@@ -567,7 +569,7 @@ router.get('/health/event-store', async (req: Request, res: Response) => {
     res.status(500).json({
       status: 'unhealthy',
       timestamp: new Date(),
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -595,7 +597,7 @@ router.get('/health/streaming', async (req: Request, res: Response) => {
     res.status(500).json({
       status: 'unhealthy',
       timestamp: new Date(),
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -607,7 +609,7 @@ router.get('/health/metrics', async (req: Request, res: Response) => {
     
   } catch (error) {
     res.status(500).json({
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -619,7 +621,7 @@ router.get('/metrics/prometheus', async (req: Request, res: Response) => {
     
   } catch (error) {
     res.status(500).json({
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });

@@ -329,7 +329,10 @@ router.get('/suggestions', async (req: Request, res: Response) => {
     }
 
     const count = parseInt(req.query.count as string) || 5;
-    const context = req.query.context ? JSON.parse(req.query.context as string) : {};
+    let context = {};
+    if (req.query.context) {
+      try { context = JSON.parse(req.query.context as string); } catch { /* invalid JSON, use default */ }
+    }
 
     const system = await getPersonalizationSystem();
     const suggestions = await system.recommendations.generateRecommendations(
@@ -562,7 +565,10 @@ router.get('/interface', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const context = req.query.context ? JSON.parse(req.query.context as string) : {};
+    let context = {};
+    if (req.query.context) {
+      try { context = JSON.parse(req.query.context as string); } catch { /* invalid JSON, use default */ }
+    }
 
     const system = await getPersonalizationSystem();
     const adaptiveLayout = await system.adaptiveInterface.getAdaptiveLayout(userId, context);
@@ -622,7 +628,10 @@ router.get('/interface/layout', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const deviceInfo = req.query.device ? JSON.parse(req.query.device as string) : {};
+    let deviceInfo = {};
+    if (req.query.device) {
+      try { deviceInfo = JSON.parse(req.query.device as string); } catch { /* invalid JSON, use default */ }
+    }
     const context = { device: deviceInfo, ...req.query };
 
     const system = await getPersonalizationSystem();

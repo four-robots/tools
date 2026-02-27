@@ -91,21 +91,21 @@ export class MarkItDownWorker {
     // Process document conversion messages
     (async () => {
       for await (const msg of documentSub) {
-        this.handleDocumentConversion(msg);
+        await this.handleDocumentConversion(msg);
       }
     })();
 
     // Process URL conversion messages
     (async () => {
       for await (const msg of urlSub) {
-        this.handleUrlConversion(msg);
+        await this.handleUrlConversion(msg);
       }
     })();
 
     // Process stats requests
     (async () => {
       for await (const msg of statsSub) {
-        this.handleStatsRequest(msg);
+        await this.handleStatsRequest(msg);
       }
     })();
 

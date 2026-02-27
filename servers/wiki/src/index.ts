@@ -77,12 +77,12 @@ async function createWikiServer() {
     mimeType: 'application/json',
   }, async (uri: any) => {
     const uriString = typeof uri === 'string' ? uri : uri.toString();
-    const match = uriString.match(/wiki:\/\/page\/(\d+)/);
+    const match = uriString.match(/wiki:\/\/page\/([a-f0-9-]+)/i);
     if (!match) {
       throw new Error('Invalid page URI format');
     }
 
-    const pageId = parseInt(match[1]);
+    const pageId = match[1];
     const page = await db.getPageById(pageId);
     if (!page) {
       throw new Error(`Page ${pageId} not found`);

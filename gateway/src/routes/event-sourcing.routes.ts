@@ -241,7 +241,7 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
         userId: req.params.userId,
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
         error: error.message,
-        userId: req.user?.id
+        authenticatedUserId: req.user?.id
       });
 
       res.status(500).json({

@@ -134,21 +134,21 @@ export class EmbeddingsWorker {
     // Process single embedding messages
     (async () => {
       for await (const msg of embeddingSub) {
-        this.handleEmbeddingRequest(msg);
+        await this.handleEmbeddingRequest(msg);
       }
     })();
 
     // Process batch embedding messages
     (async () => {
       for await (const msg of batchSub) {
-        this.handleBatchRequest(msg);
+        await this.handleBatchRequest(msg);
       }
     })();
 
     // Process stats requests
     (async () => {
       for await (const msg of statsSub) {
-        this.handleStatsRequest(msg);
+        await this.handleStatsRequest(msg);
       }
     })();
 

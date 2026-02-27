@@ -106,16 +106,17 @@ router.post('/', [
       sessionId
     );
     
+    let timeoutId: ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         reject(new Error('Search request timed out'));
       }, 30000); // 30 second timeout
     });
-    
+
     const searchResults = await Promise.race([
       searchPromise,
       timeoutPromise
-    ]) as any;
+    ]).finally(() => clearTimeout(timeoutId)) as any;
     
     const processingTime = Date.now() - startTime;
     

@@ -160,8 +160,8 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
         userId: req.query.userId || userId, // Allow admins to query other users
         startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
         endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 100,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0
+        limit: parseInt(req.query.limit as string) || 100,
+        offset: parseInt(req.query.offset as string) || 0
       };
 
       const timeSeries = await analyticsService.getTimeSeriesData(query);

@@ -72,7 +72,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
     private eventService: EventBroadcastingService,
     private presenceService: PresenceService,
     private searchService: LiveSearchCollaborationService,
-    private jwtSecret: string = process.env.JWT_SECRET || '',
+    private jwtSecret: string = process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET environment variable is required'); })(),
     private config: {
       heartbeatInterval: number;
       connectionTimeout: number;

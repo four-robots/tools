@@ -90,7 +90,7 @@ const syndicationRuleSchema = z.object({
 router.post('/initialize', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'system';
+    const userId = req.user?.id || 'system';
 
     if (!tenantId) {
       return res.status(400).json({
@@ -200,7 +200,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
 router.post('/nodes/register', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'system';
+    const userId = req.user?.id || 'system';
 
     if (!tenantId) {
       return res.status(400).json({
@@ -325,7 +325,7 @@ router.get('/nodes/:nodeId', async (req: Request, res: Response) => {
 router.post('/search', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'anonymous';
+    const userId = req.user?.id || 'anonymous';
 
     if (!tenantId) {
       return res.status(400).json({
@@ -437,7 +437,7 @@ router.get('/search/:searchId', async (req: Request, res: Response) => {
 router.post('/search/:searchId/cancel', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'system';
+    const userId = req.user?.id || 'system';
     const { searchId } = req.params;
 
     if (!tenantId) {
@@ -473,7 +473,7 @@ router.post('/search/:searchId/cancel', async (req: Request, res: Response) => {
 router.post('/syndication/rules', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'system';
+    const userId = req.user?.id || 'system';
 
     if (!tenantId) {
       return res.status(400).json({
@@ -626,7 +626,7 @@ router.get('/syndication/statistics', async (req: Request, res: Response) => {
 router.post('/security/certificates', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || 'system';
+    const userId = req.user?.id || 'system';
 
     if (!tenantId) {
       return res.status(400).json({
@@ -943,7 +943,7 @@ router.get('/nodes/summary', async (req: Request, res: Response) => {
 router.post('/search/managed', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] as string;
-    const userId = req.user?.userId || req.headers['x-user-id'] as string;
+    const userId = req.user?.id || req.headers['x-user-id'] as string;
 
     if (!tenantId || !userId) {
       return res.status(400).json({
