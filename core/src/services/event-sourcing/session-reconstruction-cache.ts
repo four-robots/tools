@@ -156,18 +156,20 @@ export class SessionReconstructionCache {
   setCachedSession(sessionId: string, state: CollaborationSession, version: number): void {
     try {
       // Calculate size and checksum
-      const serialized = JSON.stringify(state);
-      const sizeInBytes = Buffer.byteLength(serialized, 'utf8');
-      const checksum = crypto.createHash('sha256').update(serialized).digest('hex');
+      const sizeInBytes = Buffer.byteLength(JSON.stringify(state), 'utf8');
 
       // Check if this would exceed memory limits
       if (this.totalSizeBytes + sizeInBytes > this.config.maxSizeBytes) {
         this.evictLeastRecentlyUsed(sizeInBytes);
       }
 
+      const storedState = this.config.compressionEnabled ? this.compressState(state) : state;
+      // Compute checksum on the stored (possibly compressed) state so verifyIntegrity matches
+      const checksum = crypto.createHash('sha256').update(JSON.stringify(storedState)).digest('hex');
+
       const cachedState: CachedSessionState = {
         sessionId,
-        state: this.config.compressionEnabled ? this.compressState(state) : state,
+        state: storedState,
         version,
         timestamp: new Date(),
         lastAccessed: new Date(),
