@@ -144,8 +144,9 @@ router.post('/', [
     // Execute summary generation with timeout
     const summaryPromise = aiSummaryService.generateResultSummary(summaryRequest);
 
+    let timeoutId: ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         reject(new Error('Summary generation timed out'));
       }, 60000); // 60 second timeout for AI processing
     });
@@ -153,7 +154,7 @@ router.post('/', [
     const summaryResponse = await Promise.race([
       summaryPromise,
       timeoutPromise
-    ]) as any;
+    ]).finally(() => clearTimeout(timeoutId)) as any;
 
     const processingTime = Date.now() - startTime;
 
