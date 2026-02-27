@@ -294,7 +294,7 @@ export class MemoryService {
               relationshipType: rel.relationship_type,
               strength: rel.strength,
               bidirectional: rel.bidirectional,
-              metadata: JSON.parse(rel.metadata),
+              metadata: this.safeJsonParse(rel.metadata),
               lastUpdated: rel.last_updated,
               createdAt: rel.created_at,
               updatedAt: rel.updated_at
@@ -393,8 +393,8 @@ export class MemoryService {
           mergedContent = [primaryMemory.content, ...secondaryMemories.filter(m => m).map(m => m!.content)].join('\n\n---\n\n');
           mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
           mergedMetadata = this.mergeMetadata([
-            JSON.parse(primaryMemory.metadata || '{}'),
-            ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
+            this.safeJsonParse(primaryMemory.metadata),
+            ...secondaryMemories.filter(m => m).map(m => this.safeJsonParse(m!.metadata))
           ]);
           break;
 
@@ -403,8 +403,8 @@ export class MemoryService {
           mergedContent = primaryMemory.content;
           mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
           mergedMetadata = this.mergeMetadata([
-            JSON.parse(primaryMemory.metadata || '{}'),
-            ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
+            this.safeJsonParse(primaryMemory.metadata),
+            ...secondaryMemories.filter(m => m).map(m => this.safeJsonParse(m!.metadata))
           ]);
           break;
 
@@ -412,8 +412,8 @@ export class MemoryService {
           mergedContent = primaryMemory.content + '\n\n' + secondaryMemories.filter(m => m).map(m => m!.content).join('\n\n');
           mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
           mergedMetadata = this.mergeMetadata([
-            JSON.parse(primaryMemory.metadata || '{}'),
-            ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
+            this.safeJsonParse(primaryMemory.metadata),
+            ...secondaryMemories.filter(m => m).map(m => this.safeJsonParse(m!.metadata))
           ]);
           break;
 
@@ -508,12 +508,17 @@ export class MemoryService {
   }
 
   // Helper methods
+  private safeJsonParse(value: string | null | undefined, fallback: any = {}): any {
+    if (!value) return fallback;
+    try { return JSON.parse(value); } catch { return fallback; }
+  }
+
   private convertToMemoryNode(memoryRecord: Memory, concepts: ConceptInfo[] = []): MemoryNode {
     return {
       id: memoryRecord.id,
       content: memoryRecord.content,
       contentHash: memoryRecord.content_hash,
-      context: JSON.parse(memoryRecord.context),
+      context: this.safeJsonParse(memoryRecord.context),
       concepts,
       importance: memoryRecord.importance,
       status: memoryRecord.status,
@@ -523,7 +528,7 @@ export class MemoryService {
       createdAt: memoryRecord.created_at,
       updatedAt: memoryRecord.updated_at,
       createdBy: memoryRecord.created_by || undefined,
-      metadata: memoryRecord.metadata ? JSON.parse(memoryRecord.metadata) : {}
+      metadata: this.safeJsonParse(memoryRecord.metadata)
     };
   }
 

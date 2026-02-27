@@ -64,7 +64,7 @@ let behaviorAnalyticsService: BehaviorAnalyticsService;
 // Initialize services with database connection
 const initializeServices = async () => {
   const db = await getDatabaseConnection();
-  
+
   behaviorTrackingService = new BehaviorTrackingService(db);
   patternRecognitionService = new PatternRecognitionService(db);
   behaviorLearningService = new BehaviorLearningService(db);
@@ -72,6 +72,24 @@ const initializeServices = async () => {
   privacyComplianceService = new PrivacyComplianceService(db);
   behaviorAnalyticsService = new BehaviorAnalyticsService(db);
 };
+
+// Store the initialization promise so routes can await it
+const servicesReady = initializeServices().catch(error => {
+  logger.error('Failed to initialize user behavior services', error);
+});
+
+// Middleware to ensure services are initialized before handling requests
+router.use(async (req: Request, res: Response, next) => {
+  try {
+    await servicesReady;
+    if (!behaviorTrackingService) {
+      return res.status(503).json({ success: false, message: 'Service initializing' });
+    }
+    next();
+  } catch {
+    res.status(503).json({ success: false, message: 'Service unavailable' });
+  }
+});
 
 // Event Tracking Routes
 
@@ -769,11 +787,6 @@ router.get('/admin/health', async (req: Request, res: Response) => {
       message: 'Failed to get service health',
     });
   }
-});
-
-// Initialize services when module loads
-initializeServices().catch(error => {
-  logger.error('Failed to initialize user behavior services', error);
 });
 
 export default router;

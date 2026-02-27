@@ -490,7 +490,7 @@ export class MemoryService {
   }
 
   // Helper methods
-  private convertToMemoryNode(memoryRecord: any, concepts: Concept[] = []): MemoryNode {
+  convertToMemoryNode(memoryRecord: any, concepts: Concept[] = []): MemoryNode {
     return {
       id: memoryRecord.id,
       content: memoryRecord.content,
