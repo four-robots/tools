@@ -170,8 +170,8 @@ export class DatabaseConnectionPool {
         `;
         
         const dbResult = await client.query(dbStatsQuery);
-        const dbStats = dbResult.rows[0];
-        
+        const dbStats = dbResult.rows[0] || { active_connections: '0', max_connections: '100' };
+
         return {
           pool: poolStats,
           performance: {
@@ -180,8 +180,8 @@ export class DatabaseConnectionPool {
             errorRate: 0,          // Would need to track this over time
           },
           database: {
-            activeConnections: parseInt(dbStats.active_connections),
-            maxConnections: parseInt(dbStats.max_connections),
+            activeConnections: parseInt(dbStats.active_connections) || 0,
+            maxConnections: parseInt(dbStats.max_connections) || 100,
             connectionUtilization: poolStats.totalConnections / poolStats.maxConnections,
           },
         };

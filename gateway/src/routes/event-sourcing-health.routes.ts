@@ -349,7 +349,8 @@ export class EventSourcingHealthCheck {
         status = 'degraded';
       }
       
-      if (poolStats.waitingClients > 20 || !eventsTableExists.rows[0].exists) {
+      const tablesExist = eventsTableExists.rows[0]?.exists ?? false;
+      if (poolStats.waitingClients > 20 || !tablesExist) {
         status = 'unhealthy';
       }
 
@@ -359,7 +360,7 @@ export class EventSourcingHealthCheck {
         responseTime,
         details: {
           ...poolStats,
-          tablesExist: eventsTableExists.rows[0].exists,
+          tablesExist,
           latency: `${responseTime}ms`,
           canConnect: true,
           canQuery: true

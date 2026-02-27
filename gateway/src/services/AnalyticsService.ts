@@ -437,6 +437,13 @@ export class AnalyticsService {
     `, [userId]);
 
     const row = result.rows[0];
+    if (!row) {
+      return {
+        totalTasks: 0, completedTasks: 0, completionRate: 0,
+        wikiPages: 0, memories: 0, activeDays: 0,
+        avgSessionDuration: 0, lastActivity: new Date()
+      };
+    }
     const completionRate = row.total_tasks > 0 ? (row.completed_tasks / row.total_tasks) * 100 : 0;
 
     return {

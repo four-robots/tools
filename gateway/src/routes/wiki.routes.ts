@@ -95,7 +95,7 @@ router.post('/pages', [
     id: 'page_' + Date.now(),
     title: req.body.title,
     slug,
-    summary: req.body.content.substring(0, 200) + '...',
+    summary: (req.body.content ?? '').substring(0, 200) + '...',
     category: req.body.category_id ? {
       id: req.body.category_id,
       name: 'Category Name',
