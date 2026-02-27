@@ -146,21 +146,6 @@ export interface CardLink {
   created_by: string | null;
 }
 
-// Time Tracking
-export interface TimeEntry {
-  id: string;
-  card_id: string;
-  user_name: string | null;
-  description: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  duration_minutes: number | null;
-  is_billable: boolean;
-  hourly_rate: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
 // Input schemas
 export const CreateBoardSchema = z.object({
   name: z.string().min(1).max(255),

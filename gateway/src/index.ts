@@ -166,7 +166,7 @@ async function createApp() {
   
   // Initialize core services
   console.log('🔧 Initializing services...');
-  console.log('PostgreSQL URL:', config.database.postgres);
+  console.log('PostgreSQL: connected');
   
   // Initialize PostgreSQL and Redis for analytics
   console.log('🔄 Connecting to PostgreSQL...');
@@ -318,13 +318,7 @@ async function createApp() {
   const workspaceSessionService = new WorkspaceSessionService(pgPool);
   const workspaceActivityService = new WorkspaceActivityService(pgPool);
   const workspaceTemplateService = new WorkspaceTemplateService(pgPool);
-  const workspaceIntegrationService = new WorkspaceIntegrationService(
-    pgPool,
-    kanbanService,
-    memoryService,
-    scraperService, // Wiki service will be added when available
-    workspaceActivityService
-  );
+  const workspaceIntegrationService = new WorkspaceIntegrationService(pgPool);
   console.log('✅ Workspace services created and initialized');
   
   // Store services in app locals for access in routes
@@ -380,7 +374,6 @@ async function createApp() {
   app.use('/api/v1/ai-summaries', aiSummariesRoutes);
   app.use('/api/v1/quality', qualityRoutes);
   app.use('/api/v1/analytics', createAnalyticsRoutes(analyticsService));
-  app.use('/api/analytics', analyticsRoutes);
   app.use('/api/v1/facets', dynamicFacetsRoutes);
   app.use('/api/v1/filters', filterBuilderRoutes);
   app.use('/api/v1/behavior', userBehaviorRoutes);
@@ -419,7 +412,7 @@ async function createApp() {
 async function startServer() {
   try {
     console.log('🚀 Starting MCP Tools API Gateway...');
-    console.log('📋 Configuration:', JSON.stringify(config, null, 2));
+    console.log(`📋 Configuration: port=${config.port}, cors=${config.corsOrigin}`);
     
     // Create Express app
     console.log('📦 Creating Express app...');
@@ -518,14 +511,10 @@ async function startServer() {
         console.log('HTTP server closed');
         
         // Close service connections
-        if (app.locals.kanbanService) {
-          await app.locals.kanbanService.shutdown();
-        }
-        if (app.locals.memoryService) {
-          await app.locals.memoryService.shutdown();
-        }
-        if (app.locals.scraperService) {
+        try {
           await scrapingEngine.close();
+        } catch (e) {
+          // Scraping engine may not be initialized
         }
         
         // Shutdown collaboration services

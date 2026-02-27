@@ -209,29 +209,6 @@ router.delete('/pages/:id', [
   res.status(204).send();
 }));
 
-// GET /api/wiki/pages/:id/history - Get page version history
-router.get('/pages/:id/history', [
-  param('id').notEmpty(),
-  query('page').optional().isInt({ min: 1 }).toInt(),
-  query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
-  validateRequest
-], asyncHandler(async (req: any, res: any) => {
-  const mcpService: MCPClientService = req.app.locals.mcpService;
-  
-  // This would require a specific MCP tool for version history
-  // For now, return empty history
-  const page = req.query.page || 1;
-  const limit = req.query.limit || 10;
-  
-  res.paginated([], {
-    page,
-    limit,
-    total: 0,
-    hasNext: false,
-    hasPrev: false
-  });
-}));
-
 // GET /api/wiki/categories - List categories
 router.get('/categories', [
   query('page').optional().isInt({ min: 1 }).toInt(),
@@ -311,7 +288,7 @@ router.put('/pages/:id/categories', [
   const result = await mcpService.callTool('wiki', {
     name: 'update_page_categories',
     arguments: {
-      pageId: parseInt(req.params.id),
+      pageId: req.params.id,
       categoryIds: req.body.category_ids
     }
   });
@@ -334,7 +311,7 @@ router.put('/pages/:id/tags', [
   const result = await mcpService.callTool('wiki', {
     name: 'update_page_tags',
     arguments: {
-      pageId: parseInt(req.params.id),
+      pageId: req.params.id,
       tagNames: req.body.tag_names
     }
   });
@@ -352,18 +329,18 @@ router.get('/pages/:id/history', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const mcpService: MCPClientService = req.app.locals.mcpService;
-  
+
   const result = await mcpService.callTool('wiki', {
     name: 'get_page_history',
     arguments: {
-      pageId: parseInt(req.params.id)
+      pageId: req.params.id
     }
   });
-  
+
   if (result.isError) {
     return res.status(404).error('NOT_FOUND', 'Wiki page not found', result.content);
   }
-  
+
   res.success(result.content);
 }));
 
@@ -375,11 +352,11 @@ router.post('/pages/:id/restore/:version', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const mcpService: MCPClientService = req.app.locals.mcpService;
-  
+
   const result = await mcpService.callTool('wiki', {
     name: 'restore_page_version',
     arguments: {
-      pageId: parseInt(req.params.id),
+      pageId: req.params.id,
       historyId: parseInt(req.params.version),
       restoredBy: req.body.restored_by || req.user?.name
     }
@@ -402,14 +379,14 @@ router.get('/pages/:id/links', [
   const result = await mcpService.callTool('wiki', {
     name: 'get_page_links',
     arguments: {
-      pageId: parseInt(req.params.id)
+      pageId: req.params.id
     }
   });
-  
+
   if (result.isError) {
     return res.status(404).error('NOT_FOUND', 'Wiki page not found', result.content);
   }
-  
+
   res.success(result.content);
 }));
 
@@ -419,11 +396,11 @@ router.get('/pages/:id/backlinks', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const mcpService: MCPClientService = req.app.locals.mcpService;
-  
+
   const result = await mcpService.callTool('wiki', {
     name: 'get_page_backlinks',
     arguments: {
-      pageId: parseInt(req.params.id)
+      pageId: req.params.id
     }
   });
   

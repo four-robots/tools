@@ -1,6 +1,6 @@
 /**
  * Kanban API Routes
- * 
+ *
  * REST API endpoints for Kanban board management.
  */
 
@@ -29,16 +29,16 @@ router.get('/boards', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
-  const boards = await kanbanService.getBoards();
-  
+
+  const boards = await kanbanService.getAllBoards();
+
   // Apply pagination
   const page = req.query.page || 1;
   const limit = req.query.limit || 20;
   const startIdx = (page - 1) * limit;
   const endIdx = startIdx + limit;
   const paginatedBoards = boards.slice(startIdx, endIdx);
-  
+
   res.paginated(paginatedBoards, {
     page,
     limit,
@@ -57,14 +57,14 @@ router.post('/boards', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   const board = await kanbanService.createBoard({
     name: req.body.name,
     slug: req.body.slug,
     description: req.body.description,
     color: req.body.color || '#6366f1'
   });
-  
+
   res.status(201).success(board);
 }));
 
@@ -75,15 +75,15 @@ router.get('/boards/:id', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const boardId = parseInt(req.params.id.replace('board_', '')) || parseInt(req.params.id);
-    const board = await kanbanService.getBoard(boardId);
-    
+    const boardId = req.params.id;
+    const board = await kanbanService.getBoardById(boardId);
+
     if (!board) {
       return res.status(404).error('NOT_FOUND', 'Board not found');
     }
-    
+
     res.success(board);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Board not found');
@@ -97,14 +97,14 @@ router.get('/boards/slug/:slug', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
     const board = await kanbanService.getBoardBySlug(req.params.slug);
-    
+
     if (!board) {
       return res.status(404).error('NOT_FOUND', 'Board not found');
     }
-    
+
     res.success(board);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Board not found');
@@ -126,14 +126,11 @@ router.post('/cards', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const boardId = parseInt(req.body.board_id.replace('board_', '')) || parseInt(req.body.board_id);
-    const columnId = parseInt(req.body.column_id.replace('col_', '')) || parseInt(req.body.column_id);
-    
     const card = await kanbanService.createCard({
-      board_id: boardId,
-      column_position: columnId,
+      board_id: req.body.board_id,
+      column_id: req.body.column_id,
       title: req.body.title,
       slug: req.body.slug,
       description: req.body.description,
@@ -142,7 +139,7 @@ router.post('/cards', [
       due_date: req.body.due_date,
       position: req.body.position || 0
     });
-    
+
     res.status(201).success(card);
   } catch (error: any) {
     return res.error('CREATE_ERROR', 'Failed to create card', error.message);
@@ -161,19 +158,16 @@ router.put('/cards/:id', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const cardId = parseInt(req.params.id.replace('card_', '')) || parseInt(req.params.id);
-    
-    const updatedCard = await kanbanService.updateCard({
-      card_id: cardId,
-      ...req.body
-    });
-    
+    const cardId = req.params.id;
+
+    const updatedCard = await kanbanService.updateCard(cardId, req.body);
+
     if (!updatedCard) {
       return res.status(404).error('NOT_FOUND', 'Card not found');
     }
-    
+
     res.success(updatedCard);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Card not found');
@@ -188,21 +182,19 @@ router.put('/cards/:id/move', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const cardId = parseInt(req.params.id.replace('card_', '')) || parseInt(req.params.id);
-    const columnId = parseInt(req.body.column_id.replace('col_', '')) || parseInt(req.body.column_id);
-    
-    const movedCard = await kanbanService.moveCard({
-      card_id: cardId,
-      column_position: columnId,
+    const cardId = req.params.id;
+
+    const movedCard = await kanbanService.moveCard(cardId, {
+      column_id: req.body.column_id,
       position: req.body.position
     });
-    
+
     if (!movedCard) {
       return res.status(404).error('NOT_FOUND', 'Card not found');
     }
-    
+
     res.success(movedCard);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Card not found');
@@ -215,19 +207,18 @@ router.delete('/cards/:id', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const cardId = parseInt(req.params.id.replace('card_', '')) || parseInt(req.params.id);
-    
-    const deleted = await kanbanService.deleteCard(cardId);
-    
-    if (!deleted) {
+    const cardId = req.params.id;
+
+    await kanbanService.deleteCard(cardId);
+
+    res.status(204).send();
+  } catch (error: any) {
+    if (error.code === 'NOT_FOUND') {
       return res.status(404).error('NOT_FOUND', 'Card not found');
     }
-    
-    res.status(204).send();
-  } catch (error) {
-    return res.status(404).error('NOT_FOUND', 'Card not found');
+    throw error;
   }
 }));
 
@@ -238,14 +229,14 @@ router.get('/boards/slug/:boardSlug/cards/:cardSlug', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
     const card = await kanbanService.getCardBySlug(req.params.boardSlug, req.params.cardSlug);
-    
+
     if (!card) {
       return res.status(404).error('NOT_FOUND', 'Card not found');
     }
-    
+
     res.success(card);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Card not found');
@@ -259,13 +250,13 @@ router.get('/boards/:id/activity', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
-    const boardId = parseInt(req.params.id.replace('board_', '')) || parseInt(req.params.id);
+    const boardId = req.params.id;
     const limit = req.query.limit || 50;
-    
+
     const activity = await kanbanService.getBoardActivity(boardId, limit);
-    
+
     res.success(activity);
   } catch (error) {
     return res.status(404).error('NOT_FOUND', 'Board not found');
@@ -274,14 +265,14 @@ router.get('/boards/:id/activity', [
 
 // GET /api/kanban/analytics/status-distribution - Get status distribution metrics
 router.get('/analytics/status-distribution', [
-  query('board_id').optional().isInt(),
+  query('board_id').optional().isString(),
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
     const stats = await kanbanService.getStats();
-    
+
     res.success({
       cards_by_status: stats.cards_by_status,
       total_cards: stats.total_cards,
@@ -299,13 +290,13 @@ router.get('/analytics/user-productivity', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
     const userId = req.query.user_id;
     const timeframe = req.query.timeframe || '30d';
-    
+
     const stats = await kanbanService.getUserActivityStats(userId, timeframe);
-    
+
     res.success(stats);
   } catch (error) {
     return res.error('INTERNAL_ERROR', 'Failed to get user productivity stats');
@@ -317,10 +308,10 @@ router.get('/analytics/overview', [
   validateRequest
 ], asyncHandler(async (req: any, res: any) => {
   const kanbanService: KanbanService = req.app.locals.kanbanService;
-  
+
   try {
     const stats = await kanbanService.getStats();
-    
+
     res.success({
       ...stats,
       generated_at: new Date().toISOString()
