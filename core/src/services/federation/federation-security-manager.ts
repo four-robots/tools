@@ -17,6 +17,7 @@ import { FederationAuditLogger } from './federation-audit-logger.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { sql } from 'kysely';
 
 interface MutualTLSConfig {
   certificate_pem: string;
@@ -50,6 +51,7 @@ interface SecurityValidationResult {
 }
 
 interface FederationJWT {
+  jti: string; // JWT ID for uniqueness/revocation
   iss: string; // Issuing tenant
   aud: string; // Target node/tenant
   sub: string; // Subject (user/service)
@@ -98,7 +100,7 @@ export class FederationSecurityManager {
       });
 
       // Generate self-signed certificate (in production, would use proper CA)
-      const certificate = this.generateSelfSignedCertificate(
+      const certificate = await this.generateSelfSignedCertificate(
         keyPair,
         subjectDN,
         subjectAltNames,
@@ -144,7 +146,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to generate federation certificate:', error);
-      throw new Error(`Failed to generate federation certificate: ${error.message}`);
+      throw new Error(`Failed to generate federation certificate: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -226,7 +228,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to validate certificate:', error);
-      throw new Error(`Failed to validate certificate: ${error.message}`);
+      throw new Error(`Failed to validate certificate: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -266,7 +268,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to revoke certificate:', error);
-      throw new Error(`Failed to revoke certificate: ${error.message}`);
+      throw new Error(`Failed to revoke certificate: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -355,7 +357,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to generate federation API key:', error);
-      throw new Error(`Failed to generate federation API key: ${error.message}`);
+      throw new Error(`Failed to generate federation API key: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -495,7 +497,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to rotate API key:', error);
-      throw new Error(`Failed to rotate API key: ${error.message}`);
+      throw new Error(`Failed to rotate API key: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -515,6 +517,7 @@ export class FederationSecurityManager {
   ): Promise<string> {
     try {
       const payload: FederationJWT = {
+        jti: crypto.randomUUID(),
         iss: tenantId,
         aud: targetNodeId,
         sub: userId,
@@ -537,13 +540,13 @@ export class FederationSecurityManager {
       });
 
       // Store token metadata
-      await this.storeJWTMetadata(payload.jti || crypto.randomUUID(), tenantId, userId, payload.exp);
+      await this.storeJWTMetadata(payload.jti, tenantId, userId, payload.exp);
 
       return token;
 
     } catch (error) {
       logger.error('Failed to generate federation JWT:', error);
-      throw new Error(`Failed to generate federation JWT: ${error.message}`);
+      throw new Error(`Failed to generate federation JWT: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -594,7 +597,7 @@ export class FederationSecurityManager {
       logger.error('Failed to verify federation JWT:', error);
       return {
         valid: false,
-        errors: [error.message || 'Token verification failed']
+        errors: [error instanceof Error ? error.message : 'Token verification failed']
       };
     }
   }
@@ -648,7 +651,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to encrypt federation payload:', error);
-      throw new Error(`Failed to encrypt federation payload: ${error.message}`);
+      throw new Error(`Failed to encrypt federation payload: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -703,7 +706,7 @@ export class FederationSecurityManager {
         eventType: 'federation_decryption_failure',
         sourceNodeId,
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           algorithm: encryptionMetadata.algorithm,
           key_id: encryptionMetadata.key_id,
           failure_time: new Date().toISOString()
@@ -713,7 +716,7 @@ export class FederationSecurityManager {
         riskScore: 0.8
       });
       
-      throw new Error(`Failed to decrypt federation payload: ${error.message}`);
+      throw new Error(`Failed to decrypt federation payload: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -746,7 +749,7 @@ export class FederationSecurityManager {
       try {
         certificate = new crypto.X509Certificate(certificatePem);
       } catch (error) {
-        errors.push(`Invalid certificate format: ${error.message}`);
+        errors.push(`Invalid certificate format: ${error instanceof Error ? error.message : String(error)}`);
         return { valid: false, errors, certificateInfo: null };
       }
 
@@ -903,7 +906,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to generate certificate:', error);
-      throw new Error(`Certificate generation failed: ${error.message}`);
+      throw new Error(`Certificate generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -956,19 +959,25 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to get signing key:', error);
-      throw new Error(`Failed to get signing key: ${error.message}`);
+      throw new Error(`Failed to get signing key: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private async getEncryptionKey(tenantId: string, nodeId: string): Promise<Buffer> {
     const keyId = `${tenantId}:${nodeId}`;
-    
+
     if (!this.encryptionKeys.has(keyId)) {
+      // Evict oldest entries if cache exceeds max size
+      const MAX_CACHED_KEYS = 1000;
+      if (this.encryptionKeys.size >= MAX_CACHED_KEYS) {
+        const firstKey = this.encryptionKeys.keys().next().value;
+        if (firstKey) this.encryptionKeys.delete(firstKey);
+      }
       // Generate or retrieve encryption key
       const key = crypto.randomBytes(32); // 256-bit key
       this.encryptionKeys.set(keyId, key);
     }
-    
+
     return this.encryptionKeys.get(keyId)!;
   }
 
@@ -976,10 +985,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
     await this.db.db
       .updateTable('federation_api_keys')
       .set({
-        usage_count: this.db.db
-          .selectFrom('federation_api_keys')
-          .select((eb) => eb('usage_count', '+', 1))
-          .where('key_hash', '=', keyHash),
+        usage_count: sql`usage_count + 1`,
         last_used_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1102,7 +1108,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to get security metrics:', error);
-      throw new Error(`Failed to get security metrics: ${error.message}`);
+      throw new Error(`Failed to get security metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
