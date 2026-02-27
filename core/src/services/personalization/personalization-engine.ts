@@ -22,6 +22,7 @@ import {
 } from '@shared/types/personalization.js';
 import { Database } from '@shared/utils/database.js';
 import { logger } from '@shared/utils/logger.js';
+import crypto from 'crypto';
 
 export interface PersonalizationConfig {
   defaultPersonalizationLevel: PersonalizationLevel;
@@ -77,7 +78,7 @@ export class PersonalizationEngine implements IPersonalizationEngine {
 
     } catch (error) {
       logger.error(`Error getting personalization profile for user ${userId}:`, error);
-      throw new Error(`Failed to get personalization profile: ${error.message}`);
+      throw new Error(`Failed to get personalization profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -115,7 +116,7 @@ export class PersonalizationEngine implements IPersonalizationEngine {
 
     } catch (error) {
       logger.error(`Error updating personalization profile for user ${userId}:`, error);
-      throw new Error(`Failed to update personalization profile: ${error.message}`);
+      throw new Error(`Failed to update personalization profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -139,7 +140,7 @@ export class PersonalizationEngine implements IPersonalizationEngine {
 
     } catch (error) {
       logger.error(`Error resetting personalization profile for user ${userId}:`, error);
-      throw new Error(`Failed to reset personalization profile: ${error.message}`);
+      throw new Error(`Failed to reset personalization profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -190,7 +191,7 @@ export class PersonalizationEngine implements IPersonalizationEngine {
 
     } catch (error) {
       logger.error(`Error personalizing search results for user ${userId}:`, error);
-      throw new Error(`Failed to personalize search results: ${error.message}`);
+      throw new Error(`Failed to personalize search results: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -604,7 +605,7 @@ export class PersonalizationEngine implements IPersonalizationEngine {
       personalizedResults: originalResults, // No reordering
       personalizationApplied: {
         factorCount: 0,
-        personalizedationDisabled: true
+        personalizationDisabled: true
       },
       baseScores: {},
       personalizationScores: {},

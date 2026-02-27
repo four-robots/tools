@@ -40,7 +40,7 @@ export function useRealtimeUpdates() {
 
   const handleRealtimeUpdate = useCallback((update: RealtimeUpdate) => {
     // Prevent duplicate processing
-    const messageId = `${update.entity}-${update.action}-${update.id}-${Date.now()}`;
+    const messageId = `${update.entity}-${update.action}-${update.id}`;
     if (processedMessages.current.has(messageId)) {
       return;
     }
