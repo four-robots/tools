@@ -29,26 +29,35 @@ export class MarkdownProcessor {
     // Override heading renderer to add IDs
     this.renderer.heading = (text: string, level: number): string => {
       const id = slugify(text, { lower: true, strict: true });
-      return `<h${level} id="${id}">${text}</h${level}>`;
+      const safeText = this.escapeHtml(text);
+      return `<h${level} id="${id}">${safeText}</h${level}>`;
     };
 
     // Override link renderer to track internal links
     this.renderer.link = (href: string, title: string | null | undefined, text: string): string => {
-      const titleAttr = title ? ` title="${title}"` : '';
+      const safeTitle = title ? this.escapeHtml(title) : null;
+      const titleAttr = safeTitle ? ` title="${safeTitle}"` : '';
       
+      // Block dangerous protocols
+      if (/^(javascript|data|vbscript):/i.test(href)) {
+        return this.escapeHtml(text);
+      }
+
       // Check if it's an internal link (starts with [[]] or is a relative path)
       if (href.startsWith('[[') && href.endsWith(']]')) {
-        const pageSlug = href.slice(2, -2);
+        const pageSlug = encodeURIComponent(href.slice(2, -2));
         return `<a href="/wiki/${pageSlug}" class="internal-link"${titleAttr}>${text}</a>`;
       }
-      
+
       // External links
       if (href.startsWith('http')) {
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
+        const safeHref = this.escapeHtml(href);
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
       }
-      
+
       // Internal relative links
-      return `<a href="${href}"${titleAttr}>${text}</a>`;
+      const safeHref = this.escapeHtml(href);
+      return `<a href="${safeHref}"${titleAttr}>${text}</a>`;
     };
 
     // Override code renderer for syntax highlighting support
@@ -197,7 +206,7 @@ export class MarkdownProcessor {
         toc += '<li>';
       }
 
-      toc += `<a href="#${heading.id}">${heading.text}</a>`;
+      toc += `<a href="#${heading.id}">${this.escapeHtml(heading.text)}</a>`;
       currentLevel = heading.level;
     }
 

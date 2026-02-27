@@ -230,15 +230,15 @@ export const registerGetCardBySlugTool = (db: KanbanDatabase): ToolModule => ({
         content: [
           {
             type: 'text',
-            text: `🎯 **${card.title}** (${card.slug})\\n\\n` +
-                  `${card.description || 'No description'}\\n\\n` +
-                  `📊 **Details:**\\n` +
-                  `• Priority: ${card.priority}\\n` +
-                  `• Position: ${card.position}\\n` +
-                  `• Created: ${new Date(card.created_at).toLocaleDateString()}\\n` +
-                  `• Updated: ${new Date(card.updated_at).toLocaleDateString()}\\n` +
-                  (dueDateText ? `• ${dueDateText}\\n` : '') +
-                  (assignedText ? `• ${assignedText}\\n` : '') +
+            text: `🎯 **${card.title}** (${card.slug})\n\n` +
+                  `${card.description || 'No description'}\n\n` +
+                  `📊 **Details:**\n` +
+                  `• Priority: ${card.priority}\n` +
+                  `• Position: ${card.position}\n` +
+                  `• Created: ${new Date(card.created_at).toLocaleDateString()}\n` +
+                  `• Updated: ${new Date(card.updated_at).toLocaleDateString()}\n` +
+                  (dueDateText ? `• ${dueDateText}\n` : '') +
+                  (assignedText ? `• ${assignedText}\n` : '') +
                   (tagsText ? `• ${tagsText}` : ''),
           },
         ],
