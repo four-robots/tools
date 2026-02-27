@@ -506,6 +506,7 @@ export class PredictiveAnalyticsService {
     const recentAvg = recent.reduce((sum, d) => sum + d.value, 0) / recent.length;
     const olderAvg = older.reduce((sum, d) => sum + d.value, 0) / older.length;
 
+    if (olderAvg === 0) return recentAvg > 0 ? 'improving' : 'stable';
     const improvement = (recentAvg - olderAvg) / olderAvg;
 
     if (improvement > 0.1) return 'improving';

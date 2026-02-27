@@ -389,16 +389,6 @@ export function setupWhiteboardWebSocket(
           },
         });
 
-        // Initialize canvas version if not exists
-        if (!canvasVersions.has(sanitizedWhiteboardId)) {
-          canvasVersions.set(sanitizedWhiteboardId, 1);
-        }
-
-        // Join whiteboard rooms
-        socket.join(`whiteboard:${sanitizedWhiteboardId}`);
-        socket.join(`whiteboard:${sanitizedWhiteboardId}:presence`);
-        socket.join(`whiteboard:${sanitizedWhiteboardId}:comments`);
-
         // Validate input data before processing
         const whiteboardValidation = validateWhiteboardId(whiteboardId);
         if (!whiteboardValidation.valid) {
@@ -409,13 +399,13 @@ export function setupWhiteboardWebSocket(
           });
           return;
         }
-        
+
         const userInfoValidation = validateUserInfo({
           userName: socket.user.name,
           userEmail: socket.user.email,
           avatar: socket.user.avatar
         });
-        
+
         if (!userInfoValidation.valid) {
           socket.emit('error', {
             code: 'INVALID_INPUT',
@@ -424,10 +414,20 @@ export function setupWhiteboardWebSocket(
           });
           return;
         }
-        
+
         // Use sanitized data
         const sanitizedWhiteboardId = whiteboardValidation.sanitized;
         const sanitizedUserInfo = userInfoValidation.sanitizedData;
+
+        // Initialize canvas version if not exists
+        if (!canvasVersions.has(sanitizedWhiteboardId)) {
+          canvasVersions.set(sanitizedWhiteboardId, 1);
+        }
+
+        // Join whiteboard rooms
+        socket.join(`whiteboard:${sanitizedWhiteboardId}`);
+        socket.join(`whiteboard:${sanitizedWhiteboardId}:presence`);
+        socket.join(`whiteboard:${sanitizedWhiteboardId}:comments`);
         
         // Update whiteboard session with sanitized ID
         socket.whiteboardSession.whiteboardId = sanitizedWhiteboardId;
@@ -4630,8 +4630,8 @@ export function setupWhiteboardWebSocket(
     }
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
 
   logger.info('Whiteboard WebSocket handlers configured');
 

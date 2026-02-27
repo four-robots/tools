@@ -806,7 +806,11 @@ export class AnalyticsSocketHandler extends EventEmitter {
         }
       }
       
-      // Clean up metric subscriptions
+      // Clean up metric subscriptions (clear interval timer before deleting)
+      const metricSub = this.metricStreamSubscriptions.get(socket.id);
+      if (metricSub?.timer) {
+        clearInterval(metricSub.timer);
+      }
       this.metricStreamSubscriptions.delete(socket.id);
       
       // Remove from socket data

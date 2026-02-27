@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useApi } from './use-api';
-import { useRealtime } from './use-realtime';
+import { useWebSocket } from '@/lib/websocket';
 
 // Memory management configuration
 const MEMORY_CONFIG = {
@@ -180,7 +180,28 @@ export const useEventSourcing = (sessionId: string) => {
   });
   
   const { apiCall } = useApi();
-  const { socket, isConnected } = useRealtime();
+  const { sendMessage, isConnected, lastMessage } = useWebSocket({
+    onMessage: (message) => {
+      switch (message.type) {
+        case 'subscription_created':
+          setSubscriptionId(message.payload?.subscriptionId);
+          break;
+        case 'event_stream':
+          const newEvent = message.payload?.event;
+          if (newEvent) {
+            addRealtimeEventWithMemoryManagement(newEvent);
+            if (newEvent.eventType?.startsWith('collaboration.session.') ||
+                newEvent.eventType?.startsWith('collaboration.participant.')) {
+              reconstructSession();
+            }
+          }
+          break;
+        case 'error':
+          setError(message.payload?.message);
+          break;
+      }
+    },
+  });
   const timelineRef = useRef<SessionTimelineEntry[]>([]);
   const cleanupIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -362,30 +383,30 @@ export const useEventSourcing = (sessionId: string) => {
 
   // Subscribe to real-time events
   const subscribeToEvents = useCallback((filter?: EventFilter) => {
-    if (!socket || !isConnected || !sessionId) return;
+    if (!isConnected || !sessionId) return;
 
     const eventFilter: EventFilter = {
       sessionId,
       ...filter
     };
 
-    socket.send(JSON.stringify({
+    sendMessage({
       type: 'subscribe',
-      data: { filter: eventFilter }
-    }));
-  }, [socket, isConnected, sessionId]);
+      payload: { filter: eventFilter }
+    });
+  }, [isConnected, sessionId, sendMessage]);
 
   // Unsubscribe from events
   const unsubscribeFromEvents = useCallback(() => {
-    if (!socket || !subscriptionId) return;
+    if (!subscriptionId) return;
 
-    socket.send(JSON.stringify({
+    sendMessage({
       type: 'unsubscribe',
-      data: { subscriptionId }
-    }));
+      payload: { subscriptionId }
+    });
 
     setSubscriptionId(null);
-  }, [socket, subscriptionId]);
+  }, [subscriptionId, sendMessage]);
 
   // Get session timeline
   const getTimeline = useCallback(async () => {
@@ -449,47 +470,6 @@ export const useEventSourcing = (sessionId: string) => {
       return null;
     }
   }, [sessionId, apiCall]);
-
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data);
-
-        switch (message.type) {
-          case 'subscription_created':
-            setSubscriptionId(message.data.subscriptionId);
-            break;
-
-          case 'event_stream':
-            const newEvent = message.data.event;
-            addRealtimeEventWithMemoryManagement(newEvent);
-            
-            // Update session state if this is a session event
-            if (newEvent.eventType.startsWith('collaboration.session.') || 
-                newEvent.eventType.startsWith('collaboration.participant.')) {
-              // Trigger session reconstruction to get updated state
-              reconstructSession();
-            }
-            break;
-
-          case 'error':
-            setError(message.data.message);
-            break;
-        }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
-
-    socket.addEventListener('message', handleMessage);
-
-    return () => {
-      socket.removeEventListener('message', handleMessage);
-    };
-  }, [socket, reconstructSession]);
 
   // Initialize session reconstruction
   useEffect(() => {
