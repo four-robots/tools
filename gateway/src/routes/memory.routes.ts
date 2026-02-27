@@ -34,19 +34,19 @@ router.get('/memories', [
 ], asyncHandler(async (req: any, res: any) => {
   const memoryService: MemoryService = req.app.locals.memoryService;
   
+  // Apply pagination after retrieval
+  const page = req.query.page || 1;
+  const limit = req.query.limit || 20;
+
   const memories = await memoryService.retrieveMemory({
     userId: req.query.user_id || req.user?.id,
     projectName: req.query.project_name,
     concepts: req.query.concepts ? [].concat(req.query.concepts) : undefined,
-    limit: req.query.limit || 20,
     importance: req.query.importance,
     createdAfter: req.query.created_after,
     createdBefore: req.query.created_before
   });
-  
-  // Apply pagination
-  const page = req.query.page || 1;
-  const limit = req.query.limit || 20;
+
   const startIdx = (page - 1) * limit;
   const endIdx = startIdx + limit;
   const paginatedMemories = memories.slice(startIdx, endIdx);

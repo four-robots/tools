@@ -31,7 +31,11 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
   
   try {
-    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      res.status(500).error('CONFIG_ERROR', 'JWT_SECRET is not configured');
+      return;
+    }
     const decoded = jwt.verify(token, jwtSecret) as any;
     
     // Add user info to request

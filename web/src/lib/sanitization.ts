@@ -103,7 +103,7 @@ export function sanitizeHtml(
     
     // Clean up hooks to prevent side effects
     if (options.allowLinks) {
-      DOMPurify.removeAllHooks();
+      DOMPurify.removeHook('afterSanitizeAttributes');
     }
     
     return sanitized;

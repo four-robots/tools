@@ -146,38 +146,35 @@ export const registerTools = (server: MCPServer, kanbanService: KanbanService, w
 function createDatabaseAdapter(service: KanbanService): any {
   return {
     getBoards: () => service.getAllBoards(),
-    getBoardById: (id: number) => service.getBoardById(id),
+    getBoardById: (id: string) => service.getBoardById(id),
     getBoardBySlug: (slug: string) => service.getBoardBySlug(slug),
     createBoard: (data: any) => service.createBoard(data),
-    updateBoard: (id: number, data: any) => service.updateBoard(id, data),
-    deleteBoard: (id: number) => service.deleteBoard(id),
-    // Add more adapter methods as needed for cards, columns, etc.
-    // For now, these will throw errors until properly implemented
+    updateBoard: (id: string, data: any) => service.updateBoard(id, data),
+    deleteBoard: (id: string) => service.deleteBoard(id),
     getColumnsByBoard: () => { throw new Error('Not implemented in service yet'); },
     getCardsByColumn: () => { throw new Error('Not implemented in service yet'); },
     getCardTags: () => { throw new Error('Not implemented in service yet'); },
     createCard: (data: any) => service.createCard(data),
-    updateCard: (id: number, data: any) => service.updateCard(id, data),
-    moveCard: (id: number, data: any) => service.moveCard(id, data),
-    deleteCard: (id: number) => service.deleteCard(id),
-    getCardById: (id: number) => service.getCardById(id),
+    updateCard: (id: string, data: any) => service.updateCard(id, data),
+    moveCard: (id: string, data: any) => service.moveCard(id, data),
+    deleteCard: (id: string) => service.deleteCard(id),
+    getCardById: (id: string) => service.getCardById(id),
     getCardBySlug: (boardSlug: string, cardSlug: string) => service.getCardBySlug(boardSlug, cardSlug),
     searchCards: (query: string) => service.searchCards({ query }),
     getRecentlyUpdatedCards: () => { throw new Error('Not implemented in service yet'); },
-    getCardComments: (cardId: number) => service.getCardComments(cardId),
-    // Placeholder methods for other tools
+    getCardComments: (cardId: string) => service.getCardComments(cardId),
     createColumn: (data: any) => service.createColumn(data),
-    updateColumn: (id: number, data: any) => service.updateColumn(id, data),
-    deleteColumn: (id: number) => service.deleteColumn(id),
+    updateColumn: (id: string, data: any) => service.updateColumn(id, data),
+    deleteColumn: (id: string) => service.deleteColumn(id),
     getColumn: () => { throw new Error('Not implemented in service yet'); },
     addComment: (data: any) => service.addComment(data),
-    getComments: (cardId: number) => service.getCardComments(cardId),
-    deleteComment: (id: number) => service.deleteComment(id),
+    getComments: (cardId: string) => service.getCardComments(cardId),
+    deleteComment: (id: string) => service.deleteComment(id),
     getTags: () => service.getAllTags(),
     createTag: (data: any) => service.createTag(data),
-    addCardTag: (cardId: number, tagId: number) => service.addCardTag(cardId, tagId),
-    removeCardTag: (cardId: number, tagId: number) => service.removeCardTag(cardId, tagId),
-    
+    addCardTag: (cardId: string, tagId: string) => service.addCardTag(cardId, tagId),
+    removeCardTag: (cardId: string, tagId: string) => service.removeCardTag(cardId, tagId),
+
     // Custom Fields methods
     createCustomField: () => { throw new Error('Not implemented in service yet'); },
     updateCustomField: () => { throw new Error('Not implemented in service yet'); },
@@ -186,7 +183,7 @@ function createDatabaseAdapter(service: KanbanService): any {
     getCustomFieldsByBoard: () => { throw new Error('Not implemented in service yet'); },
     setCustomFieldValue: () => { throw new Error('Not implemented in service yet'); },
     getCustomFieldValuesByCard: () => { throw new Error('Not implemented in service yet'); },
-    
+
     // Milestones methods
     createMilestone: () => { throw new Error('Not implemented in service yet'); },
     updateMilestone: () => { throw new Error('Not implemented in service yet'); },
@@ -196,7 +193,7 @@ function createDatabaseAdapter(service: KanbanService): any {
     assignCardToMilestone: () => { throw new Error('Not implemented in service yet'); },
     unassignCardFromMilestone: () => { throw new Error('Not implemented in service yet'); },
     getMilestoneProgress: () => { throw new Error('Not implemented in service yet'); },
-    
+
     // Subtasks methods
     createSubtask: () => { throw new Error('Not implemented in service yet'); },
     updateSubtask: () => { throw new Error('Not implemented in service yet'); },
@@ -204,7 +201,7 @@ function createDatabaseAdapter(service: KanbanService): any {
     getSubtaskById: () => { throw new Error('Not implemented in service yet'); },
     getSubtasksByCard: () => { throw new Error('Not implemented in service yet'); },
     getSubtaskProgress: () => { throw new Error('Not implemented in service yet'); },
-    
+
     // Card Links methods
     createCardLink: () => { throw new Error('Not implemented in service yet'); },
     updateCardLink: () => { throw new Error('Not implemented in service yet'); },
@@ -215,16 +212,16 @@ function createDatabaseAdapter(service: KanbanService): any {
     getLinkedCards: () => { throw new Error('Not implemented in service yet'); },
     getBlockingCards: () => { throw new Error('Not implemented in service yet'); },
     getCardDependencies: () => { throw new Error('Not implemented in service yet'); },
-    
+
     // Time Tracking methods
     createTimeEntry: (data: any) => service.createTimeEntry(data),
-    updateTimeEntry: (id: number, data: any) => service.updateTimeEntry(id, data),
-    deleteTimeEntry: (id: number) => service.deleteTimeEntry(id),
-    getTimeEntryById: (id: number) => service.getTimeEntryById(id),
-    getTimeEntriesByCard: (cardId: number) => service.getTimeEntriesByCard(cardId),
-    getActiveTimeEntry: (cardId?: number) => service.getActiveTimeEntry(cardId),
+    updateTimeEntry: (id: string, data: any) => service.updateTimeEntry(id, data),
+    deleteTimeEntry: (id: string) => service.deleteTimeEntry(id),
+    getTimeEntryById: (id: string) => service.getTimeEntryById(id),
+    getTimeEntriesByCard: (cardId: string) => service.getTimeEntriesByCard(cardId),
+    getActiveTimeEntry: (cardId?: string) => service.getActiveTimeEntry(cardId),
     getActiveTimeEntries: () => service.getActiveTimeEntries(),
-    updateCardActualHours: (cardId: number) => service.updateCardActualHours(cardId),
-    getTimeReport: (cardId?: number, startDate?: string, endDate?: string) => service.getTimeReport(cardId, startDate, endDate),
+    updateCardActualHours: (cardId: string) => service.updateCardActualHours(cardId),
+    getTimeReport: (cardId?: string, startDate?: string, endDate?: string) => service.getTimeReport(cardId, startDate, endDate),
   };
 }

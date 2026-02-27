@@ -24,8 +24,6 @@ export function errorHandler(
     stack: error.stack,
     url: req.url,
     method: req.method,
-    body: req.body,
-    query: req.query,
     params: req.params
   });
   

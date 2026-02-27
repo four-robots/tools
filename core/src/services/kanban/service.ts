@@ -608,7 +608,7 @@ export class KanbanService {
     let query = this.database.kysely
       .selectFrom('cards')
       .selectAll()
-      .where('title', 'like', `%${input.query}%`);
+      .where('title', 'like', `%${input.query.replace(/[%_]/g, '\\$&')}%`);
 
     if (input.board_id) {
       query = query.where('board_id', '=', input.board_id);
@@ -1035,9 +1035,9 @@ export class KanbanService {
     const result = await this.database.kysely
       .deleteFrom('time_entries')
       .where('id', '=', id)
-      .execute();
+      .executeTakeFirst();
 
-    return result.length > 0;
+    return (result?.numDeletedRows ?? 0n) > 0n;
   }
 
   async getTimeEntryById(id: string): Promise<TimeEntry | null> {

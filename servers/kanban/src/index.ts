@@ -85,12 +85,12 @@ async function createKanbanServer() {
     mimeType: 'application/json',
   }, async (uri: any) => {
     const uriString = typeof uri === 'string' ? uri : uri.toString();
-    const match = uriString.match(/kanban:\/\/board\/(\d+)/);
+    const match = uriString.match(/kanban:\/\/board\/([a-f0-9-]+)/i);
     if (!match) {
       throw new Error('Invalid board URI format');
     }
 
-    const boardId = parseInt(match[1]);
+    const boardId = match[1];
     const board = await kanbanService.getBoardById(boardId);
     if (!board) {
       throw new Error(`Board ${boardId} not found`);
@@ -130,12 +130,12 @@ async function createKanbanServer() {
     mimeType: 'application/json',
   }, async (uri: any) => {
     const uriString = typeof uri === 'string' ? uri : uri.toString();
-    const match = uriString.match(/kanban:\/\/card\/(\d+)/);
+    const match = uriString.match(/kanban:\/\/card\/([a-f0-9-]+)/i);
     if (!match) {
       throw new Error('Invalid card URI format');
     }
 
-    const cardId = parseInt(match[1]);
+    const cardId = match[1];
     const cardData = await kanbanService.getCardById(cardId);
     if (!cardData) {
       throw new Error(`Card ${cardId} not found`);
@@ -180,7 +180,16 @@ async function createKanbanServer() {
     description: 'Recent changes and activities across all boards',
     mimeType: 'application/json',
   }, async () => {
-    const activityData = await kanbanService.getBoardActivity(0, 50); // Get activity for all boards
+    // Fetch recent activity across all boards
+    const boards = await kanbanService.getAllBoards();
+    const allActivity: any[] = [];
+    for (const board of boards.slice(0, 5)) {
+      const activity = await kanbanService.getBoardActivity(board.id, 10);
+      allActivity.push(...activity);
+    }
+    const activityData = allActivity
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 50);
 
     return {
       contents: [{
@@ -385,6 +394,4 @@ async function main() {
     process.exit(1);
   }
 }
-console.log(import.meta.url)
-
 main();
