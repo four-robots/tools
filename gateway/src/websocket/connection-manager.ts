@@ -504,7 +504,9 @@ export class WebSocketConnectionManager {
       try {
         // Check if socket is still connected
         if (!connection.socket.connected) {
-          this.unregisterConnection(connectionId, 'HEARTBEAT_DEAD');
+          this.unregisterConnection(connectionId, 'HEARTBEAT_DEAD').catch(err => {
+            this.logger.error('Failed to unregister dead connection', { connectionId, error: err instanceof Error ? err.message : String(err) });
+          });
           deadConnections++;
         } else {
           // Send ping if needed (Socket.IO handles this automatically)
@@ -515,7 +517,9 @@ export class WebSocketConnectionManager {
           connectionId,
           error: error instanceof Error ? error.message : String(error),
         });
-        this.unregisterConnection(connectionId, 'HEARTBEAT_ERROR');
+        this.unregisterConnection(connectionId, 'HEARTBEAT_ERROR').catch(err => {
+          this.logger.error('Failed to unregister errored connection', { connectionId, error: err instanceof Error ? err.message : String(err) });
+        });
         deadConnections++;
       }
     }

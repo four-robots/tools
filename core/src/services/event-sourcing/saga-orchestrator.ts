@@ -236,30 +236,30 @@ export class SagaOrchestrator {
     // Check database
     try {
       const client = await this.pool.connect();
-      
-      const result = await client.query(`
-        SELECT id, saga_type, saga_data, status, created_at, updated_at, completed_at
-        FROM saga_instances
-        WHERE id = $1
-      `, [sagaId]);
+      try {
+        const result = await client.query(`
+          SELECT id, saga_type, saga_data, status, created_at, updated_at, completed_at
+          FROM saga_instances
+          WHERE id = $1
+        `, [sagaId]);
 
-      client.release();
+        if (result.rows.length === 0) {
+          return null;
+        }
 
-      if (result.rows.length === 0) {
-        return null;
+        const row = result.rows[0];
+        return {
+          id: row.id,
+          sagaType: row.saga_type,
+          sagaData: JSON.parse(row.saga_data),
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          completedAt: row.completed_at
+        };
+      } finally {
+        client.release();
       }
-
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        sagaType: row.saga_type,
-        sagaData: JSON.parse(row.saga_data),
-        status: row.status,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        completedAt: row.completed_at
-      };
-
     } catch (error) {
       logger.error(`Failed to get saga ${sagaId}`, {
         sagaId,
@@ -593,26 +593,29 @@ export class SagaOrchestrator {
   private async cleanupCompletedSagas(): Promise<void> {
     try {
       const client = await this.pool.connect();
-      
-      // Remove sagas completed more than 7 days ago
-      const cleanupDate = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
-      
-      const result = await client.query(`
-        DELETE FROM saga_instances 
-        WHERE status IN ('completed', 'failed', 'cancelled') 
-        AND completed_at < $1
-        RETURNING saga_type, count(*)
-      `, [cleanupDate]);
+      try {
+        // Remove sagas completed more than 7 days ago
+        const cleanupDate = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
 
-      client.release();
+        const result = await client.query(`
+          WITH deleted AS (
+            DELETE FROM saga_instances
+            WHERE status IN ('completed', 'failed', 'cancelled')
+            AND completed_at < $1
+            RETURNING saga_type
+          )
+          SELECT saga_type, count(*)::int as count FROM deleted GROUP BY saga_type
+        `, [cleanupDate]);
 
-      if (result.rows.length > 0) {
-        logger.info('Cleaned up completed sagas', {
-          removedSagas: result.rows.length,
-          cleanupDate
-        });
+        if (result.rows.length > 0) {
+          logger.info('Cleaned up completed sagas', {
+            removedSagas: result.rows.length,
+            cleanupDate
+          });
+        }
+      } finally {
+        client.release();
       }
-
     } catch (error) {
       logger.error('Failed to cleanup completed sagas', { error: error.message });
     }
