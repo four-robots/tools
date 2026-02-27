@@ -60,7 +60,7 @@ function validateAndSanitizeDashboardData(data: any): any {
   
   // Validate refresh interval bounds
   if (sanitized.refreshIntervalSeconds) {
-    sanitized.refreshIntervalSeconds = Math.max(5, Math.min(3600, parseInt(sanitized.refreshIntervalSeconds)));
+    sanitized.refreshIntervalSeconds = Math.max(5, Math.min(3600, parseInt(sanitized.refreshIntervalSeconds) || 60));
   }
   
   // Sanitize shared user arrays
@@ -996,11 +996,14 @@ router.post('/alerts/:id/acknowledge',
     try {
       const { id: alertId } = req.params;
       const { notes } = req.body;
-      const userId = req.user?.id!;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
       const tenantId = req.user?.tenantId;
-      
+
       const { alertManager } = getAnalyticsServices(tenantId);
-      
+
       await alertManager.acknowledgeAlert(alertId, userId, notes);
       
       logger.info('Alert acknowledged', { alertId, userId });
@@ -1040,11 +1043,14 @@ router.post('/alerts/:id/resolve',
     try {
       const { id: alertId } = req.params;
       const { resolution } = req.body;
-      const userId = req.user?.id!;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
       const tenantId = req.user?.tenantId;
-      
+
       const { alertManager } = getAnalyticsServices(tenantId);
-      
+
       await alertManager.resolveAlert(alertId, userId, resolution);
       
       logger.info('Alert resolved', { alertId, userId, resolution });

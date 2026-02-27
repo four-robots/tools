@@ -53,6 +53,7 @@ export class SecurityMonitoringMiddleware {
   private rateLimitCache = new Map<string, RateLimitEntry>();
   private securityEventBuffer: SecurityEvent[] = [];
   private bufferFlushInterval: NodeJS.Timeout;
+  private rateLimitCleanupInterval: NodeJS.Timeout;
 
   constructor() {
     this.db = new DatabasePool();
@@ -63,7 +64,7 @@ export class SecurityMonitoringMiddleware {
     }, 30000);
 
     // Clean up rate limit cache every 5 minutes
-    setInterval(() => {
+    this.rateLimitCleanupInterval = setInterval(() => {
       this.cleanupRateLimitCache();
     }, 300000);
   }
@@ -471,6 +472,9 @@ export class SecurityMonitoringMiddleware {
   destroy(): void {
     if (this.bufferFlushInterval) {
       clearInterval(this.bufferFlushInterval);
+    }
+    if (this.rateLimitCleanupInterval) {
+      clearInterval(this.rateLimitCleanupInterval);
     }
     this.flushSecurityEventBuffer();
   }

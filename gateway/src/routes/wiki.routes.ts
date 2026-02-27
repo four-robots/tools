@@ -168,21 +168,31 @@ router.put('/pages/:id', [
 ], asyncHandler(async (req: any, res: any) => {
   const mcpService: MCPClientService = req.app.locals.mcpService;
   
+  const { title, content, summary, tags, published } = req.body;
+
   const result = await mcpService.callTool('wiki', {
     name: 'update_page',
     arguments: {
       pageId: req.params.id.replace('page_', ''),
-      ...req.body
+      title,
+      content,
+      summary,
+      tags,
+      published
     }
   });
-  
+
   if (result.isError) {
     return res.status(404).error('NOT_FOUND', 'Wiki page not found');
   }
-  
+
   res.success({
     id: req.params.id,
-    ...req.body,
+    title,
+    content,
+    summary,
+    tags,
+    published,
     updated_at: new Date().toISOString(),
     version: 2
   });
