@@ -83,7 +83,7 @@ router.post('/', [
 ], asyncHandler(async (req: any, res: any) => {
   const startTime = Date.now();
   const searchRequest = req.body;
-  const userId = req.headers['user-id'] as string;
+  const userId = req.user?.id || req.headers['user-id'] as string;
   const sessionId = req.headers['session-id'] as string;
   
   console.log(`🔍 Search request received: "${searchRequest.query}" from user ${userId}`);
@@ -244,7 +244,7 @@ router.get('/analytics', [
       try {
         cacheStats = searchService.getCacheStats();
       } catch (error) {
-        console.warn('⚠️ Cache stats not available:', error.message);
+        console.warn('⚠️ Cache stats not available:', error instanceof Error ? error.message : String(error));
       }
     }
     

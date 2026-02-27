@@ -784,7 +784,9 @@ export function createCollaborationRoutes(
    */
   router.get('/admin/stats', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Note: In production, you'd want to check for admin permissions here
+      // TODO: Add admin role check when role system is implemented
+      // For now, log access for audit
+      logger.info('Admin stats accessed', { userId: req.user!.id });
       
       const [
         connectionStats,
@@ -821,7 +823,9 @@ export function createCollaborationRoutes(
    */
   router.post('/admin/cleanup', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Note: In production, you'd want to check for admin permissions here
+      // TODO: Add admin role check when role system is implemented
+      // For now, log access for audit
+      logger.info('Admin cleanup triggered', { userId: req.user!.id });
 
       const [
         stalePresenceCleanup,

@@ -290,13 +290,11 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     try {
       const subscriptions = eventStreamService.getActiveSubscriptions();
       
-      // Filter subscriptions to only show user's own (unless admin)
-      const filteredSubscriptions = req.user?.isAdmin 
-        ? subscriptions 
-        : subscriptions.filter(sub => {
-            // This would need proper client-user mapping in a real implementation
-            return true; // For now, show all
-          });
+      // Filter subscriptions to only show user's own
+      const userId = req.user?.id;
+      const filteredSubscriptions = subscriptions.filter(sub => {
+        return (sub as any).userId === userId || (sub as any).clientId === userId;
+      });
 
       res.json({
         success: true,

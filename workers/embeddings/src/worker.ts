@@ -27,6 +27,8 @@ export class EmbeddingsWorker {
   private config: EmbeddingsWorkerConfig;
   private jsonCodec = JSONCodec();
   
+  private healthCheckInterval?: ReturnType<typeof setInterval>;
+
   // Statistics
   private stats = {
     totalRequests: 0,
@@ -309,7 +311,7 @@ export class EmbeddingsWorker {
   }
 
   private setupHealthCheck(): void {
-    setInterval(async () => {
+    this.healthCheckInterval = setInterval(async () => {
       if (this.natsConnection) {
         // Test embedding provider periodically
         try {
@@ -335,12 +337,17 @@ export class EmbeddingsWorker {
       this.logger.info(`Received ${signal}, shutting down gracefully...`);
       
       try {
+        // Stop health check timer
+        if (this.healthCheckInterval) {
+          clearInterval(this.healthCheckInterval);
+        }
+
         // Stop accepting new work
         if (this.natsConnection) {
           await this.natsConnection.drain();
           await this.natsConnection.close();
         }
-        
+
         // Clear any caches
         if ('clearCache' in this.embeddingProvider) {
           (this.embeddingProvider as any).clearCache();
