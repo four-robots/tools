@@ -517,7 +517,7 @@ export class WikiService {
         title: page.title,
         slug: page.slug,
         summary: page.summary,
-        link_count: Number(page.link_count),
+        link_count: Number(page.link_count) || 0,
         updated_at: page.updated_at,
       })),
     };
