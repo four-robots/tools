@@ -219,7 +219,7 @@ async function main() {
       }
       
       const concepts = await database.getMemoryConcepts(memoryId);
-      const memory = memoryService['convertToMemoryNode'](memoryRecord, concepts.map(c => ({
+      const memory = memoryService.convertToMemoryNode(memoryRecord, concepts.map(c => ({
         id: c.id,
         name: c.name,
         description: c.description || undefined,

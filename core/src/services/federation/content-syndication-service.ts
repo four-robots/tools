@@ -16,6 +16,7 @@ import {
   validateSyndicatedContent
 } from '../../shared/types/federation.js';
 import crypto from 'crypto';
+import { sql } from 'kysely';
 
 interface SyndicationTarget {
   node_id: string;
@@ -132,7 +133,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to create syndication rule:', error);
-      throw new Error(`Failed to create syndication rule: ${error.message}`);
+      throw new Error(`Failed to create syndication rule: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -211,7 +212,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to update syndication rule:', error);
-      throw new Error(`Failed to update syndication rule: ${error.message}`);
+      throw new Error(`Failed to update syndication rule: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -307,7 +308,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to syndicate content:', error);
-      throw new Error(`Failed to syndicate content: ${error.message}`);
+      throw new Error(`Failed to syndicate content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -365,7 +366,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to handle content change:', error);
-      throw new Error(`Failed to handle content change: ${error.message}`);
+      throw new Error(`Failed to handle content change: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -466,7 +467,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to resolve conflict:', error);
-      throw new Error(`Failed to resolve conflict: ${error.message}`);
+      throw new Error(`Failed to resolve conflict: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -701,10 +702,7 @@ export class ContentSyndicationService {
           .set({
             sync_status: 'failed',
             last_sync_attempt: new Date().toISOString(),
-            sync_error_count: this.db.db
-              .selectFrom('syndicated_content')
-              .select((eb) => eb('sync_error_count', '+', 1))
-              .where('id', '=', syndicatedContentId),
+            sync_error_count: sql`sync_error_count + 1`,
             last_sync_error: syncError.message
           })
           .where('id', '=', syndicatedContentId)
@@ -746,10 +744,7 @@ export class ContentSyndicationService {
         content_metadata: JSON.stringify(metadata),
         change_detection_hash: contentHash,
         sync_status: 'pending',
-        version_number: this.db.db
-          .selectFrom('syndicated_content')
-          .select((eb) => eb('version_number', '+', 1))
-          .where('id', '=', syndicatedContentId),
+        version_number: sql`version_number + 1`,
         updated_at: new Date().toISOString()
       })
       .where('id', '=', syndicatedContentId)
@@ -850,7 +845,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to get syndicated content:', error);
-      throw new Error(`Failed to get syndicated content: ${error.message}`);
+      throw new Error(`Failed to get syndicated content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -909,7 +904,7 @@ export class ContentSyndicationService {
 
     } catch (error) {
       logger.error('Failed to get syndication statistics:', error);
-      throw new Error(`Failed to get syndication statistics: ${error.message}`);
+      throw new Error(`Failed to get syndication statistics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
