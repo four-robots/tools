@@ -384,15 +384,8 @@ export function useWebSocketSubscription(
       if (message.type === messageType) {
         handler(message.payload);
       }
-      config?.onOpen?.()
     },
   });
-
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === messageType) {
-      handler(lastMessage.payload);
-    }
-  }, [lastMessage, messageType, handler]);
 
   return websocket;
 }

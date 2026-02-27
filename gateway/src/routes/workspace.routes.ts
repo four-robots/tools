@@ -50,6 +50,17 @@ const getUserContext = (req: any) => {
   };
 };
 
+// Input sanitization helper - strips HTML tags and trims
+const sanitizeInput = (input: string): string => {
+  if (!input || typeof input !== 'string') return '';
+  return input.replace(/<[^>]*>/g, '').trim();
+};
+
+// UUID validation helper
+const isValidUUID = (value: string): boolean => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+};
+
 // ==================== WORKSPACE MANAGEMENT ====================
 
 // GET /api/workspace - List user's workspaces
@@ -688,6 +699,29 @@ router.post('/templates', [
   res.status(201).success(template);
 }));
 
+// GET /api/workspace/templates/categories - Get template categories
+// NOTE: Must be registered before /templates/:id to avoid matching 'categories' as :id
+router.get('/templates/categories', asyncHandler(async (req: any, res: any) => {
+  const templateService: WorkspaceTemplateService = req.app.locals.workspaceTemplateService;
+
+  const categories = await templateService.getCategories();
+
+  res.success(categories);
+}));
+
+// GET /api/workspace/templates/tags - Get popular template tags
+// NOTE: Must be registered before /templates/:id to avoid matching 'tags' as :id
+router.get('/templates/tags', [
+  query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
+  validateRequest
+], asyncHandler(async (req: any, res: any) => {
+  const templateService: WorkspaceTemplateService = req.app.locals.workspaceTemplateService;
+
+  const tags = await templateService.getPopularTags(req.query.limit || 20);
+
+  res.success(tags);
+}));
+
 // GET /api/workspace/templates/:id - Get template by ID
 router.get('/templates/:id', [
   param('id').notEmpty().isUUID(),
@@ -767,27 +801,6 @@ router.post('/templates/:id/rate', [
   await templateService.rateTemplate(req.params.id, userId, req.body.rating);
 
   res.status(204).send();
-}));
-
-// GET /api/workspace/templates/categories - Get template categories
-router.get('/templates/categories', asyncHandler(async (req: any, res: any) => {
-  const templateService: WorkspaceTemplateService = req.app.locals.workspaceTemplateService;
-
-  const categories = await templateService.getCategories();
-
-  res.success(categories);
-}));
-
-// GET /api/workspace/templates/tags - Get popular template tags
-router.get('/templates/tags', [
-  query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
-  validateRequest
-], asyncHandler(async (req: any, res: any) => {
-  const templateService: WorkspaceTemplateService = req.app.locals.workspaceTemplateService;
-
-  const tags = await templateService.getPopularTags(req.query.limit || 20);
-
-  res.success(tags);
 }));
 
 // ==================== INTEGRATIONS ====================

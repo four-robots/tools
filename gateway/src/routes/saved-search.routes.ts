@@ -1,9 +1,9 @@
 /**
  * Saved Search Management API Routes
- * 
+ *
  * REST API endpoints for comprehensive saved search management including:
  * - Search CRUD operations
- * - Collection/folder organization  
+ * - Collection/folder organization
  * - Scheduling and automation
  * - Sharing and collaboration
  * - Version history management
@@ -135,14 +135,14 @@ router.post('/', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const savedSearch = await savedSearchService.saveSearch(req.body, userId);
-    
+
     console.log(`💾 Search saved: "${savedSearch.name}" by user ${userId}`);
-    
+
     res.success({
       search: savedSearch,
       message: 'Search saved successfully'
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to save search:', error);
     res.status(500).error(
@@ -165,9 +165,9 @@ router.get('/', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const paginatedResults = await savedSearchService.getUserSearches(userId, req.query);
-    
+
     res.success(paginatedResults);
-    
+
   } catch (error) {
     console.error('❌ Failed to list saved searches:', error);
     res.status(500).error(
@@ -178,179 +178,8 @@ router.get('/', [
   }
 }));
 
-/**
- * GET /api/v1/saved-searches/:id - Get a specific saved search
- */
-router.get('/:id', [
-  standardRateLimit,
-  validateRequest(UuidParamSchema, 'params')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    const savedSearch = await savedSearchService.getSearchById(id, userId);
-    
-    res.success({ search: savedSearch });
-    
-  } catch (error) {
-    console.error('❌ Failed to get saved search:', error);
-    
-    if (isSavedSearchError(error)) {
-      const errorResponse = formatErrorResponse(error);
-      return res.status(errorResponse.statusCode).error(
-        errorResponse.code,
-        errorResponse.message,
-        errorResponse.details
-      );
-    }
-    
-    res.status(500).error(
-      'GET_FAILED',
-      'Failed to retrieve saved search',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * PUT /api/v1/saved-searches/:id - Update a saved search
- */
-router.put('/:id', [
-  standardRateLimit,
-  validateRequest(UuidParamSchema, 'params'),
-  validateRequest(UpdateSearchRequestSchema, 'body')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    const updatedSearch = await savedSearchService.updateSearch(id, req.body, userId);
-    
-    console.log(`📝 Search updated: "${updatedSearch.name}" by user ${userId}`);
-    
-    res.success({
-      search: updatedSearch,
-      message: 'Search updated successfully'
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to update saved search:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to edit this search');
-    }
-    
-    if (error instanceof Error && error.message === 'Search not found') {
-      return res.status(404).error('NOT_FOUND', 'Saved search not found');
-    }
-    
-    res.status(500).error(
-      'UPDATE_FAILED',
-      'Failed to update saved search',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * DELETE /api/v1/saved-searches/:id - Delete a saved search
- */
-router.delete('/:id', [
-  standardRateLimit,
-  validateRequest(UuidParamSchema, 'params')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    await savedSearchService.deleteSearch(id, userId);
-    
-    console.log(`🗑️ Search deleted: ${id} by user ${userId}`);
-    
-    res.success({ message: 'Search deleted successfully' });
-    
-  } catch (error) {
-    console.error('❌ Failed to delete saved search:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to delete this search');
-    }
-    
-    if (error instanceof Error && error.message === 'Search not found') {
-      return res.status(404).error('NOT_FOUND', 'Saved search not found');
-    }
-    
-    res.status(500).error(
-      'DELETE_FAILED',
-      'Failed to delete saved search',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * POST /api/v1/saved-searches/:id/execute - Execute a saved search
- */
-router.post('/:id/execute', [
-  standardRateLimit,
-  validateRequest(UuidParamSchema, 'params')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    const results = await savedSearchService.executeSearch(id, userId);
-    
-    console.log(`🔍 Search executed: ${id} by user ${userId}`);
-    
-    res.success({
-      results,
-      executed_at: new Date().toISOString(),
-      message: 'Search executed successfully'
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to execute saved search:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to execute this search');
-    }
-    
-    if (error instanceof Error && error.message === 'Search not found') {
-      return res.status(404).error('NOT_FOUND', 'Saved search not found');
-    }
-    
-    res.status(500).error(
-      'EXECUTE_FAILED',
-      'Failed to execute saved search',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
 // ============================================================================
-// COLLECTION MANAGEMENT ROUTES
+// COLLECTION MANAGEMENT ROUTES (static paths - must be before /:id)
 // ============================================================================
 
 /**
@@ -364,9 +193,9 @@ router.get('/collections', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const collections = await savedSearchService.getCollections(userId);
-    
+
     res.success({ collections });
-    
+
   } catch (error) {
     console.error('❌ Failed to get collections:', error);
     res.status(500).error(
@@ -389,14 +218,14 @@ router.post('/collections', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const collection = await savedSearchService.createCollection(req.body, userId);
-    
+
     console.log(`📁 Collection created: "${collection.name}" by user ${userId}`);
-    
+
     res.success({
       collection,
       message: 'Collection created successfully'
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to create collection:', error);
     res.status(500).error(
@@ -407,86 +236,8 @@ router.post('/collections', [
   }
 }));
 
-/**
- * POST /api/v1/saved-searches/:searchId/add-to-collection - Add search to collection
- */
-router.post('/:searchId/add-to-collection', [
-  standardRateLimit,
-  validateRequest(SearchIdParamSchema, 'params'),
-  validateRequest(z.object({ collectionId: z.string().uuid() }), 'body')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { searchId } = req.params;
-  const { collectionId } = req.body;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    await savedSearchService.addToCollection(searchId, collectionId, userId);
-    
-    console.log(`📁 Search ${searchId} added to collection ${collectionId} by user ${userId}`);
-    
-    res.success({ message: 'Search added to collection successfully' });
-    
-  } catch (error) {
-    console.error('❌ Failed to add search to collection:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this search or collection');
-    }
-    
-    res.status(500).error(
-      'ADD_TO_COLLECTION_FAILED',
-      'Failed to add search to collection',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * POST /api/v1/saved-searches/:searchId/remove-from-collection - Remove search from collection
- */
-router.post('/:searchId/remove-from-collection', [
-  standardRateLimit,
-  validateRequest(SearchIdParamSchema, 'params'),
-  validateRequest(z.object({ collectionId: z.string().uuid() }), 'body')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { searchId } = req.params;
-  const { collectionId } = req.body;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const savedSearchService = new SavedSearchService(req.app.locals.db);
-    await savedSearchService.removeFromCollection(searchId, collectionId, userId);
-    
-    console.log(`📁 Search ${searchId} removed from collection ${collectionId} by user ${userId}`);
-    
-    res.success({ message: 'Search removed from collection successfully' });
-    
-  } catch (error) {
-    console.error('❌ Failed to remove search from collection:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this search or collection');
-    }
-    
-    res.status(500).error(
-      'REMOVE_FROM_COLLECTION_FAILED',
-      'Failed to remove search from collection',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
 // ============================================================================
-// SCHEDULING ROUTES
+// SCHEDULING ROUTES (static paths - must be before /:id)
 // ============================================================================
 
 /**
@@ -500,59 +251,14 @@ router.get('/schedules', [
   try {
     const schedulerService = new SearchSchedulerService(req.app.locals.db);
     const scheduledSearches = await schedulerService.getScheduledSearches(userId);
-    
+
     res.success({ scheduled_searches: scheduledSearches });
-    
+
   } catch (error) {
     console.error('❌ Failed to get scheduled searches:', error);
     res.status(500).error(
       'SCHEDULES_FAILED',
       'Failed to retrieve scheduled searches',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * POST /api/v1/saved-searches/:id/schedule - Schedule a search
- */
-router.post('/:id/schedule', [
-  schedulingRateLimit,
-  validateRequest(UuidParamSchema, 'params'),
-  validateRequest(ScheduleUpdateSchema.required(), 'body')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const schedulerService = new SearchSchedulerService(req.app.locals.db);
-    const scheduledSearch = await schedulerService.scheduleSearch(id, req.body, userId);
-    
-    console.log(`⏰ Search scheduled: ${id} by user ${userId}`);
-    
-    res.success({
-      scheduled_search: scheduledSearch,
-      message: 'Search scheduled successfully'
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to schedule search:', error);
-    
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to schedule this search');
-    }
-    
-    if (error instanceof Error && error.message === 'Search not found') {
-      return res.status(404).error('NOT_FOUND', 'Saved search not found');
-    }
-    
-    res.status(500).error(
-      'SCHEDULE_FAILED',
-      'Failed to schedule search',
       { error_type: error?.constructor?.name || 'Unknown' }
     );
   }
@@ -568,7 +274,7 @@ router.put('/schedules/:id', [
 ], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
   const userId = req.user.id;
   const { id } = req.params;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -576,25 +282,25 @@ router.put('/schedules/:id', [
   try {
     const schedulerService = new SearchSchedulerService(req.app.locals.db);
     const updatedSchedule = await schedulerService.updateSchedule(id, req.body, userId);
-    
+
     console.log(`⏰ Schedule updated: ${id} by user ${userId}`);
-    
+
     res.success({
       scheduled_search: updatedSchedule,
       message: 'Schedule updated successfully'
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to update schedule:', error);
-    
+
     if (error instanceof Error && error.message === 'Access denied') {
       return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this schedule');
     }
-    
+
     if (error instanceof Error && error.message === 'Schedule not found') {
       return res.status(404).error('NOT_FOUND', 'Schedule not found');
     }
-    
+
     res.status(500).error(
       'UPDATE_SCHEDULE_FAILED',
       'Failed to update schedule',
@@ -612,7 +318,7 @@ router.delete('/schedules/:id', [
 ], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
   const userId = req.user.id;
   const { id } = req.params;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -620,22 +326,22 @@ router.delete('/schedules/:id', [
   try {
     const schedulerService = new SearchSchedulerService(req.app.locals.db);
     await schedulerService.deleteSchedule(id, userId);
-    
+
     console.log(`🗑️ Schedule deleted: ${id} by user ${userId}`);
-    
+
     res.success({ message: 'Schedule deleted successfully' });
-    
+
   } catch (error) {
     console.error('❌ Failed to delete schedule:', error);
-    
+
     if (error instanceof Error && error.message === 'Access denied') {
       return res.status(403).error('ACCESS_DENIED', 'You do not have permission to delete this schedule');
     }
-    
+
     if (error instanceof Error && error.message === 'Schedule not found') {
       return res.status(404).error('NOT_FOUND', 'Schedule not found');
     }
-    
+
     res.status(500).error(
       'DELETE_SCHEDULE_FAILED',
       'Failed to delete schedule',
@@ -645,49 +351,8 @@ router.delete('/schedules/:id', [
 }));
 
 // ============================================================================
-// SHARING ROUTES
+// SHARING ROUTES (static paths - must be before /:id)
 // ============================================================================
-
-/**
- * POST /api/v1/saved-searches/:id/share - Share a search
- */
-router.post('/:id/share', [
-  standardRateLimit,
-  validateRequest(UuidParamSchema, 'params'),
-  validateRequest(SearchSharingConfigSchema, 'body')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const sharingService = new SearchSharingService(req.app.locals.db);
-    const shares = await sharingService.shareSearch(id, req.body, userId);
-    
-    console.log(`🔗 Search shared: ${id} by user ${userId}`);
-    
-    res.success({
-      shares,
-      message: 'Search shared successfully'
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to share search:', error);
-    
-    if (error instanceof Error && error.message.includes('permission')) {
-      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to share this search');
-    }
-    
-    res.status(500).error(
-      'SHARE_FAILED',
-      'Failed to share search',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
 
 /**
  * GET /api/v1/saved-searches/shared - Get searches shared with user
@@ -700,9 +365,9 @@ router.get('/shared', [
   try {
     const sharingService = new SearchSharingService(req.app.locals.db);
     const sharedSearches = await sharingService.getSharedSearches(userId);
-    
+
     res.success({ shared_searches: sharedSearches });
-    
+
   } catch (error) {
     console.error('❌ Failed to get shared searches:', error);
     res.status(500).error(
@@ -722,7 +387,7 @@ router.delete('/shares/:id', [
 ], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
   const userId = req.user.id;
   const { id } = req.params;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -730,25 +395,403 @@ router.delete('/shares/:id', [
   try {
     const sharingService = new SearchSharingService(req.app.locals.db);
     await sharingService.revokeShare(id, userId);
-    
+
     console.log(`🚫 Share revoked: ${id} by user ${userId}`);
-    
+
     res.success({ message: 'Share revoked successfully' });
-    
+
   } catch (error) {
     console.error('❌ Failed to revoke share:', error);
-    
+
     if (error instanceof Error && error.message.includes('permission')) {
       return res.status(403).error('ACCESS_DENIED', 'You do not have permission to revoke this share');
     }
-    
+
     if (error instanceof Error && error.message === 'Share not found') {
       return res.status(404).error('NOT_FOUND', 'Share not found');
     }
-    
+
     res.status(500).error(
       'REVOKE_SHARE_FAILED',
       'Failed to revoke share',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+// ============================================================================
+// ANALYTICS ROUTES (static paths - must be before /:id)
+// ============================================================================
+
+/**
+ * GET /api/v1/saved-searches/user-stats - Get user search statistics
+ */
+router.get('/user-stats', [
+  standardRateLimit,
+  validateRequest(AnalyticsQuerySchema, 'query')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { timeRange } = req.query as any;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const analyticsService = new SearchAnalyticsService(req.app.locals.db);
+    const stats = await analyticsService.getUserSearchStats(userId, timeRange);
+
+    res.success({
+      user_stats: stats,
+      user_id: userId,
+      generated_at: new Date().toISOString(),
+      time_range: timeRange
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get user stats:', error);
+    res.status(500).error(
+      'USER_STATS_FAILED',
+      'Failed to retrieve user statistics',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+// ============================================================================
+// PARAMETERIZED ROUTES (/:id and sub-paths - must come after all static routes)
+// ============================================================================
+
+/**
+ * GET /api/v1/saved-searches/:id - Get a specific saved search
+ */
+router.get('/:id', [
+  standardRateLimit,
+  validateRequest(UuidParamSchema, 'params')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    const savedSearch = await savedSearchService.getSearchById(id, userId);
+
+    res.success({ search: savedSearch });
+
+  } catch (error) {
+    console.error('❌ Failed to get saved search:', error);
+
+    if (isSavedSearchError(error)) {
+      const errorResponse = formatErrorResponse(error);
+      return res.status(errorResponse.statusCode).error(
+        errorResponse.code,
+        errorResponse.message,
+        errorResponse.details
+      );
+    }
+
+    res.status(500).error(
+      'GET_FAILED',
+      'Failed to retrieve saved search',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * PUT /api/v1/saved-searches/:id - Update a saved search
+ */
+router.put('/:id', [
+  standardRateLimit,
+  validateRequest(UuidParamSchema, 'params'),
+  validateRequest(UpdateSearchRequestSchema, 'body')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    const updatedSearch = await savedSearchService.updateSearch(id, req.body, userId);
+
+    console.log(`📝 Search updated: "${updatedSearch.name}" by user ${userId}`);
+
+    res.success({
+      search: updatedSearch,
+      message: 'Search updated successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to update saved search:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to edit this search');
+    }
+
+    if (error instanceof Error && error.message === 'Search not found') {
+      return res.status(404).error('NOT_FOUND', 'Saved search not found');
+    }
+
+    res.status(500).error(
+      'UPDATE_FAILED',
+      'Failed to update saved search',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * DELETE /api/v1/saved-searches/:id - Delete a saved search
+ */
+router.delete('/:id', [
+  standardRateLimit,
+  validateRequest(UuidParamSchema, 'params')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    await savedSearchService.deleteSearch(id, userId);
+
+    console.log(`🗑️ Search deleted: ${id} by user ${userId}`);
+
+    res.success({ message: 'Search deleted successfully' });
+
+  } catch (error) {
+    console.error('❌ Failed to delete saved search:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to delete this search');
+    }
+
+    if (error instanceof Error && error.message === 'Search not found') {
+      return res.status(404).error('NOT_FOUND', 'Saved search not found');
+    }
+
+    res.status(500).error(
+      'DELETE_FAILED',
+      'Failed to delete saved search',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/saved-searches/:id/execute - Execute a saved search
+ */
+router.post('/:id/execute', [
+  standardRateLimit,
+  validateRequest(UuidParamSchema, 'params')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    const results = await savedSearchService.executeSearch(id, userId);
+
+    console.log(`🔍 Search executed: ${id} by user ${userId}`);
+
+    res.success({
+      results,
+      executed_at: new Date().toISOString(),
+      message: 'Search executed successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to execute saved search:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to execute this search');
+    }
+
+    if (error instanceof Error && error.message === 'Search not found') {
+      return res.status(404).error('NOT_FOUND', 'Saved search not found');
+    }
+
+    res.status(500).error(
+      'EXECUTE_FAILED',
+      'Failed to execute saved search',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/saved-searches/:searchId/add-to-collection - Add search to collection
+ */
+router.post('/:searchId/add-to-collection', [
+  standardRateLimit,
+  validateRequest(SearchIdParamSchema, 'params'),
+  validateRequest(z.object({ collectionId: z.string().uuid() }), 'body')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { searchId } = req.params;
+  const { collectionId } = req.body;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    await savedSearchService.addToCollection(searchId, collectionId, userId);
+
+    console.log(`📁 Search ${searchId} added to collection ${collectionId} by user ${userId}`);
+
+    res.success({ message: 'Search added to collection successfully' });
+
+  } catch (error) {
+    console.error('❌ Failed to add search to collection:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this search or collection');
+    }
+
+    res.status(500).error(
+      'ADD_TO_COLLECTION_FAILED',
+      'Failed to add search to collection',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/saved-searches/:searchId/remove-from-collection - Remove search from collection
+ */
+router.post('/:searchId/remove-from-collection', [
+  standardRateLimit,
+  validateRequest(SearchIdParamSchema, 'params'),
+  validateRequest(z.object({ collectionId: z.string().uuid() }), 'body')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { searchId } = req.params;
+  const { collectionId } = req.body;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const savedSearchService = new SavedSearchService(req.app.locals.db);
+    await savedSearchService.removeFromCollection(searchId, collectionId, userId);
+
+    console.log(`📁 Search ${searchId} removed from collection ${collectionId} by user ${userId}`);
+
+    res.success({ message: 'Search removed from collection successfully' });
+
+  } catch (error) {
+    console.error('❌ Failed to remove search from collection:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this search or collection');
+    }
+
+    res.status(500).error(
+      'REMOVE_FROM_COLLECTION_FAILED',
+      'Failed to remove search from collection',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/saved-searches/:id/schedule - Schedule a search
+ */
+router.post('/:id/schedule', [
+  schedulingRateLimit,
+  validateRequest(UuidParamSchema, 'params'),
+  validateRequest(ScheduleUpdateSchema.required(), 'body')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const schedulerService = new SearchSchedulerService(req.app.locals.db);
+    const scheduledSearch = await schedulerService.scheduleSearch(id, req.body, userId);
+
+    console.log(`⏰ Search scheduled: ${id} by user ${userId}`);
+
+    res.success({
+      scheduled_search: scheduledSearch,
+      message: 'Search scheduled successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to schedule search:', error);
+
+    if (error instanceof Error && error.message === 'Access denied') {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to schedule this search');
+    }
+
+    if (error instanceof Error && error.message === 'Search not found') {
+      return res.status(404).error('NOT_FOUND', 'Saved search not found');
+    }
+
+    res.status(500).error(
+      'SCHEDULE_FAILED',
+      'Failed to schedule search',
+      { error_type: error?.constructor?.name || 'Unknown' }
+    );
+  }
+}));
+
+/**
+ * POST /api/v1/saved-searches/:id/share - Share a search
+ */
+router.post('/:id/share', [
+  standardRateLimit,
+  validateRequest(UuidParamSchema, 'params'),
+  validateRequest(SearchSharingConfigSchema, 'body')
+], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!userId) {
+    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
+  }
+
+  try {
+    const sharingService = new SearchSharingService(req.app.locals.db);
+    const shares = await sharingService.shareSearch(id, req.body, userId);
+
+    console.log(`🔗 Search shared: ${id} by user ${userId}`);
+
+    res.success({
+      shares,
+      message: 'Search shared successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to share search:', error);
+
+    if (error instanceof Error && error.message.includes('permission')) {
+      return res.status(403).error('ACCESS_DENIED', 'You do not have permission to share this search');
+    }
+
+    res.status(500).error(
+      'SHARE_FAILED',
+      'Failed to share search',
       { error_type: error?.constructor?.name || 'Unknown' }
     );
   }
@@ -767,7 +810,7 @@ router.get('/:id/versions', [
 ], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
   const userId = req.user.id;
   const { id } = req.params;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -775,16 +818,16 @@ router.get('/:id/versions', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const versions = await savedSearchService.getVersionHistory(id, userId);
-    
+
     res.success({ versions });
-    
+
   } catch (error) {
     console.error('❌ Failed to get version history:', error);
-    
+
     if (error instanceof Error && error.message === 'Access denied') {
       return res.status(403).error('ACCESS_DENIED', 'You do not have permission to access this search');
     }
-    
+
     res.status(500).error(
       'VERSIONS_FAILED',
       'Failed to retrieve version history',
@@ -802,7 +845,7 @@ router.post('/:id/restore/:versionId', [
 ], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
   const userId = req.user.id;
   const { id, versionId } = req.params;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -810,25 +853,25 @@ router.post('/:id/restore/:versionId', [
   try {
     const savedSearchService = new SavedSearchService(req.app.locals.db);
     const restoredSearch = await savedSearchService.restoreVersion(id, versionId, userId);
-    
+
     console.log(`⏪ Version restored: ${versionId} for search ${id} by user ${userId}`);
-    
+
     res.success({
       search: restoredSearch,
       message: 'Version restored successfully'
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to restore version:', error);
-    
+
     if (error instanceof Error && error.message === 'Access denied') {
       return res.status(403).error('ACCESS_DENIED', 'You do not have permission to modify this search');
     }
-    
+
     if (error instanceof Error && error.message === 'Version not found') {
       return res.status(404).error('NOT_FOUND', 'Version not found');
     }
-    
+
     res.status(500).error(
       'RESTORE_FAILED',
       'Failed to restore version',
@@ -838,7 +881,7 @@ router.post('/:id/restore/:versionId', [
 }));
 
 // ============================================================================
-// ANALYTICS ROUTES
+// ANALYTICS ROUTES (parameterized)
 // ============================================================================
 
 /**
@@ -852,7 +895,7 @@ router.get('/:id/analytics', [
   const userId = req.user.id;
   const { id } = req.params;
   const { timeRange } = req.query as any;
-  
+
   if (!userId) {
     return res.status(401).error('UNAUTHORIZED', 'User authentication required');
   }
@@ -860,54 +903,19 @@ router.get('/:id/analytics', [
   try {
     const analyticsService = new SearchAnalyticsService(req.app.locals.db);
     const analytics = await analyticsService.getSearchAnalytics(id, timeRange);
-    
+
     res.success({
       analytics,
       search_id: id,
       generated_at: new Date().toISOString(),
       time_range: timeRange
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to get search analytics:', error);
     res.status(500).error(
       'ANALYTICS_FAILED',
       'Failed to retrieve search analytics',
-      { error_type: error?.constructor?.name || 'Unknown' }
-    );
-  }
-}));
-
-/**
- * GET /api/v1/saved-searches/user-stats - Get user search statistics
- */
-router.get('/user-stats', [
-  standardRateLimit,
-  validateRequest(AnalyticsQuerySchema, 'query')
-], asyncHandler(async (req: AuthenticatedRequest, res: any) => {
-  const userId = req.user.id;
-  const { timeRange } = req.query as any;
-  
-  if (!userId) {
-    return res.status(401).error('UNAUTHORIZED', 'User authentication required');
-  }
-
-  try {
-    const analyticsService = new SearchAnalyticsService(req.app.locals.db);
-    const stats = await analyticsService.getUserSearchStats(userId, timeRange);
-    
-    res.success({
-      user_stats: stats,
-      user_id: userId,
-      generated_at: new Date().toISOString(),
-      time_range: timeRange
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to get user stats:', error);
-    res.status(500).error(
-      'USER_STATS_FAILED',
-      'Failed to retrieve user statistics',
       { error_type: error?.constructor?.name || 'Unknown' }
     );
   }
@@ -927,13 +935,13 @@ router.post('/:id/track', [
   const userId = req.user.id;
   const { id } = req.params;
   const { action, metadata = {} } = req.body;
-  
+
   try {
     const analyticsService = new SearchAnalyticsService(req.app.locals.db);
     await analyticsService.trackSearchUsage(id, userId, action, metadata);
-    
+
     res.success({ message: 'Usage tracked successfully' });
-    
+
   } catch (error) {
     console.error('❌ Failed to track usage:', error);
     // Don't fail the request for tracking errors

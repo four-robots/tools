@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { MCPClientService } from '../services/MCPClientService.js';
-import eventSourcingHealthRoutes from './event-sourcing-health.routes';
+import eventSourcingHealthRoutes from './event-sourcing-health.routes.js';
 
 const router = Router();
 
