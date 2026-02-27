@@ -66,7 +66,7 @@ export function createSearchAlertsRoutes(db: Pool): Router {
   const savedSearchService = new SavedSearchService(db);
   const alertService = new AlertService(db, savedSearchService);
   const notificationService = new NotificationService(db);
-  const unifiedSearchService = new UnifiedSearchService(/* configuration */);
+  const unifiedSearchService = new UnifiedSearchService();
   const alertSchedulerService = new AlertSchedulerService(
     db, 
     alertService, 
@@ -84,17 +84,17 @@ export function createSearchAlertsRoutes(db: Pool): Router {
    * Create a new alert definition
    */
   router.post('/', async (req: Request, res: Response) => {
+    const userId = req.user?.id;
     try {
-      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
       const alertRequest = CreateAlertRequestSchema.parse(req.body);
-      
+
       // Additional business validation
       validateCreateAlertRequest(alertRequest);
-      
+
       const alert = await alertService.createAlert(userId, alertRequest);
 
       res.status(201).json({
@@ -103,9 +103,9 @@ export function createSearchAlertsRoutes(db: Pool): Router {
         message: 'Alert created successfully',
       });
     } catch (error) {
-      logError(error, { 
-        operation: 'createAlert', 
-        userId, 
+      logError(error, {
+        operation: 'createAlert',
+        userId,
         alertName: req.body.name,
       });
       
@@ -147,6 +147,113 @@ export function createSearchAlertsRoutes(db: Pool): Router {
     } catch (error) {
       console.error('Error listing alerts:', error);
       res.status(500).json({ error: 'Failed to list alerts' });
+    }
+  });
+
+  // =====================
+  // Notification Templates (static GET routes - must precede GET /:id)
+  // =====================
+
+  /**
+   * List notification templates
+   */
+  router.get('/templates', async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const templateType = req.query.type as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+
+      const templates = await notificationService.listTemplates(userId, templateType, limit);
+
+      res.json({
+        success: true,
+        data: templates,
+      });
+    } catch (error) {
+      console.error('Error listing templates:', error);
+      res.status(500).json({ error: 'Failed to list templates' });
+    }
+  });
+
+  // =====================
+  // Analytics (static GET routes - must precede GET /:id)
+  // =====================
+
+  /**
+   * Get user alert statistics
+   */
+  router.get('/user-analytics', async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      // Parse date range if provided
+      let dateRange;
+      if (req.query.from && req.query.to) {
+        dateRange = {
+          from: new Date(req.query.from as string),
+          to: new Date(req.query.to as string),
+          granularity: (req.query.granularity as any) || 'day',
+        };
+      }
+
+      const stats = await alertAnalyticsService.getUserAlertStats(userId, dateRange);
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error('Error getting user alert stats:', error);
+      res.status(500).json({ error: 'Failed to get user alert statistics' });
+    }
+  });
+
+  /**
+   * Get notification engagement metrics
+   */
+  router.get('/engagement-metrics', async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const alertId = req.query.alertId as string;
+
+      // If alertId is provided, verify user owns the alert
+      if (alertId) {
+        const alert = await alertService.getAlert(alertId, userId);
+        if (!alert) {
+          return res.status(404).json({ error: 'Alert not found' });
+        }
+      }
+
+      // Parse date range if provided
+      let dateRange;
+      if (req.query.from && req.query.to) {
+        dateRange = {
+          from: new Date(req.query.from as string),
+          to: new Date(req.query.to as string),
+          granularity: (req.query.granularity as any) || 'day',
+        };
+      }
+
+      const engagement = await alertAnalyticsService.getNotificationEngagementMetrics(alertId, dateRange);
+
+      res.json({
+        success: true,
+        data: engagement,
+      });
+    } catch (error) {
+      console.error('Error getting engagement metrics:', error);
+      res.status(500).json({ error: 'Failed to get engagement metrics' });
     }
   });
 
@@ -430,31 +537,6 @@ export function createSearchAlertsRoutes(db: Pool): Router {
   // =====================
 
   /**
-   * List notification templates
-   */
-  router.get('/templates', async (req: Request, res: Response) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      const templateType = req.query.type as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-
-      const templates = await notificationService.listTemplates(userId, templateType, limit);
-
-      res.json({
-        success: true,
-        data: templates,
-      });
-    } catch (error) {
-      console.error('Error listing templates:', error);
-      res.status(500).json({ error: 'Failed to list templates' });
-    }
-  });
-
-  /**
    * Create notification template
    */
   router.post('/templates', async (req: Request, res: Response) => {
@@ -617,38 +699,6 @@ export function createSearchAlertsRoutes(db: Pool): Router {
   });
 
   /**
-   * Get user alert statistics
-   */
-  router.get('/user-analytics', async (req: Request, res: Response) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      // Parse date range if provided
-      let dateRange;
-      if (req.query.from && req.query.to) {
-        dateRange = {
-          from: new Date(req.query.from as string),
-          to: new Date(req.query.to as string),
-          granularity: (req.query.granularity as any) || 'day',
-        };
-      }
-
-      const stats = await alertAnalyticsService.getUserAlertStats(userId, dateRange);
-
-      res.json({
-        success: true,
-        data: stats,
-      });
-    } catch (error) {
-      console.error('Error getting user alert stats:', error);
-      res.status(500).json({ error: 'Failed to get user alert statistics' });
-    }
-  });
-
-  /**
    * Get alert optimization recommendations
    */
   router.get('/:id/recommendations', async (req: Request, res: Response) => {
@@ -675,48 +725,6 @@ export function createSearchAlertsRoutes(db: Pool): Router {
     } catch (error) {
       console.error('Error getting recommendations:', error);
       res.status(500).json({ error: 'Failed to get optimization recommendations' });
-    }
-  });
-
-  /**
-   * Get notification engagement metrics
-   */
-  router.get('/engagement-metrics', async (req: Request, res: Response) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      const alertId = req.query.alertId as string;
-      
-      // If alertId is provided, verify user owns the alert
-      if (alertId) {
-        const alert = await alertService.getAlert(alertId, userId);
-        if (!alert) {
-          return res.status(404).json({ error: 'Alert not found' });
-        }
-      }
-
-      // Parse date range if provided
-      let dateRange;
-      if (req.query.from && req.query.to) {
-        dateRange = {
-          from: new Date(req.query.from as string),
-          to: new Date(req.query.to as string),
-          granularity: (req.query.granularity as any) || 'day',
-        };
-      }
-
-      const engagement = await alertAnalyticsService.getNotificationEngagementMetrics(alertId, dateRange);
-
-      res.json({
-        success: true,
-        data: engagement,
-      });
-    } catch (error) {
-      console.error('Error getting engagement metrics:', error);
-      res.status(500).json({ error: 'Failed to get engagement metrics' });
     }
   });
 

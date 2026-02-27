@@ -793,7 +793,7 @@ export function createCollaborationRoutes(
       ] = await Promise.all([
         connectionManager.getConnectionStats(),
         rateLimiter.getStats(60),
-        presenceService.cleanupStalePresence(0) // Get count without cleanup
+        presenceService.cleanupStalePresence(60) // Get stale presence older than 60 minutes
       ]);
 
       res.json({
