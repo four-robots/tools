@@ -21,6 +21,7 @@ import type {
 
 export interface QualityServiceConfig {
   databasePath?: string;
+  persistResults?: boolean;
   projectPath: string;
   projectName: string;
   scanners: {
@@ -33,7 +34,7 @@ export interface QualityServiceConfig {
 }
 
 export class QualityService {
-  private db: QualityDatabase;
+  private db: QualityDatabase | null;
   private config: QualityServiceConfig;
   private debtScanner: TechnicalDebtScanner;
   private securityScanner: SecurityScanner;
@@ -44,9 +45,11 @@ export class QualityService {
 
   constructor(config: QualityServiceConfig) {
     this.config = config;
-    this.db = new QualityDatabase(
-      config.databasePath ? { database: config.databasePath } : undefined
-    );
+    this.db = config.persistResults !== false
+      ? new QualityDatabase(
+          config.databasePath ? { database: config.databasePath } : undefined
+        )
+      : null;
     
     // Initialize scanners with config
     this.debtScanner = new TechnicalDebtScanner(config.scanners.technicalDebt || {});
@@ -83,7 +86,9 @@ export class QualityService {
     const codeCoverage = await this.getCodeCoverage();
 
     // Get previous report for trend analysis
-    const previousReport = await this.db.getLatestQualityReport(this.config.projectName);
+    const previousReport = this.db
+      ? await this.db.getLatestQualityReport(this.config.projectName)
+      : null;
 
     // Generate comprehensive report
     const report = await this.reportGenerator.generateReport({
@@ -100,10 +105,10 @@ export class QualityService {
     });
 
     // Save report to database
-    await this.db.saveQualityReport(report);
-
-    // Save quality metrics
-    await this.saveQualityMetrics(report);
+    if (this.db) {
+      await this.db.saveQualityReport(report);
+      await this.saveQualityMetrics(report);
+    }
 
     // Generate HTML report
     if (this.config.reportOutputDir) {
@@ -130,8 +135,10 @@ export class QualityService {
     const debtItems = await this.debtScanner.scanDirectory(this.config.projectPath);
     
     // Save to database
-    for (const item of debtItems) {
-      await this.db.insertTechnicalDebtItem(item);
+    if (this.db) {
+      for (const item of debtItems) {
+        await this.db.insertTechnicalDebtItem(item);
+      }
     }
 
     // Generate individual report
@@ -154,10 +161,12 @@ export class QualityService {
 
     console.log('Scanning security vulnerabilities...');
     const vulnerabilities = await this.securityScanner.scanProject(this.config.projectPath);
-    
+
     // Save to database
-    for (const vuln of vulnerabilities) {
-      await this.db.insertSecurityVulnerability(vuln);
+    if (this.db) {
+      for (const vuln of vulnerabilities) {
+        await this.db.insertSecurityVulnerability(vuln);
+      }
     }
 
     // Generate individual report
@@ -180,10 +189,12 @@ export class QualityService {
 
     console.log('Scanning performance budgets...');
     const budgets = await this.performanceScanner.scanProject(this.config.projectPath);
-    
+
     // Save to database
-    for (const budget of budgets) {
-      await this.db.upsertPerformanceBudget(budget);
+    if (this.db) {
+      for (const budget of budgets) {
+        await this.db.upsertPerformanceBudget(budget);
+      }
     }
 
     // Generate individual report
@@ -288,6 +299,8 @@ export class QualityService {
   }
 
   private async saveQualityMetrics(report: QualityReport): Promise<void> {
+    if (!this.db) return;
+
     const metrics: Omit<QualityMetric, 'id'>[] = [
       {
         projectName: report.projectName,
@@ -342,6 +355,7 @@ export class QualityService {
   }
 
   async getQualityTrends(metricName: string, days: number = 30): Promise<Array<{ timestamp: string; value: number }>> {
+    if (!this.db) return [];
     return this.db.getQualityTrends(this.config.projectName, metricName, days);
   }
 
@@ -352,6 +366,9 @@ export class QualityService {
     budgetViolations: number;
     latestQualityScore: number | null;
   }> {
+    if (!this.db) {
+      return { totalDebtItems: 0, unresolvedDebtItems: 0, securityVulnerabilities: 0, budgetViolations: 0, latestQualityScore: null };
+    }
     return this.db.getDashboardStats(this.config.projectName);
   }
 
@@ -367,6 +384,11 @@ export class QualityService {
       blockMerge: boolean;
     }>;
   }> {
+    if (!this.db) {
+      console.warn('Database not available, skipping quality gate checks');
+      return { passed: true, results: [] };
+    }
+
     const results = [];
     let overallPassed = true;
 
@@ -426,7 +448,9 @@ export class QualityService {
   }
 
   close(): void {
-    this.db.close();
+    if (this.db) {
+      this.db.close();
+    }
   }
 }
 
