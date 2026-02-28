@@ -619,7 +619,7 @@ export class SearchSchedulerService {
     if (settings.notifyOnFailure) {
       await this.notificationService.sendSearchErrorNotification({
         search: scheduledSearch.search,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         recipients: settings.emailRecipients,
         webhookUrl: settings.webhookUrl,
       });

@@ -128,6 +128,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
 }) => {
   const { toast } = useToast();
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // State management
   const [resolutionSession, setResolutionSession] = useState<ResolutionSession | null>(null);
@@ -148,6 +149,10 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     }
     
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }
@@ -206,8 +211,10 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
 
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
+      wsRef.current = null;
       // Attempt to reconnect after a delay
-      setTimeout(() => {
+      reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = null;
         if (isOpen) connectWebSocket();
       }, 3000);
     };
