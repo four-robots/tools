@@ -340,6 +340,8 @@ const OwnershipIndicator: React.FC<{
       onExpired: () => setCountdown(0),
     });
 
+    let fallbackTimeout: NodeJS.Timeout | null = null;
+
     if (!success) {
       console.warn('[OwnershipIndicator] Failed to register countdown, using fallback');
       // Fallback to local countdown if manager is at capacity
@@ -347,7 +349,7 @@ const OwnershipIndicator: React.FC<{
         const remaining = Math.max(0, Math.floor((ownership.expiresAt - Date.now()) / 1000));
         setCountdown(remaining);
         if (remaining > 0) {
-          setTimeout(updateCountdown, 1000);
+          fallbackTimeout = setTimeout(updateCountdown, 1000);
         }
       };
       updateCountdown();
@@ -355,6 +357,9 @@ const OwnershipIndicator: React.FC<{
 
     return () => {
       countdownManager.unregister(countdownId);
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+      }
     };
   }, [ownership.elementId, ownership.ownerId, ownership.expiresAt]);
 

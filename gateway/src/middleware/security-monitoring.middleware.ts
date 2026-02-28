@@ -60,7 +60,9 @@ export class SecurityMonitoringMiddleware {
     
     // Flush security events every 30 seconds
     this.bufferFlushInterval = setInterval(() => {
-      this.flushSecurityEventBuffer();
+      this.flushSecurityEventBuffer().catch(error => {
+        console.error('Failed to flush security event buffer:', error instanceof Error ? error.message : String(error));
+      });
     }, 30000);
 
     // Clean up rate limit cache every 5 minutes
@@ -469,14 +471,14 @@ export class SecurityMonitoringMiddleware {
   /**
    * Cleanup resources
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
     if (this.bufferFlushInterval) {
       clearInterval(this.bufferFlushInterval);
     }
     if (this.rateLimitCleanupInterval) {
       clearInterval(this.rateLimitCleanupInterval);
     }
-    this.flushSecurityEventBuffer();
+    await this.flushSecurityEventBuffer();
   }
 }
 

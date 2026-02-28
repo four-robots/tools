@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { EventCollector } from './EventCollector';
 import { SessionManager } from './SessionManager';
 import { PrivacyConsentModal } from './PrivacyConsentModal';
@@ -201,6 +201,7 @@ export const BehaviorTracker: React.FC<BehaviorTrackerProps> = ({
   };
 
   // Auto-track page views
+  const pageViewTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   useEffect(() => {
     if (!enableAutoTracking || !trackingEnabled) return;
 
@@ -222,12 +223,14 @@ export const BehaviorTracker: React.FC<BehaviorTrackerProps> = ({
 
     history.pushState = function(...args) {
       originalPushState.apply(this, args);
-      setTimeout(handlePageView, 100);
+      const t = setTimeout(handlePageView, 100);
+      pageViewTimeoutsRef.current.push(t);
     };
 
     history.replaceState = function(...args) {
       originalReplaceState.apply(this, args);
-      setTimeout(handlePageView, 100);
+      const t = setTimeout(handlePageView, 100);
+      pageViewTimeoutsRef.current.push(t);
     };
 
     window.addEventListener('popstate', handlePageView);
@@ -236,6 +239,10 @@ export const BehaviorTracker: React.FC<BehaviorTrackerProps> = ({
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
       window.removeEventListener('popstate', handlePageView);
+      for (const t of pageViewTimeoutsRef.current) {
+        clearTimeout(t);
+      }
+      pageViewTimeoutsRef.current = [];
     };
   }, [enableAutoTracking, trackingEnabled]);
 

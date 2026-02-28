@@ -130,9 +130,11 @@ export class DistributedSearchOrchestrator {
         this.activeSearches.delete(searchId);
 
         // Update search status to failed
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
         await this.updateSearchStatus(searchId, 'failed', {
-          error: error.message,
-          error_details: { stack: error.stack }
+          error: errorMsg,
+          error_details: { stack: errorStack }
         });
 
         throw error;
@@ -140,7 +142,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to execute distributed search:', error);
-      throw new Error(`Failed to execute distributed search: ${error.message}`);
+      throw new Error(`Failed to execute distributed search: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

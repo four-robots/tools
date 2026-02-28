@@ -62,6 +62,7 @@ export function useWorkspaceRealtime(
   const socketRef = useRef<Socket | null>(null);
   const reconnectAttempts = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const connectionCheckRef = useRef<NodeJS.Timeout>();
 
   // Initialize socket connection
   const initializeSocket = useCallback(() => {
@@ -233,15 +234,18 @@ export function useWorkspaceRealtime(
   const joinWorkspace = useCallback((clientInfo?: any) => {
     if (!socketRef.current?.connected) {
       initializeSocket();
-      // Wait for connection then join
+      // Wait for connection then join (bounded retry)
+      let attempts = 0;
+      const maxAttempts = 50;
       const checkConnection = () => {
         if (socketRef.current?.connected) {
           socketRef.current.emit('workspace:join', { workspaceId, clientInfo });
-        } else {
-          setTimeout(checkConnection, 100);
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          connectionCheckRef.current = setTimeout(checkConnection, 100);
         }
       };
-      setTimeout(checkConnection, 100);
+      connectionCheckRef.current = setTimeout(checkConnection, 100);
     } else {
       socketRef.current.emit('workspace:join', { workspaceId, clientInfo });
     }
@@ -294,6 +298,9 @@ export function useWorkspaceRealtime(
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (connectionCheckRef.current) {
+        clearTimeout(connectionCheckRef.current);
       }
       if (socketRef.current) {
         socketRef.current.disconnect();
