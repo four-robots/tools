@@ -229,8 +229,8 @@ export class FederationPerformanceMonitor {
         average_response_time: executionTimes.length > 0
           ? executionTimes.reduce((sum, time) => sum + Number(time), 0) / executionTimes.length
           : 0,
-        fastest_response: Math.min(...executionTimes.map(t => Number(t))),
-        slowest_response: Math.max(...executionTimes.map(t => Number(t))),
+        fastest_response: executionTimes.length > 0 ? Math.min(...executionTimes.map(t => Number(t))) : 0,
+        slowest_response: executionTimes.length > 0 ? Math.max(...executionTimes.map(t => Number(t))) : 0,
         timeout_rate: 0 // Would calculate from timeout metrics
       };
 

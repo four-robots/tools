@@ -302,7 +302,7 @@ export class CodeParserService {
       totalNodes: nodes.length,
       totalEdges: edges.length,
       maxDepth: this.calculateMaxDepth(nodes, edges),
-      avgDependencies: nodes.reduce((sum, node) => sum + node.dependencies.length, 0) / nodes.length
+      avgDependencies: nodes.length > 0 ? nodes.reduce((sum, node) => sum + node.dependencies.length, 0) / nodes.length : 0
     };
 
     return {

@@ -379,7 +379,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
       logger.info('AI merge suggestions generated', { 
         conflictId: context.conflictId,
         suggestionsCount: finalSuggestions.length,
-        avgConfidence: finalSuggestions.reduce((sum, s) => sum + s.confidence, 0) / finalSuggestions.length
+        avgConfidence: finalSuggestions.length > 0 ? finalSuggestions.reduce((sum, s) => sum + s.confidence, 0) / finalSuggestions.length : 0
       });
 
       return finalSuggestions;

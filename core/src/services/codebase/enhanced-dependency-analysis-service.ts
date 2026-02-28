@@ -169,7 +169,7 @@ export class EnhancedDependencyAnalysisService {
         nodes: Array.from(allNodes.values()),
         edges,
         circularDependencies,
-        depth: Math.max(...Array.from(allNodes.values()).map(n => n.depth)),
+        depth: allNodes.size > 0 ? Math.max(...Array.from(allNodes.values()).map(n => n.depth)) : 0,
         totalPackages: allNodes.size,
         stats
       };

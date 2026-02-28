@@ -512,7 +512,7 @@ export class FederationComplianceService {
           log.violation_details && 
           JSON.stringify(log.violation_details).includes('consent')
         ).length,
-        average_risk_score: auditLogs.reduce((sum, log) => sum + Number(log.risk_score), 0) / auditLogs.length
+        average_risk_score: auditLogs.length > 0 ? auditLogs.reduce((sum, log) => sum + Number(log.risk_score), 0) / auditLogs.length : 0
       };
 
       // Generate recommendations

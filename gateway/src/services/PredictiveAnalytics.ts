@@ -585,8 +585,8 @@ export class PredictiveAnalyticsService {
 
   private calculateStressLevel(data: PatternData): number {
     // Simple stress calculation based on work intensity and break patterns
-    const avgSessionDuration = data.workingSessions.reduce((sum, d) => sum + d.value, 0) / data.workingSessions.length;
-    const avgTasksPerHour = data.taskCompletions.reduce((sum, d) => sum + d.value, 0) / data.taskCompletions.length;
+    const avgSessionDuration = data.workingSessions.length > 0 ? data.workingSessions.reduce((sum, d) => sum + d.value, 0) / data.workingSessions.length : 0;
+    const avgTasksPerHour = data.taskCompletions.length > 0 ? data.taskCompletions.reduce((sum, d) => sum + d.value, 0) / data.taskCompletions.length : 0;
     
     // High stress indicators: long sessions, high task density
     const sessionStress = Math.min(1, avgSessionDuration / 180); // Cap at 3 hours
