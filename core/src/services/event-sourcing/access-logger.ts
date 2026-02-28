@@ -79,8 +79,10 @@ export class AccessLogger {
     }
   ) {
     // Start periodic flush of buffered log entries
-    this.flushInterval = setInterval(async () => {
-      await this.flushBuffer();
+    this.flushInterval = setInterval(() => {
+      this.flushBuffer().catch(error => {
+        logger.error('Failed to flush access log buffer', { error });
+      });
     }, config.flushIntervalMs);
 
     logger.info('Access logger initialized', {
