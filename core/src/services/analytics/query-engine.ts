@@ -31,6 +31,7 @@ interface OptimizedQuery extends AnalyticsQuery {
 export class AnalyticsQueryEngine {
   private queryCache = new Map<string, { data: any; timestamp: Date; ttl: number }>();
   private queryStats = new Map<string, { count: number; avgDuration: number; lastExecuted: Date }>();
+  private cacheCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly db: DatabaseConnection,
@@ -850,9 +851,9 @@ export class AnalyticsQueryEngine {
   }
 
   private startCacheCleanup(): void {
-    setInterval(() => {
+    this.cacheCleanupInterval = setInterval(() => {
       const now = Date.now();
-      
+
       for (const [key, cached] of this.queryCache.entries()) {
         if (now > cached.timestamp.getTime() + cached.ttl * 1000) {
           this.queryCache.delete(key);
@@ -877,6 +878,10 @@ export class AnalyticsQueryEngine {
   }
 
   async destroy(): void {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
     this.queryCache.clear();
     this.queryStats.clear();
   }

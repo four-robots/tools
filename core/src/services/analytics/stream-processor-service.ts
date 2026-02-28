@@ -50,6 +50,7 @@ export class KafkaStreamProcessor extends EventEmitter implements StreamProcesso
   private aggregationCache = new Map<string, AggregationResult[]>();
   private readonly batchSize = ANALYTICS_CONSTANTS.MAX_EVENT_BATCH_SIZE;
   private readonly windowCleanupInterval = 5 * 60 * 1000; // 5 minutes
+  private backgroundIntervals: ReturnType<typeof setInterval>[] = [];
   
   constructor(
     private readonly db: DatabaseConnection,
@@ -594,16 +595,26 @@ export class KafkaStreamProcessor extends EventEmitter implements StreamProcesso
 
   private startBackgroundTasks(): void {
     // Clean up old time windows periodically
-    setInterval(() => {
+    this.backgroundIntervals.push(setInterval(() => {
       this.cleanupOldWindows();
-    }, this.windowCleanupInterval);
+    }, this.windowCleanupInterval));
 
     // Refresh materialized views
-    setInterval(() => {
+    this.backgroundIntervals.push(setInterval(() => {
       this.refreshMaterializedViews().catch(error => {
         logger.error('Failed to refresh materialized views', { error });
       });
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 5 * 60 * 1000)); // Every 5 minutes
+  }
+
+  async destroy(): void {
+    for (const interval of this.backgroundIntervals) {
+      clearInterval(interval);
+    }
+    this.backgroundIntervals = [];
+    this.metricBuffers.clear();
+    this.alertRules.clear();
+    this.aggregationCache.clear();
   }
 
   private cleanupOldWindows(): void {

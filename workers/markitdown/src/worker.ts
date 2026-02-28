@@ -92,23 +92,35 @@ export class MarkItDownWorker {
     // Process document conversion messages
     (async () => {
       for await (const msg of documentSub) {
-        await this.handleDocumentConversion(msg);
+        try {
+          await this.handleDocumentConversion(msg);
+        } catch (error) {
+          this.logger.error('Error handling document conversion', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('Document subscription loop failed', { error }));
 
     // Process URL conversion messages
     (async () => {
       for await (const msg of urlSub) {
-        await this.handleUrlConversion(msg);
+        try {
+          await this.handleUrlConversion(msg);
+        } catch (error) {
+          this.logger.error('Error handling URL conversion', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('URL subscription loop failed', { error }));
 
     // Process stats requests
     (async () => {
       for await (const msg of statsSub) {
-        await this.handleStatsRequest(msg);
+        try {
+          await this.handleStatsRequest(msg);
+        } catch (error) {
+          this.logger.error('Error handling stats request', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('Stats subscription loop failed', { error }));
 
     this.logger.info('Message handlers set up', {
       subjects: ['markitdown.convert.document', 'markitdown.convert.url', 'markitdown.stats']
