@@ -319,6 +319,7 @@ export function useActivityAwareness(options: UseActivityAwarenessOptions = {}):
   }, [enableTypingDetection, updateActivity, typingDebounceMs]);
 
   // Selection detection
+  const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!enableSelectionDetection) return;
 
@@ -327,8 +328,12 @@ export function useActivityAwareness(options: UseActivityAwarenessOptions = {}):
       if (selection && selection.toString().length > 0) {
         updateActivity('selecting', undefined, 'Text selection');
         setDetectionStatus(prev => ({ ...prev, selecting: true }));
-        
-        setTimeout(() => {
+
+        if (selectionTimeoutRef.current) {
+          clearTimeout(selectionTimeoutRef.current);
+        }
+        selectionTimeoutRef.current = setTimeout(() => {
+          selectionTimeoutRef.current = null;
           setDetectionStatus(prev => ({ ...prev, selecting: false }));
         }, 1000);
       }
@@ -339,6 +344,10 @@ export function useActivityAwareness(options: UseActivityAwarenessOptions = {}):
 
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current);
+        selectionTimeoutRef.current = null;
+      }
     };
   }, [enableSelectionDetection, updateActivity]);
 

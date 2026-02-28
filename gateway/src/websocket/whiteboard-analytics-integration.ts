@@ -569,6 +569,7 @@ export class AnalyticsBatcher {
   private batches = new Map<string, { events: AnalyticsEvent[]; lastUpdate: number }>();
   private batchTimeout = 1000; // 1 second
   private maxBatchSize = 50;
+  private batchProcessingInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private analytics: WhiteboardAnalyticsIntegration,
@@ -579,11 +580,22 @@ export class AnalyticsBatcher {
     if (options?.maxBatchSize) this.maxBatchSize = options.maxBatchSize;
 
     // Process batches periodically
-    setInterval(() => {
+    this.batchProcessingInterval = setInterval(() => {
       this.processBatches().catch(error => {
         this.logger.warn('Batch processing failed', { error });
       });
     }, this.batchTimeout);
+  }
+
+  /**
+   * Cleanup resources
+   */
+  destroy(): void {
+    if (this.batchProcessingInterval) {
+      clearInterval(this.batchProcessingInterval);
+      this.batchProcessingInterval = null;
+    }
+    this.batches.clear();
   }
 
   /**
