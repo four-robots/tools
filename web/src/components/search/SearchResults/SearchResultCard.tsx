@@ -182,9 +182,9 @@ export function SearchResultCard({
         <div 
           className={styles.previewText}
           dangerouslySetInnerHTML={{ 
-            __html: result.preview.highlights 
+            __html: result.preview.highlights
               ? previewText.replace(
-                  new RegExp(`(${result.preview.highlights.map(h => h.match).join('|')})`, 'gi'),
+                  new RegExp(`(${result.preview.highlights.map(h => h.match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi'),
                   `<mark class="${styles.highlight}">$1</mark>`
                 )
               : previewText
