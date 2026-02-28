@@ -34,7 +34,7 @@ on:
         type: boolean
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   PYTHON_VERSION: '3.11'
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
 
@@ -120,13 +120,13 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ matrix.component }}
-        run: npm ci --omit=optional
+        run: npm ci
 
       - name: Build core first (dependency)
         if: matrix.component != 'core'
         working-directory: core
         run: |
-          npm ci --omit=optional
+          npm ci
           npm run build
 
       - name: Build component
@@ -330,7 +330,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci --omit=optional
+        run: npm ci
 
       - name: Install Playwright browsers
         working-directory: web
@@ -387,7 +387,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: tests
-        run: npm ci --omit=optional
+        run: npm ci
 
       - name: Start services for performance testing
         run: |
@@ -441,7 +441,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci --omit=optional
+        run: npm ci
 
       - name: Install Playwright and axe
         working-directory: web
@@ -497,7 +497,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: web
-        run: npm ci --omit=optional
+        run: npm ci
 
       - name: Install Playwright browsers
         working-directory: web
@@ -676,9 +676,9 @@ jobs:
       - name: Build production artifacts
         run: |
           # Build all components for production
-          cd core && npm ci --omit=optional && npm run build
-          cd ../gateway && npm ci --omit=optional && npm run build
-          cd ../web && npm ci --omit=optional && npm run build
+          cd core && npm ci && npm run build
+          cd ../gateway && npm ci && npm run build
+          cd ../web && npm ci && npm run build
 
       - name: Run production smoke tests
         run: |
