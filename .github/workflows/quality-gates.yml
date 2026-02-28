@@ -61,6 +61,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               technicalDebt: { enabled: true }
             },
@@ -99,6 +100,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               security: { enabled: true, auditLevel: 'moderate' }
             },
@@ -150,6 +152,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               performance: { enabled: true }
             },
@@ -190,6 +193,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               complexity: { enabled: true, cyclomaticThreshold: 10, cognitiveThreshold: 15 }
             },
@@ -263,6 +267,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               technicalDebt: { enabled: true },
               security: { enabled: true },
@@ -271,7 +276,7 @@ jobs:
             },
             reportOutputDir: '${{ env.QUALITY_REPORT_PATH }}'
           });
-          
+
           async function run() {
             console.log('Running full quality scan...');
             const report = await service.runFullScan();
@@ -449,6 +454,7 @@ jobs:
           const service = new QualityService({
             projectPath: process.cwd(),
             projectName: 'mcp-tools',
+            persistResults: false,
             scanners: {
               technicalDebt: { enabled: true },
               security: { enabled: true },
@@ -456,7 +462,7 @@ jobs:
               complexity: { enabled: true }
             }
           });
-          
+
           // Define quality gates
           const qualityGates = [
             {
