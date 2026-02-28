@@ -326,7 +326,7 @@ export class WhiteboardThumbnailService {
         };
       
       case 'freehand':
-        if (data.points && Array.isArray(data.points)) {
+        if (data.points && Array.isArray(data.points) && data.points.length > 0) {
           const xs = data.points.map((p: any) => p.x || 0);
           const ys = data.points.map((p: any) => p.y || 0);
           return {

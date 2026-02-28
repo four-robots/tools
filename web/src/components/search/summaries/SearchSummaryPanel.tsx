@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { sanitizeHtml, SanitizationProfiles } from '../../../lib/sanitization';
 import {
   Bot,
   Brain,
@@ -359,7 +360,7 @@ export function SearchSummaryPanel({
           <div className={styles.summaryText}>
             <div 
               className={styles.summaryContent}
-              dangerouslySetInnerHTML={{ __html: summary.content.replace(/\n/g, '<br/>') }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(summary.content, SanitizationProfiles.RICH_TEXT).replace(/\n/g, '<br/>') }}
             />
             {summary.hallucinationChecks.length > 0 && (
               <Alert className={styles.qualityAlert}>
