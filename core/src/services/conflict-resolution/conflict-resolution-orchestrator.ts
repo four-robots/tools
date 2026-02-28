@@ -60,6 +60,7 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
   private activeSessions: Map<string, ConflictResolutionSession> = new Map();
   private sessionTimers: Map<string, NodeJS.Timeout> = new Map();
   private votingTimers: Map<string, NodeJS.Timeout> = new Map();
+  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private db: Pool,
@@ -650,9 +651,27 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
   private startSessionMonitoring(): void {
     // Periodic cleanup and monitoring of active sessions
-    setInterval(async () => {
-      await this.monitorActiveSessions();
+    this.monitoringInterval = setInterval(() => {
+      this.monitorActiveSessions().catch(error => {
+        // Prevent unhandled rejection from async callback in setInterval
+      });
     }, 30000); // Every 30 seconds
+  }
+
+  destroy(): void {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+    }
+    for (const timer of this.sessionTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.sessionTimers.clear();
+    for (const timer of this.votingTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.votingTimers.clear();
+    this.activeSessions.clear();
   }
 
   private async monitorActiveSessions(): Promise<void> {

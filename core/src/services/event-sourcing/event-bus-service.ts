@@ -83,7 +83,7 @@ export class EventBus extends EventEmitter {
       logger.error('Failed to publish event', {
         eventId: event.id,
         eventType: event.eventType,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -341,7 +341,7 @@ export class EventBus extends EventEmitter {
         streamId,
         fromVersion,
         toVersion,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -380,7 +380,7 @@ export class EventBus extends EventEmitter {
           eventId: event.id,
           eventType: event.eventType,
           handlerName: handler.name || 'anonymous',
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
 
         // Emit error event for monitoring
@@ -423,7 +423,7 @@ export class EventBus extends EventEmitter {
             eventId: event.id,
             eventType: event.eventType,
             delay,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           });
           await new Promise(resolve => setTimeout(resolve, delay));
         }

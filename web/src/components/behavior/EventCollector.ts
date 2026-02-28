@@ -20,6 +20,7 @@ export class EventCollector {
   private isOnline: boolean = navigator.onLine;
   private retryAttempts: number = 3;
   private retryDelay: number = 1000;
+  private boundHandlers: Array<{ target: EventTarget; event: string; handler: EventListener }> = [];
 
   constructor(apiUrl: string, options: {
     batchSize?: number;
@@ -127,6 +128,11 @@ export class EventCollector {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
     }
+    // Remove all registered event listeners
+    for (const { target, event, handler } of this.boundHandlers) {
+      target.removeEventListener(event, handler);
+    }
+    this.boundHandlers = [];
     // Attempt final flush
     this.flush().catch(console.error);
   }
@@ -162,14 +168,18 @@ export class EventCollector {
     }
   }
 
+  private addTrackedListener(target: EventTarget, event: string, handler: EventListener): void {
+    target.addEventListener(event, handler);
+    this.boundHandlers.push({ target, event, handler });
+  }
+
   private setupNetworkListeners(): void {
-    window.addEventListener('online', () => {
+    this.addTrackedListener(window, 'online', () => {
       this.isOnline = true;
-      // Flush when coming back online
       this.flush().catch(console.error);
     });
 
-    window.addEventListener('offline', () => {
+    this.addTrackedListener(window, 'offline', () => {
       this.isOnline = false;
     });
   }
@@ -187,9 +197,8 @@ export class EventCollector {
 
   private setupBeforeUnload(): void {
     // Flush events before page unload
-    window.addEventListener('beforeunload', () => {
+    this.addTrackedListener(window, 'beforeunload', () => {
       if (this.eventQueue.length > 0 && this.isOnline) {
-        // Use sendBeacon for more reliable delivery on page unload
         const eventsToSend = [...this.eventQueue];
         try {
           navigator.sendBeacon(
@@ -203,7 +212,7 @@ export class EventCollector {
     });
 
     // Also handle visibility change (when tab becomes hidden)
-    document.addEventListener('visibilitychange', () => {
+    this.addTrackedListener(document, 'visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.flush().catch(console.error);
       }

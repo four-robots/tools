@@ -165,7 +165,7 @@ export class ProjectionService {
     // Cleanup stale projections periodically
     this.cleanupInterval = setInterval(() => {
       this.cleanupStaleProjections().catch(error => {
-        logger.error('Failed to cleanup stale projections', { error: error.message });
+        logger.error('Failed to cleanup stale projections', { error: error instanceof Error ? error.message : String(error) });
       });
     }, 60 * 60 * 1000); // Every hour
   }
@@ -220,7 +220,7 @@ export class ProjectionService {
       logger.error(`Failed to get projection ${projectionName} for stream ${streamId}`, {
         projectionName,
         streamId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -252,7 +252,7 @@ export class ProjectionService {
     } catch (error) {
       logger.error(`Failed to get all projections for ${projectionName}`, {
         projectionName,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -341,7 +341,7 @@ export class ProjectionService {
     } catch (error) {
       logger.error(`Failed to rebuild projection ${projectionName}`, {
         projectionName,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     } finally {
@@ -359,7 +359,7 @@ export class ProjectionService {
     } catch (error) {
       logger.error(`Failed to delete projection ${projectionName}`, {
         projectionName,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -405,7 +405,7 @@ export class ProjectionService {
         projectionName,
         eventId: event.id,
         eventType: event.eventType,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
