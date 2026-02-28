@@ -469,7 +469,7 @@ ${source.url ? `URL: ${source.url}` : ''}
 
   private calculateAnswerConfidence(answer: string, sources: ContentSource[]): number {
     // Simplified confidence calculation
-    const avgSourceRelevance = sources.reduce((sum, s) => sum + s.relevance, 0) / sources.length;
+    const avgSourceRelevance = sources.length > 0 ? sources.reduce((sum, s) => sum + s.relevance, 0) / sources.length : 0;
     const answerLength = Math.min(answer.length / 500, 1.0); // Longer answers generally more comprehensive
     const citationCount = (answer.match(/\[Source \d+\]/g) || []).length;
     const citationScore = Math.min(citationCount / 3, 1.0); // Good answers cite multiple sources
@@ -586,7 +586,7 @@ Return as a JSON array of strings.`;
 
   private calculateSynthesisConfidence(content: string, sources: ContentSource[]): number {
     // Simplified synthesis confidence calculation
-    const avgSourceRelevance = sources.reduce((sum, s) => sum + s.relevance, 0) / sources.length;
+    const avgSourceRelevance = sources.length > 0 ? sources.reduce((sum, s) => sum + s.relevance, 0) / sources.length : 0;
     const contentLength = Math.min(content.length / 1000, 1.0);
     
     return (avgSourceRelevance * 0.6) + (contentLength * 0.4);
