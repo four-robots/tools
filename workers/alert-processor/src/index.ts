@@ -73,7 +73,7 @@ async function main() {
       client.release();
       logger.info('✅ Database connection successful');
     } catch (error) {
-      logger.error('❌ Database connection failed', { error: error.message });
+      logger.error('❌ Database connection failed', { error: error instanceof Error ? error.message : String(error) });
       process.exit(1);
     }
 
@@ -89,7 +89,7 @@ async function main() {
         logger.info('Worker stopped successfully');
         process.exit(0);
       } catch (error) {
-        logger.error('Error during shutdown', { error: error.message });
+        logger.error('Error during shutdown', { error: error instanceof Error ? error.message : String(error) });
         process.exit(1);
       }
     };

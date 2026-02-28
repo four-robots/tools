@@ -160,7 +160,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to set resource quota:', error);
-      throw new Error(`Failed to set resource quota: ${error.message}`);
+      throw new Error(`Failed to set resource quota: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -183,7 +183,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to get resource quotas:', error);
-      throw new Error(`Failed to get resource quotas: ${error.message}`);
+      throw new Error(`Failed to get resource quotas: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -311,7 +311,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to record resource usage:', error);
-      throw new Error(`Failed to record resource usage: ${error.message}`);
+      throw new Error(`Failed to record resource usage: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -360,7 +360,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to get usage metrics:', error);
-      throw new Error(`Failed to get usage metrics: ${error.message}`);
+      throw new Error(`Failed to get usage metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -447,7 +447,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to generate usage report:', error);
-      throw new Error(`Failed to generate usage report: ${error.message}`);
+      throw new Error(`Failed to generate usage report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -508,7 +508,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to generate billing record:', error);
-      throw new Error(`Failed to generate billing record: ${error.message}`);
+      throw new Error(`Failed to generate billing record: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -554,7 +554,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to get billing records:', error);
-      throw new Error(`Failed to get billing records: ${error.message}`);
+      throw new Error(`Failed to get billing records: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -606,7 +606,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to reset expired quotas:', error);
-      throw new Error(`Failed to reset expired quotas: ${error.message}`);
+      throw new Error(`Failed to reset expired quotas: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -631,7 +631,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to cleanup old metrics:', error);
-      throw new Error(`Failed to cleanup old metrics: ${error.message}`);
+      throw new Error(`Failed to cleanup old metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -660,7 +660,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to monitor quota usage:', error);
-      throw new Error(`Failed to monitor quota usage: ${error.message}`);
+      throw new Error(`Failed to monitor quota usage: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -704,7 +704,7 @@ export class TenantResourceService {
 
     } catch (error) {
       logger.error('Failed to get resource utilization:', error);
-      throw new Error(`Failed to get resource utilization: ${error.message}`);
+      throw new Error(`Failed to get resource utilization: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

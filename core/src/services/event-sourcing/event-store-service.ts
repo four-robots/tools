@@ -36,6 +36,7 @@ export class PostgresEventStore implements EventStore {
   private readonly maxRetries: number;
   private readonly encryptionService: EventEncryptionService;
   private readonly accessLogger: AccessLogger;
+  private partitionMaintenanceTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly pool: Pool,
@@ -624,11 +625,11 @@ export class PostgresEventStore implements EventStore {
       
       const timeout = tomorrow.getTime() - now.getTime();
       
-      setTimeout(async () => {
+      this.partitionMaintenanceTimeout = setTimeout(async () => {
         try {
           await this.maintainPartitions();
         } catch (error) {
-          logger.error('Scheduled partition maintenance failed', { error: error.message });
+          logger.error('Scheduled partition maintenance failed', { error: error instanceof Error ? error.message : String(error) });
         }
         scheduleNext();
       }, timeout);
@@ -636,5 +637,12 @@ export class PostgresEventStore implements EventStore {
 
     scheduleNext();
     logger.info('Scheduled daily partition maintenance at 2 AM');
+  }
+
+  shutdown(): void {
+    if (this.partitionMaintenanceTimeout) {
+      clearTimeout(this.partitionMaintenanceTimeout);
+      this.partitionMaintenanceTimeout = null;
+    }
   }
 }

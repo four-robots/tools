@@ -369,13 +369,14 @@ export class SearchRateLimiter {
     pipeline.zcard(key);
     
     // Add current request
-    pipeline.zadd(key, now, `${now}-${Math.random()}`);
-    
+    const member = `${now}-${Math.random()}`;
+    pipeline.zadd(key, now, member);
+
     // Set expiration
     pipeline.expire(key, Math.ceil(windowMs / 1000));
 
     const results = await pipeline.exec();
-    
+
     if (!results || results.length < 4) {
       throw new Error('Redis pipeline failed');
     }
@@ -386,7 +387,7 @@ export class SearchRateLimiter {
 
     // If limit exceeded, remove the request we just added
     if (!allowed) {
-      await this.redis.zrem(key, `${now}-${Math.random()}`);
+      await this.redis.zrem(key, member);
     }
 
     return {

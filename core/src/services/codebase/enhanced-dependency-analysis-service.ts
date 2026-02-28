@@ -223,8 +223,8 @@ export class EnhancedDependencyAnalysisService {
         .execute();
 
       const depths = result.map(r => r.depth);
-      const maxDepth = Math.max(...depths);
-      const averageDepth = depths.reduce((a, b) => a + b, 0) / depths.length;
+      const maxDepth = depths.length > 0 ? Math.max(...depths) : 0;
+      const averageDepth = depths.length > 0 ? depths.reduce((a, b) => a + b, 0) / depths.length : 0;
       
       const depthDistribution: Record<number, number> = {};
       for (const depth of depths) {

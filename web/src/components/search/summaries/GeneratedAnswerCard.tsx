@@ -5,7 +5,8 @@
  * follow-up questions, and interactive elements.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { sanitizeHtml, SanitizationProfiles } from '../../../lib/sanitization';
 import {
   MessageSquare,
   HelpCircle,
@@ -307,8 +308,8 @@ export function GeneratedAnswerCard({
       <div className={styles.answerContent}>
         <div 
           className={styles.answerText}
-          dangerouslySetInnerHTML={{ 
-            __html: answer.answer.replace(/\n/g, '<br/>') 
+          dangerouslySetInnerHTML={{
+            __html: sanitizeHtml(answer.answer, SanitizationProfiles.RICH_TEXT).replace(/\n/g, '<br/>')
           }}
         />
       </div>

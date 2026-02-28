@@ -64,8 +64,8 @@ class ErrorManager {
       message: error.message || 'Unknown error',
       stack: error.stack,
       context,
-      userAgent: navigator.userAgent,
-      url: window.location.href,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
       retryable: this.isRetryable(error, category),
       category,
     };
@@ -306,7 +306,7 @@ class ErrorManager {
   private reportToMonitoring(report: ErrorReport): void {
     try {
       // Report to analytics
-      if (window.analytics?.track) {
+      if (typeof window !== 'undefined' && window.analytics?.track) {
         window.analytics.track('Error Occurred', {
           errorId: report.id,
           category: report.category,
@@ -409,29 +409,30 @@ export const withRetry = async <T>(
   return result.data!;
 };
 
-// Global error handler for unhandled promise rejections
-window.addEventListener('unhandledrejection', (event) => {
-  errorManager.handleError(
-    new Error(`Unhandled promise rejection: ${event.reason}`),
-    { component: 'global' },
-    'unhandled'
-  );
-});
+// Global error handlers (only register in browser environment)
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    errorManager.handleError(
+      new Error(`Unhandled promise rejection: ${event.reason}`),
+      { component: 'global' },
+      'unhandled'
+    );
+  });
 
-// Global error handler for uncaught errors
-window.addEventListener('error', (event) => {
-  errorManager.handleError(
-    event.error || new Error(event.message),
-    { 
-      component: 'global',
-      metadata: {
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-      }
-    },
-    'uncaught'
-  );
-});
+  window.addEventListener('error', (event) => {
+    errorManager.handleError(
+      event.error || new Error(event.message),
+      {
+        component: 'global',
+        metadata: {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+        }
+      },
+      'uncaught'
+    );
+  });
+}
 
 export default errorManager;

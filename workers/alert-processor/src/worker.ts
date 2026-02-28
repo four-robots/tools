@@ -323,8 +323,8 @@ export class AlertProcessorWorker {
         scheduleType: alert.scheduleType,
       });
       
-      // Use the alert scheduler service to process the alert
-      const result = await this.alertSchedulerService.processScheduledAlerts();
+      // Process this specific alert
+      const result = await this.alertSchedulerService.processAlert(alert, 'scheduled');
       
       // Update metrics based on result
       if (result) {
@@ -346,8 +346,8 @@ export class AlertProcessorWorker {
         alertId: alert.id,
         alertName: alert.name,
         processingTimeMs: processingTime,
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
       
       throw error;

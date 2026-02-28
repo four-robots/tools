@@ -375,11 +375,17 @@ export function highlightSearchTerms(
   className: string = 'search-highlight'
 ): string {
   if (!terms.length) return text;
-  
-  let highlightedText = text;
-  
+
+  // Escape HTML in the text to prevent XSS
+  let highlightedText = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
   terms.forEach(term => {
-    const regex = new RegExp(`(${term})`, 'gi');
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedTerm})`, 'gi');
     highlightedText = highlightedText.replace(
       regex,
       `<mark class="${className}">$1</mark>`

@@ -129,6 +129,8 @@ export class WhiteboardConflictService {
   private notifications: Map<string, ConflictNotification> = new Map();
   private resolutionQueue: ConflictInfo[] = [];
   private processingConflicts: Set<string> = new Set();
+  private conflictProcessorInterval: ReturnType<typeof setInterval> | null = null;
+  private conflictCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private db: DatabasePool,
@@ -948,14 +950,21 @@ export class WhiteboardConflictService {
 
   private startConflictProcessor(): void {
     // Start background processing of conflicts
-    setInterval(() => {
+    this.conflictProcessorInterval = setInterval(() => {
       this.processConflictQueue();
     }, 1000); // Process every second
 
     // Cleanup expired conflicts
-    setInterval(() => {
+    this.conflictCleanupInterval = setInterval(() => {
       this.cleanupExpiredConflicts();
     }, 60000); // Cleanup every minute
+  }
+
+  shutdown(): void {
+    if (this.conflictProcessorInterval) clearInterval(this.conflictProcessorInterval);
+    if (this.conflictCleanupInterval) clearInterval(this.conflictCleanupInterval);
+    this.conflictProcessorInterval = null;
+    this.conflictCleanupInterval = null;
   }
 
   private async processConflictQueue(): Promise<void> {

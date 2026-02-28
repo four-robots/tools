@@ -143,12 +143,16 @@ export class AnalyticsSocketHandler extends EventEmitter {
       
       // Initialize socket data
       socket.on('authenticate', (data: { userId: string; tenantId?: string }) => {
-        this.handleAuthentication(socket, data);
+        this.handleAuthentication(socket, data).catch(err => {
+          logger.error('Authentication handler error', { error: err, socketId: socket.id });
+        });
       });
-      
+
       // Dashboard subscriptions
       socket.on('subscribe_dashboard', (data: { dashboardId: string }) => {
-        this.handleDashboardSubscription(socket, data);
+        this.handleDashboardSubscription(socket, data).catch(err => {
+          logger.error('Dashboard subscription handler error', { error: err, socketId: socket.id });
+        });
       });
       
       socket.on('unsubscribe_dashboard', (data: { dashboardId: string }) => {
@@ -198,7 +202,9 @@ export class AnalyticsSocketHandler extends EventEmitter {
       });
       
       socket.on('acknowledge_alert', (data: { alertId: string; notes?: string }) => {
-        this.handleAlertAcknowledgment(socket, data);
+        this.handleAlertAcknowledgment(socket, data).catch(err => {
+          logger.error('Alert acknowledgment handler error', { error: err, socketId: socket.id });
+        });
       });
       
       // Dashboard collaboration

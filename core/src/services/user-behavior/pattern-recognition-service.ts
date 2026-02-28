@@ -592,6 +592,7 @@ export class PatternRecognitionService extends EventEmitter {
 
   private calculateTopicFrequency(affinities: Record<string, number>): number {
     const affinityValues = Object.values(affinities);
+    if (affinityValues.length === 0) return 0;
     return affinityValues.reduce((sum, val) => sum + val, 0) / affinityValues.length;
   }
 

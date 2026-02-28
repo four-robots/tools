@@ -358,7 +358,7 @@ export class InsightsEngine {
     const firstHalfAvg = firstHalf.reduce((sum, score) => sum + score, 0) / firstHalf.length;
     const secondHalfAvg = secondHalf.reduce((sum, score) => sum + score, 0) / secondHalf.length;
     
-    const trendPercentage = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+    const trendPercentage = firstHalfAvg > 0 ? ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100 : 0;
     
     let trendDirection = 'stable';
     let recommendation = '';
@@ -443,12 +443,12 @@ export class InsightsEngine {
     });
 
     const workloads = Array.from(dailyWorkload.values());
-    const avgWorkload = workloads.reduce((sum, w) => sum + w, 0) / workloads.length;
-    const maxWorkload = Math.max(...workloads);
-    const minWorkload = Math.min(...workloads);
-    
+    const avgWorkload = workloads.length > 0 ? workloads.reduce((sum, w) => sum + w, 0) / workloads.length : 0;
+    const maxWorkload = workloads.length > 0 ? Math.max(...workloads) : 0;
+    const minWorkload = workloads.length > 0 ? Math.min(...workloads) : 0;
+
     // Calculate workload variance
-    const variance = workloads.reduce((sum, w) => sum + Math.pow(w - avgWorkload, 2), 0) / workloads.length;
+    const variance = workloads.length > 0 ? workloads.reduce((sum, w) => sum + Math.pow(w - avgWorkload, 2), 0) / workloads.length : 0;
     const consistency = 1 - Math.min(variance / (avgWorkload * avgWorkload), 1);
 
     const confidence = Math.min(0.8, 0.5 + (workloads.length / 30) * 0.3);

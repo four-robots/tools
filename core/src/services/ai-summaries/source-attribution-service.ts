@@ -391,8 +391,8 @@ export class SourceAttributionService {
       totalCitations: attribution.citations.length,
       diversityScore: attribution.diversityScore,
       sourceTypes: this.getSourceTypeBreakdown(attribution.sources),
-      averageRelevance: attribution.sources.reduce((sum, s) => sum + s.relevance, 0) / attribution.sources.length,
-      averageUsageWeight: attribution.sources.reduce((sum, s) => sum + s.usageWeight, 0) / attribution.sources.length
+      averageRelevance: attribution.sources.length > 0 ? attribution.sources.reduce((sum, s) => sum + s.relevance, 0) / attribution.sources.length : 0,
+      averageUsageWeight: attribution.sources.length > 0 ? attribution.sources.reduce((sum, s) => sum + s.usageWeight, 0) / attribution.sources.length : 0
     };
   }
 

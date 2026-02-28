@@ -416,9 +416,13 @@ export class TemporalAnalyticsService {
           timeRange,
           overview: {
             totalConflicts: parseInt(overview.total_conflicts),
-            resolutionRate: parseInt(overview.resolved_conflicts) / parseInt(overview.total_conflicts),
+            resolutionRate: parseInt(overview.total_conflicts) > 0
+              ? parseInt(overview.resolved_conflicts) / parseInt(overview.total_conflicts)
+              : 0,
             averageResolutionTime: parseFloat(overview.avg_resolution_time) || 0,
-            escalationRate: parseInt(overview.escalated_conflicts) / parseInt(overview.total_conflicts)
+            escalationRate: parseInt(overview.total_conflicts) > 0
+              ? parseInt(overview.escalated_conflicts) / parseInt(overview.total_conflicts)
+              : 0
           },
           trends: {
             conflictFrequency: frequencyResult.rows.map(row => ({

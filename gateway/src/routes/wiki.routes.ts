@@ -45,16 +45,28 @@ router.get('/pages', [
   if (result.isError) {
     return res.error('MCP_ERROR', 'Failed to retrieve wiki pages', result.content);
   }
-  
+
+  // Extract pages from MCP result
+  let pages: any[] = [];
+  try {
+    const content = result.content?.[0];
+    if (content?.text) {
+      const parsed = JSON.parse(content.text);
+      pages = Array.isArray(parsed) ? parsed : (parsed.pages || []);
+    }
+  } catch {
+    pages = [];
+  }
+
   const page = req.query.page || 1;
   const limit = req.query.limit || 20;
-  
-  res.paginated([], {
+
+  res.paginated(pages, {
     page,
     limit,
-    total: 0,
-    hasNext: false,
-    hasPrev: false
+    total: pages.length,
+    hasNext: pages.length === limit,
+    hasPrev: page > 1
   });
 }));
 

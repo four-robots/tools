@@ -515,9 +515,9 @@ export class DistributedSearchOrchestrator {
         },
         performance_metrics: {
           nodes_with_results: nodeResponses.filter(r => r.results_count > 0).length,
-          average_response_time: nodeResponses.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / nodeResponses.length,
-          fastest_node: Math.min(...nodeResponses.map(r => r.response_time_ms || Infinity)),
-          slowest_node: Math.max(...nodeResponses.map(r => r.response_time_ms || 0))
+          average_response_time: nodeResponses.length > 0 ? nodeResponses.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / nodeResponses.length : 0,
+          fastest_node: nodeResponses.length > 0 ? Math.min(...nodeResponses.map(r => r.response_time_ms || Infinity)) : 0,
+          slowest_node: nodeResponses.length > 0 ? Math.max(...nodeResponses.map(r => r.response_time_ms || 0)) : 0
         },
         quality_scores: qualityScores,
         aggregation_algorithm: strategy,

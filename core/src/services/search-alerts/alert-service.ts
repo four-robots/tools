@@ -264,7 +264,7 @@ export class AlertService {
         FROM alert_definitions ad
         JOIN saved_searches ss ON ad.saved_search_id = ss.id
         ${whereClause}
-        ORDER BY ad.${validatedOptions.sortBy} ${validatedOptions.sortOrder}
+        ORDER BY ad.${this.toSnakeCase(validatedOptions.sortBy)} ${validatedOptions.sortOrder}
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `, [...params, validatedOptions.limit, offset]);
 
@@ -648,5 +648,9 @@ export class AlertService {
       lastTriggeredAt: row.last_triggered_at,
       nextScheduledAt: row.next_scheduled_at,
     };
+  }
+
+  private toSnakeCase(str: string): string {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
   }
 }

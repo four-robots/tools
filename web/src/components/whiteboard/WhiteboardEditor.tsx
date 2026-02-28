@@ -16,6 +16,8 @@ interface WhiteboardEditorProps {
   whiteboardId: string;
   workspaceId: string;
   workspaceName: string;
+  userId: string;
+  userName: string;
   userRole?: 'owner' | 'admin' | 'editor' | 'commenter' | 'viewer';
 }
 
@@ -23,6 +25,8 @@ const WhiteboardEditor: React.FC<WhiteboardEditorProps> = ({
   whiteboardId,
   workspaceId,
   workspaceName,
+  userId,
+  userName,
   userRole = 'viewer',
 }) => {
   const router = useRouter();
@@ -166,9 +170,11 @@ const WhiteboardEditor: React.FC<WhiteboardEditorProps> = ({
   }
 
   return (
-    <WhiteboardProvider 
-      whiteboardId={whiteboardId} 
+    <WhiteboardProvider
+      whiteboardId={whiteboardId}
       workspaceId={workspaceId}
+      userId={userId}
+      userName={userName}
       isReadOnly={isReadOnly}
     >
       <div className={`whiteboard-editor ${isFullscreen ? 'fullscreen' : ''}`}>

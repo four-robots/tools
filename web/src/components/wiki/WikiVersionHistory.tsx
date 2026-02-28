@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { sanitizeHtml, SanitizationProfiles } from '../../lib/sanitization';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -87,14 +88,20 @@ export function WikiVersionHistory({ pageId, onVersionRestore }: WikiVersionHist
   };
 
   const formatContent = (content: string) => {
-    // Simple markdown to HTML conversion for preview
-    return content
+    // Escape HTML first, then apply safe markdown formatting
+    const escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    const html = escaped
       .replace(/^# (.*$)/gim, '<h1>$1</h1>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
+    return sanitizeHtml(html, SanitizationProfiles.RICH_TEXT);
   };
 
   const getChangeTypeColor = (changeReason?: string) => {

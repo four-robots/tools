@@ -750,9 +750,9 @@ export function setupWhiteboardWebSocket(
             whiteboardId,
             operationType: operation.type,
             elementId: operation.elementId,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           });
-          
+
           socket.emit('whiteboard:operation_rejected', {
             operationId: operation.elementId,
             success: false,
@@ -1860,7 +1860,7 @@ export function setupWhiteboardWebSocket(
 
       } catch (error) {
         // Log but don't disrupt cursor tracking
-        logger.debug('Failed to handle cursor move', { error: error.message });
+        logger.debug('Failed to handle cursor move', { error: error instanceof Error ? error.message : String(error) });
       }
     });
 
