@@ -88,7 +88,6 @@
     "@mcp-tools/monorepo": "file:..",
     "@octokit/plugin-throttling": "^11.0.1",
     "@octokit/rest": "^22.0.0",
-    "@tensorflow/tfjs-node": "^4.15.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cron": "^2.0.1",
     "@types/dompurify": "^3.0.5",
