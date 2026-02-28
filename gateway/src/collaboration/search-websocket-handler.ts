@@ -205,7 +205,7 @@ export class SearchWebSocketHandler implements ISearchCollaborationWebSocketGate
 
     } catch (error) {
       logger.error('Failed to handle search message', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: message
       });
       throw error;
