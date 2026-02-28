@@ -148,15 +148,6 @@
     "tsup": "^8.0.1",
     "tsx": "^4.6.2"
   },
-  "optionalDependencies": {
-    "onnxruntime-node": "^1.16.3",
-    "tree-sitter": "^0.20.4",
-    "tree-sitter-cpp": "^0.20.0",
-    "tree-sitter-go": "^0.20.0",
-    "tree-sitter-javascript": "^0.20.1",
-    "tree-sitter-python": "^0.20.4",
-    "tree-sitter-rust": "^0.20.4"
-  },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
