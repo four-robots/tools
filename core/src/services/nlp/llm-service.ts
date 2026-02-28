@@ -418,7 +418,10 @@ export class LLMService {
       max_tokens: config?.maxTokens || 1000
     });
 
-    const choice = response.choices[0];
+    const choice = response.choices?.[0];
+    if (!choice) {
+      throw new Error('OpenAI returned no choices in response');
+    }
     return {
       content: choice.message?.content || '',
       usage: response.usage ? {
@@ -451,7 +454,10 @@ export class LLMService {
       ]
     });
 
-    const content = response.content[0];
+    const content = response.content?.[0];
+    if (!content) {
+      throw new Error('Anthropic returned no content in response');
+    }
     return {
       content: content.type === 'text' ? content.text : '',
       usage: response.usage ? {

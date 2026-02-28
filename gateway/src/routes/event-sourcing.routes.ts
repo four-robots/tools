@@ -22,7 +22,7 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
       const timestamp = pointInTime ? new Date(pointInTime as string) : undefined;
       
-      if (pointInTime && isNaN(timestamp!.getTime())) {
+      if (pointInTime && (!timestamp || isNaN(timestamp.getTime()))) {
         return res.status(400).json({
           success: false,
           error: 'Invalid pointInTime format. Use ISO 8601 format.'

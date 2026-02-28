@@ -347,6 +347,7 @@ export function useWhiteboardCollaboration(options: UseWhiteboardCollaborationOp
   const disconnect = useCallback(() => {
     if (socketRef.current) {
       socketRef.current.emit('whiteboard:leave', { whiteboardId });
+      socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
       socketRef.current = null;
     }
