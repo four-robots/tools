@@ -416,8 +416,8 @@ export class KafkaStreamProcessor extends EventEmitter implements StreamProcesso
         aggregatedValue = values.length;
         break;
       case 'p95':
-        const sorted = values.sort((a, b) => a - b);
-        const index = Math.floor(0.95 * sorted.length);
+        const sorted = [...values].sort((a, b) => a - b);
+        const index = Math.min(Math.ceil(0.95 * sorted.length) - 1, sorted.length - 1);
         aggregatedValue = sorted[index] || 0;
         break;
       default:

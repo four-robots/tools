@@ -726,7 +726,9 @@ export class ProjectionService {
         
         // Recalculate resolution metrics
         const resolvedAnnotations = projection.annotations.filter(a => a.status === 'resolved');
-        projection.resolutionRate = resolvedAnnotations.length / projection.annotations.length;
+        projection.resolutionRate = projection.annotations.length > 0
+          ? resolvedAnnotations.length / projection.annotations.length
+          : 0;
         
         if (resolvedAnnotations.length > 0) {
           const totalResolutionTime = resolvedAnnotations.reduce((sum, a) => {

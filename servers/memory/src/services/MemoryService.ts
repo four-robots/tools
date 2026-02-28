@@ -373,7 +373,10 @@ export class MemoryService {
       switch (strategy) {
         case 'combine':
           mergedContent = [primaryMemory.content, ...secondaryMemories.filter(m => m).map(m => m!.content)].join('\n\n---\n\n');
-          mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
+          const secondaryImportances = secondaryMemories.filter(m => m).map(m => m!.importance);
+          mergedImportance = secondaryImportances.length > 0
+            ? Math.max(primaryMemory.importance, ...secondaryImportances)
+            : primaryMemory.importance;
           mergedMetadata = this.mergeMetadata([
             JSON.parse(primaryMemory.metadata || '{}'),
             ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
@@ -383,7 +386,10 @@ export class MemoryService {
         case 'replace':
           // Use primary content but merge metadata and concepts
           mergedContent = primaryMemory.content;
-          mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
+          const secondaryImportances = secondaryMemories.filter(m => m).map(m => m!.importance);
+          mergedImportance = secondaryImportances.length > 0
+            ? Math.max(primaryMemory.importance, ...secondaryImportances)
+            : primaryMemory.importance;
           mergedMetadata = this.mergeMetadata([
             JSON.parse(primaryMemory.metadata || '{}'),
             ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
@@ -392,7 +398,10 @@ export class MemoryService {
 
         case 'append':
           mergedContent = primaryMemory.content + '\n\n' + secondaryMemories.filter(m => m).map(m => m!.content).join('\n\n');
-          mergedImportance = Math.max(primaryMemory.importance, ...secondaryMemories.filter(m => m).map(m => m!.importance));
+          const secondaryImportances = secondaryMemories.filter(m => m).map(m => m!.importance);
+          mergedImportance = secondaryImportances.length > 0
+            ? Math.max(primaryMemory.importance, ...secondaryImportances)
+            : primaryMemory.importance;
           mergedMetadata = this.mergeMetadata([
             JSON.parse(primaryMemory.metadata || '{}'),
             ...secondaryMemories.filter(m => m).map(m => JSON.parse(m!.metadata || '{}'))
