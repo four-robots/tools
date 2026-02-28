@@ -145,7 +145,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to enable tenant discovery:', error);
-      throw new Error(`Failed to enable tenant discovery: ${error.message}`);
+      throw new Error(`Failed to enable tenant discovery: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -228,7 +228,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to search discoverable tenants:', error);
-      throw new Error(`Failed to search discoverable tenants: ${error.message}`);
+      throw new Error(`Failed to search discoverable tenants: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -248,7 +248,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to get tenant discovery details:', error);
-      throw new Error(`Failed to get tenant discovery details: ${error.message}`);
+      throw new Error(`Failed to get tenant discovery details: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -327,7 +327,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to send federation invitation:', error);
-      throw new Error(`Failed to send federation invitation: ${error.message}`);
+      throw new Error(`Failed to send federation invitation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -424,7 +424,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to respond to federation invitation:', error);
-      throw new Error(`Failed to respond to federation invitation: ${error.message}`);
+      throw new Error(`Failed to respond to federation invitation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -468,7 +468,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to get federation invitations:', error);
-      throw new Error(`Failed to get federation invitations: ${error.message}`);
+      throw new Error(`Failed to get federation invitations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -534,7 +534,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to grant cross-tenant permission:', error);
-      throw new Error(`Failed to grant cross-tenant permission: ${error.message}`);
+      throw new Error(`Failed to grant cross-tenant permission: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -599,7 +599,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to revoke cross-tenant permission:', error);
-      throw new Error(`Failed to revoke cross-tenant permission: ${error.message}`);
+      throw new Error(`Failed to revoke cross-tenant permission: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -637,7 +637,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to get cross-tenant permissions:', error);
-      throw new Error(`Failed to get cross-tenant permissions: ${error.message}`);
+      throw new Error(`Failed to get cross-tenant permissions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -759,7 +759,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to perform trust verification:', error);
-      throw new Error(`Failed to perform trust verification: ${error.message}`);
+      throw new Error(`Failed to perform trust verification: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -824,7 +824,7 @@ export class CrossTenantFederationService {
 
     } catch (error) {
       logger.error('Failed to get federation statistics:', error);
-      throw new Error(`Failed to get federation statistics: ${error.message}`);
+      throw new Error(`Failed to get federation statistics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

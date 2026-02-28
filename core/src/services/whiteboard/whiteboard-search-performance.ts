@@ -168,10 +168,10 @@ export class WhiteboardSearchPerformance {
     return {
       ...query,
       query: query.query.trim().toLowerCase(),
-      searchFields: query.searchFields?.sort(),
-      elementTypes: query.elementTypes?.sort(),
-      includeTags: query.includeTags?.sort(),
-      excludeTags: query.excludeTags?.sort(),
+      searchFields: query.searchFields ? [...query.searchFields].sort() : undefined,
+      elementTypes: query.elementTypes ? [...query.elementTypes].sort() : undefined,
+      includeTags: query.includeTags ? [...query.includeTags].sort() : undefined,
+      excludeTags: query.excludeTags ? [...query.excludeTags].sort() : undefined,
     };
   }
 

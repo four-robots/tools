@@ -742,7 +742,7 @@ export class CodeEmbeddingsService {
       query: query.query,
       queryType: query.queryType,
       language: query.language,
-      repositoryIds: query.repositoryIds?.sort(),
+      repositoryIds: query.repositoryIds ? [...query.repositoryIds].sort() : undefined,
       maxResults: query.maxResults,
       similarityThreshold: query.similarityThreshold
     });

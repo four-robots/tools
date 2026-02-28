@@ -314,7 +314,7 @@ Extract the most important key points from this content.`;
       
       // Calculate word overlap
       const commonWords = keyWords.filter(word => sourceWords.includes(word));
-      const overlapRatio = commonWords.length / keyWords.length;
+      const overlapRatio = keyWords.length > 0 ? commonWords.length / keyWords.length : 0;
       
       // If significant overlap or explicitly suggested, include as supporting source
       if (overlapRatio > 0.3 || (suggestedSources && suggestedSources.includes(source.id))) {

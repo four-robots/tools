@@ -338,9 +338,9 @@ export class AccessLogger {
       logger.error(`Failed to generate data access report for user ${userId}`, {
         userId,
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
-      throw new Error(`Data access report generation failed: ${error.message}`);
+      throw new Error(`Data access report generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -434,9 +434,9 @@ export class AccessLogger {
     } catch (error) {
       logger.error('Failed to generate compliance audit report', {
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
-      throw new Error(`Compliance audit report generation failed: ${error.message}`);
+      throw new Error(`Compliance audit report generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -467,7 +467,7 @@ export class AccessLogger {
 
     } catch (error) {
       logger.error('Failed to cleanup expired access log entries', {
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       return { deletedCount: 0, errors: 1 };
     }
@@ -522,7 +522,7 @@ export class AccessLogger {
     } catch (error) {
       logger.error('Failed to flush access log buffer', {
         entryCount: entries.length,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       
       // Re-queue entries for retry
