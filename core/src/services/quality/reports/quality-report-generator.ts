@@ -114,7 +114,7 @@ export class QualityReportGenerator {
     let totalImpact = 0;
 
     for (const item of debtItems) {
-      const severityWeight = severityWeights[item.severity];
+      const severityWeight = severityWeights[item.severity] || 1;
       const effortWeight = Math.min((item.estimatedEffort || 1) / 8, 2); // Cap at 2x
       totalImpact += severityWeight * effortWeight;
     }

@@ -80,7 +80,7 @@ export class TechnicalDebtScanner {
     const debtItems: TechnicalDebtItem[] = [];
     
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.promises.readFile(filePath, 'utf-8');
       const lines = content.split('\n');
 
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
