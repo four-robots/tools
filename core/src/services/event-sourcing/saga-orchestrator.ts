@@ -79,6 +79,12 @@ export class SagaOrchestrator {
     }, 60 * 60 * 1000); // Every hour
   }
 
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+  }
+
   registerSaga(definition: SagaDefinition): void {
     this.sagaDefinitions.set(definition.sagaType, definition);
     

@@ -168,7 +168,7 @@ export class FederationNodeRegistry {
         .updateTable('federation_nodes')
         .set({
           capabilities: JSON.stringify({
-            ...JSON.parse(existingNode.capabilities as string || '{}'),
+            ...(() => { try { return JSON.parse(existingNode.capabilities as string || '{}'); } catch { return {}; } })(),
             ...capabilities
           }),
           updated_at: new Date().toISOString()

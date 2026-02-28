@@ -143,7 +143,7 @@ export class SessionReconstructionCache {
     } catch (error) {
       logger.error('Failed to get cached session', {
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       this.missCount++;
       return null;
@@ -199,7 +199,7 @@ export class SessionReconstructionCache {
       logger.error('Failed to cache session', {
         sessionId,
         version,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -275,7 +275,7 @@ export class SessionReconstructionCache {
       logger.error('Failed incremental reconstruction from cache', {
         sessionId,
         currentVersion,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -320,7 +320,7 @@ export class SessionReconstructionCache {
     } catch (error) {
       logger.error('Failed to preload frequent sessions', {
         sessionIds: sessionIds.length,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -476,7 +476,7 @@ export class SessionReconstructionCache {
 
     } catch (error) {
       logger.error('Failed to sync session cache to disk', {
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }

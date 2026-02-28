@@ -173,6 +173,7 @@ const useRetry = (maxRetries: number = 3) => {
 export const useSelectionState = (config: SelectionStateConfig): SelectionHookState => {
   // Socket connection
   const socketRef = useRef<Socket | null>(null);
+  const eventTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -344,13 +345,13 @@ export const useSelectionState = (config: SelectionStateConfig): SelectionHookSt
       
       // Implement exponential backoff for severe rate limiting
       const backoffMultiplier = data.severity === 'high' ? 2 : 1;
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         setError(null);
-        // Optionally trigger a state refresh if needed
         if (data.shouldRefresh) {
           requestSelectionState();
         }
       }, retryAfterMs * backoffMultiplier);
+      eventTimeoutsRef.current.push(timeout);
     });
 
     // Backpressure handling
@@ -362,9 +363,10 @@ export const useSelectionState = (config: SelectionStateConfig): SelectionHookSt
       const currentThrottle = config.throttleMs || 100;
       const increasedThrottle = Math.min(currentThrottle * 2, 1000);
       
-      setTimeout(() => {
+      const bpTimeout = setTimeout(() => {
         setError(null);
       }, data.retryAfterMs || 2000);
+      eventTimeoutsRef.current.push(bpTimeout);
     });
 
     // Error events
@@ -383,6 +385,11 @@ export const useSelectionState = (config: SelectionStateConfig): SelectionHookSt
       socketRef.current.disconnect();
       socketRef.current = null;
     }
+    // Clear any pending event timeouts
+    for (const timeout of eventTimeoutsRef.current) {
+      clearTimeout(timeout);
+    }
+    eventTimeoutsRef.current = [];
     setConnected(false);
     setConnecting(false);
     setSelections([]);
