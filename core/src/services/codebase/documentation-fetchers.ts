@@ -255,7 +255,10 @@ export class NPMDocumentationFetcher extends DocumentationFetcher {
       );
 
       const latestVersion = packageData['dist-tags']?.latest || dependency.version_constraint.resolved_version;
-      const versionData = packageData.versions?.[latestVersion] || packageData.versions?.[Object.keys(packageData.versions).pop()!];
+      const versions = packageData.versions;
+      const versionKeys = versions ? Object.keys(versions) : [];
+      const fallbackVersion = versionKeys.length > 0 ? versionKeys[versionKeys.length - 1] : undefined;
+      const versionData = versions?.[latestVersion] || (fallbackVersion ? versions?.[fallbackVersion] : undefined);
 
       if (!versionData) {
         return {

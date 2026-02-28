@@ -354,14 +354,14 @@ export class CodeParserService {
     });
 
     const dates = cacheEntries.map(e => new Date(e.created_at)).sort((a, b) => a.getTime() - b.getTime());
-    
+
     return {
       totalEntries,
       hitRate,
       averageParseTime,
       totalCacheSize: 0, // Would need additional calculation
-      oldestEntry: dates[0],
-      newestEntry: dates[dates.length - 1],
+      oldestEntry: dates.length > 0 ? dates[0] : undefined,
+      newestEntry: dates.length > 0 ? dates[dates.length - 1] : undefined,
       languageBreakdown,
       cacheByRepository: {} // Would need additional query
     };
@@ -458,11 +458,23 @@ export class CodeParserService {
   }
 
   private deserializeParseResult(cache: ASTCache, fileId: string): ParseResult {
+    let ast: any;
+    let symbols: any;
+    try {
+      ast = JSON.parse(cache.astData as string);
+    } catch {
+      ast = {};
+    }
+    try {
+      symbols = JSON.parse(cache.symbols as string);
+    } catch {
+      symbols = [];
+    }
     return {
       fileId,
       language: cache.language,
-      ast: JSON.parse(cache.astData as string),
-      symbols: JSON.parse(cache.symbols as string),
+      ast,
+      symbols,
       dependencies: cache.dependencies.map(path => ({
         id: '',
         fileId,
@@ -538,11 +550,19 @@ export class CodeParserService {
     
     // Apply exclude patterns
     if (options.excludePatterns && options.excludePatterns.length > 0) {
-      return files.filter(file => 
-        !options.excludePatterns!.some(pattern => 
-          new RegExp(pattern).test(file.path)
-        )
-      );
+      const compiledPatterns: RegExp[] = [];
+      for (const pattern of options.excludePatterns) {
+        try {
+          compiledPatterns.push(new RegExp(pattern));
+        } catch {
+          // Skip invalid regex patterns
+        }
+      }
+      if (compiledPatterns.length > 0) {
+        return files.filter(file =>
+          !compiledPatterns.some(regex => regex.test(file.path))
+        );
+      }
     }
 
     return files;
