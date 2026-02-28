@@ -3,7 +3,7 @@
  */
 
 import { spawn } from 'child_process';
-import { writeFile, unlink, mkdtemp } from 'fs/promises';
+import { writeFile, unlink, mkdtemp, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import type { ConvertDocumentRequest, ConvertDocumentResponse, DocumentMetadata } from './types.js';
@@ -35,8 +35,8 @@ export class MarkItDownConverter {
       // Run markitdown via Python subprocess
       const result = await this.runMarkItDown(inputFile, request.options);
       
-      // Clean up temporary file
-      await unlink(inputFile).catch(() => {}); // Ignore cleanup errors
+      // Clean up temporary file and directory
+      await rm(tempDir, { recursive: true }).catch(() => {}); // Ignore cleanup errors
       
       const processingTimeMs = Date.now() - startTime;
       this.stats.totalProcessingTime += processingTimeMs;

@@ -164,7 +164,7 @@ export class AlertSchedulerService {
   /**
    * Process individual alert
    */
-  private async processAlert(alert: AlertDefinition, triggerReason: 'scheduled' | 'manual'): Promise<AlertTriggerResult> {
+  async processAlert(alert: AlertDefinition, triggerReason: 'scheduled' | 'manual'): Promise<AlertTriggerResult> {
     const startTime = Date.now();
     let execution: AlertExecution | null = null;
 
