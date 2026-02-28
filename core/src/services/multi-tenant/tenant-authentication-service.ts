@@ -190,7 +190,7 @@ export class TenantAuthenticationService {
 
     } catch (error) {
       logger.error('Failed to generate tenant token:', error);
-      throw new Error(`Failed to generate tenant token: ${error.message}`);
+      throw new Error(`Failed to generate tenant token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -245,7 +245,7 @@ export class TenantAuthenticationService {
       logger.error('Token validation failed:', error);
       return { 
         valid: false, 
-        error: error instanceof jwt.JsonWebTokenError ? error.message : 'Invalid token'
+        error: error instanceof jwt.JsonWebTokenError ? error instanceof Error ? error.message : String(error) : 'Invalid token'
       };
     }
   }
@@ -270,7 +270,7 @@ export class TenantAuthenticationService {
 
     } catch (error) {
       logger.error('Failed to revoke token:', error);
-      throw new Error(`Failed to revoke token: ${error.message}`);
+      throw new Error(`Failed to revoke token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -300,7 +300,7 @@ export class TenantAuthenticationService {
 
     } catch (error) {
       logger.error('Failed to refresh token:', error);
-      throw new Error(`Failed to refresh token: ${error.message}`);
+      throw new Error(`Failed to refresh token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -370,7 +370,7 @@ export class TenantAuthenticationService {
 
     } catch (error) {
       logger.error('Failed to generate API key:', error);
-      throw new Error(`Failed to generate API key: ${error.message}`);
+      throw new Error(`Failed to generate API key: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -491,7 +491,7 @@ export class TenantAuthenticationService {
 
     } catch (error) {
       logger.error('Failed to revoke API key:', error);
-      throw new Error(`Failed to revoke API key: ${error.message}`);
+      throw new Error(`Failed to revoke API key: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

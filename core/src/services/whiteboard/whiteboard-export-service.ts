@@ -258,7 +258,7 @@ export class WhiteboardExportService {
       // Start processing asynchronously
       this.processExportJob(job).catch(error => {
         this.logger.error('Export job processing failed', { error, jobId });
-        this.updateJobStatus(jobId, 'failed', 0, error.message);
+        this.updateJobStatus(jobId, 'failed', 0, error instanceof Error ? error.message : String(error));
       });
 
       return job;
@@ -480,7 +480,7 @@ export class WhiteboardExportService {
 
     } catch (error) {
       const processingTimeMs = Date.now() - startTime;
-      await this.updateJobStatus(jobId, 'failed', 0, error.message, { processingTimeMs });
+      await this.updateJobStatus(jobId, 'failed', 0, error instanceof Error ? error.message : String(error), { processingTimeMs });
       
       this.logger.error('Export job failed', { 
         error, 
@@ -531,7 +531,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('PDF export failed', { error, jobId: job.id });
-      throw new Error(`PDF export failed: ${error.message}`);
+      throw new Error(`PDF export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -574,7 +574,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('Image export failed', { error, jobId: job.id });
-      throw new Error(`Image export failed: ${error.message}`);
+      throw new Error(`Image export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -614,7 +614,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('SVG export failed', { error, jobId: job.id });
-      throw new Error(`SVG export failed: ${error.message}`);
+      throw new Error(`SVG export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -659,7 +659,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('JSON export failed', { error, jobId: job.id });
-      throw new Error(`JSON export failed: ${error.message}`);
+      throw new Error(`JSON export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -699,7 +699,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('Markdown export failed', { error, jobId: job.id });
-      throw new Error(`Markdown export failed: ${error.message}`);
+      throw new Error(`Markdown export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -739,7 +739,7 @@ export class WhiteboardExportService {
       };
     } catch (error) {
       this.logger.error('ZIP export failed', { error, jobId: job.id });
-      throw new Error(`ZIP export failed: ${error.message}`);
+      throw new Error(`ZIP export failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

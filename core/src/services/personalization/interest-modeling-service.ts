@@ -95,7 +95,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error getting user interests for ${userId}:`, error);
-      throw new Error(`Failed to get user interests: ${error.message}`);
+      throw new Error(`Failed to get user interests: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -143,7 +143,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error adding explicit interest for user ${userId}:`, error);
-      throw new Error(`Failed to add explicit interest: ${error.message}`);
+      throw new Error(`Failed to add explicit interest: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -178,7 +178,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error updating interest ${interestId} for user ${userId}:`, error);
-      throw new Error(`Failed to update interest: ${error.message}`);
+      throw new Error(`Failed to update interest: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -203,7 +203,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error removing interest ${interestId} for user ${userId}:`, error);
-      throw new Error(`Failed to remove interest: ${error.message}`);
+      throw new Error(`Failed to remove interest: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -243,7 +243,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error extracting interests from behavior for user ${userId}:`, error);
-      throw new Error(`Failed to extract interests from behavior: ${error.message}`);
+      throw new Error(`Failed to extract interests from behavior: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -290,7 +290,7 @@ export class InterestModelingService implements IInterestModelingService {
 
     } catch (error) {
       logger.error(`Error suggesting interests for user ${userId}:`, error);
-      throw new Error(`Failed to suggest interests: ${error.message}`);
+      throw new Error(`Failed to suggest interests: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -388,7 +388,7 @@ export class WhiteboardImportService {
       // Start processing asynchronously
       this.processImportJob(job).catch(error => {
         this.logger.error('Import job processing failed', { error, jobId });
-        this.updateJobStatus(jobId, 'failed', 0, error.message);
+        this.updateJobStatus(jobId, 'failed', 0, error instanceof Error ? error.message : String(error));
       });
 
       return job;
@@ -601,7 +601,7 @@ export class WhiteboardImportService {
 
     } catch (error) {
       const processingTimeMs = Date.now() - startTime;
-      await this.updateJobStatus(jobId, 'failed', 0, error.message, { processingTimeMs });
+      await this.updateJobStatus(jobId, 'failed', 0, error instanceof Error ? error.message : String(error), { processingTimeMs });
       
       this.logger.error('Import job failed', { 
         error, 
@@ -671,7 +671,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('JSON import failed', { error, jobId: job.id });
-      throw new Error(`JSON import failed: ${error.message}`);
+      throw new Error(`JSON import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -720,7 +720,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('Image import failed', { error, jobId: job.id });
-      throw new Error(`Image import failed: ${error.message}`);
+      throw new Error(`Image import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -768,7 +768,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('SVG import failed', { error, jobId: job.id });
-      throw new Error(`SVG import failed: ${error.message}`);
+      throw new Error(`SVG import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -841,7 +841,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('PDF import failed', { error, jobId: job.id });
-      throw new Error(`PDF import failed: ${error.message}`);
+      throw new Error(`PDF import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -891,7 +891,7 @@ export class WhiteboardImportService {
           }
 
         } catch (error) {
-          warnings.push(`Failed to import ${file.filename}: ${error.message}`);
+          warnings.push(`Failed to import ${file.filename}: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         await this.updateJobProgress(job.id, 40 + (40 * (i + 1) / extractedFiles.length));
@@ -918,7 +918,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('ZIP import failed', { error, jobId: job.id });
-      throw new Error(`ZIP import failed: ${error.message}`);
+      throw new Error(`ZIP import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -965,7 +965,7 @@ export class WhiteboardImportService {
       };
     } catch (error) {
       this.logger.error('Template import failed', { error, jobId: job.id });
-      throw new Error(`Template import failed: ${error.message}`);
+      throw new Error(`Template import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

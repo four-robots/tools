@@ -125,7 +125,7 @@ export class WebhookManager {
 
       return webhookId;
     } catch (error) {
-      throw new Error(`Failed to setup webhook for repository ${repositoryId}: ${error.message}`);
+      throw new Error(`Failed to setup webhook for repository ${repositoryId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -163,7 +163,7 @@ export class WebhookManager {
         .execute();
 
     } catch (error) {
-      throw new Error(`Failed to remove webhook ${webhookId}: ${error.message}`);
+      throw new Error(`Failed to remove webhook ${webhookId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -232,7 +232,7 @@ export class WebhookManager {
         processed: false,
         fileChanges: [],
         triggerSync: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -275,7 +275,7 @@ export class WebhookManager {
         successRate
       };
     } catch (error) {
-      throw new Error(`Failed to get webhook stats: ${error.message}`);
+      throw new Error(`Failed to get webhook stats: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

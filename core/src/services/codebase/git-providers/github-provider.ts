@@ -84,7 +84,7 @@ export class GitHubProvider implements GitProvider {
           throw new Error(`Access denied to repository: ${url}. Check authentication token.`);
         }
       }
-      throw new Error(`Failed to fetch repository info: ${error.message}`);
+      throw new Error(`Failed to fetch repository info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -125,7 +125,7 @@ export class GitHubProvider implements GitProvider {
         files
       };
     } catch (error) {
-      throw new Error(`Failed to fetch repository tree: ${error.message}`);
+      throw new Error(`Failed to fetch repository tree: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -173,7 +173,7 @@ export class GitHubProvider implements GitProvider {
         }
       }));
     } catch (error) {
-      throw new Error(`Failed to fetch repository branches: ${error.message}`);
+      throw new Error(`Failed to fetch repository branches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -207,7 +207,7 @@ export class GitHubProvider implements GitProvider {
           throw new Error(`File not found: ${path}`);
         }
       }
-      throw new Error(`Failed to fetch file content: ${error.message}`);
+      throw new Error(`Failed to fetch file content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -269,7 +269,7 @@ export class GitHubProvider implements GitProvider {
         files: Array.from(fileChanges.values())
       };
     } catch (error) {
-      throw new Error(`Failed to fetch changes since ${since}: ${error.message}`);
+      throw new Error(`Failed to fetch changes since ${since}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -374,7 +374,7 @@ export class GitHubProvider implements GitProvider {
 
       return webhook.id.toString();
     } catch (error) {
-      throw new Error(`Failed to create GitHub webhook: ${error.message}`);
+      throw new Error(`Failed to create GitHub webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -391,7 +391,7 @@ export class GitHubProvider implements GitProvider {
         hook_id: parseInt(webhookId)
       });
     } catch (error) {
-      throw new Error(`Failed to delete GitHub webhook: ${error.message}`);
+      throw new Error(`Failed to delete GitHub webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -409,7 +409,7 @@ export class GitHubProvider implements GitProvider {
 
       return webhooks;
     } catch (error) {
-      throw new Error(`Failed to list GitHub webhooks: ${error.message}`);
+      throw new Error(`Failed to list GitHub webhooks: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

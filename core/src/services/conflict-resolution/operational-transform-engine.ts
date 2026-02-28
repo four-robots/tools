@@ -364,9 +364,9 @@ export class OperationalTransformEngine implements IOperationalTransformEngine {
 
     } catch (error) {
       logger.error('Failed to invert operation', { error, opId: op.id });
-      throw new OperationalTransformError(`Failed to invert operation: ${error.message}`, {
+      throw new OperationalTransformError(`Failed to invert operation: ${error instanceof Error ? error.message : String(error)}`, {
         operationId: op.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -403,9 +403,9 @@ export class OperationalTransformEngine implements IOperationalTransformEngine {
 
     } catch (error) {
       logger.error('Failed to compose operations', { error, opsCount: ops.length });
-      throw new OperationalTransformError(`Failed to compose operations: ${error.message}`, {
+      throw new OperationalTransformError(`Failed to compose operations: ${error instanceof Error ? error.message : String(error)}`, {
         operationCount: ops.length,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -923,7 +923,7 @@ export class OperationalTransformEngine implements IOperationalTransformEngine {
       return {
         content,
         appliedSuccessfully: false,
-        warnings: [`Operation application failed: ${error.message}`]
+        warnings: [`Operation application failed: ${error instanceof Error ? error.message : String(error)}`]
       };
     }
   }

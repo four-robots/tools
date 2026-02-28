@@ -69,7 +69,7 @@ export class GitLabProvider implements GitProvider {
           throw new Error(`Access denied to GitLab repository: ${url}. Check authentication token.`);
         }
       }
-      throw new Error(`Failed to fetch GitLab repository info: ${error.message}`);
+      throw new Error(`Failed to fetch GitLab repository info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -115,7 +115,7 @@ export class GitLabProvider implements GitProvider {
         files
       };
     } catch (error) {
-      throw new Error(`Failed to fetch GitLab repository tree: ${error.message}`);
+      throw new Error(`Failed to fetch GitLab repository tree: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -140,7 +140,7 @@ export class GitLabProvider implements GitProvider {
         isProtected: branch.protected || false
       }));
     } catch (error) {
-      throw new Error(`Failed to fetch GitLab repository branches: ${error.message}`);
+      throw new Error(`Failed to fetch GitLab repository branches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -170,7 +170,7 @@ export class GitLabProvider implements GitProvider {
           throw new Error(`File not found: ${path}`);
         }
       }
-      throw new Error(`Failed to fetch file content: ${error.message}`);
+      throw new Error(`Failed to fetch file content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -227,7 +227,7 @@ export class GitLabProvider implements GitProvider {
         files: Array.from(fileChanges.values())
       };
     } catch (error) {
-      throw new Error(`Failed to fetch GitLab changes since ${since}: ${error.message}`);
+      throw new Error(`Failed to fetch GitLab changes since ${since}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -322,7 +322,7 @@ export class GitLabProvider implements GitProvider {
 
       return webhook.id.toString();
     } catch (error) {
-      throw new Error(`Failed to create GitLab webhook: ${error.message}`);
+      throw new Error(`Failed to create GitLab webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -336,7 +336,7 @@ export class GitLabProvider implements GitProvider {
       
       await this.gitlab.ProjectHooks.remove(projectId, parseInt(webhookId));
     } catch (error) {
-      throw new Error(`Failed to delete GitLab webhook: ${error.message}`);
+      throw new Error(`Failed to delete GitLab webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

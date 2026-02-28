@@ -133,7 +133,7 @@ class DeltaCompression {
       const result = applyPatch(stateCopy, patch, false, false);
       return result.newDocument;
     } catch (error) {
-      throw new Error(`Failed to apply JSON patch: ${error.message}`);
+      throw new Error(`Failed to apply JSON patch: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -150,7 +150,7 @@ class DeltaCompression {
       try {
         currentState = this.applyDelta(currentState, delta);
       } catch (error) {
-        throw new Error(`Failed to apply delta operation ${delta.operationType} for element ${delta.elementId}: ${error.message}`);
+        throw new Error(`Failed to apply delta operation ${delta.operationType} for element ${delta.elementId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -164,7 +164,7 @@ class DeltaCompression {
         return this.applyJsonPatch(state, delta.deltaPatch);
       } catch (error) {
         // Fall back to manual application if JSON patch fails
-        console.warn('JSON patch failed, falling back to manual delta application:', error.message);
+        console.warn('JSON patch failed, falling back to manual delta application:', error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -676,7 +676,7 @@ export class WhiteboardVersionService {
       return this.getRollbackById(rollbackId);
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      await this.updateRollbackStatus(rollbackId, 'failed', error.message, processingTime);
+      await this.updateRollbackStatus(rollbackId, 'failed', error instanceof Error ? error.message : String(error), processingTime);
       
       this.logger.error('Rollback failed', { error, rollbackId, whiteboardId, userId, request });
       throw error;

@@ -146,7 +146,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to generate federation certificate:', error);
-      throw new Error(`Failed to generate federation certificate: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to generate federation certificate: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -228,7 +228,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to validate certificate:', error);
-      throw new Error(`Failed to validate certificate: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to validate certificate: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -268,7 +268,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to revoke certificate:', error);
-      throw new Error(`Failed to revoke certificate: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to revoke certificate: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -357,7 +357,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to generate federation API key:', error);
-      throw new Error(`Failed to generate federation API key: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to generate federation API key: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -497,7 +497,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to rotate API key:', error);
-      throw new Error(`Failed to rotate API key: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to rotate API key: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -546,7 +546,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to generate federation JWT:', error);
-      throw new Error(`Failed to generate federation JWT: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to generate federation JWT: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -597,7 +597,7 @@ export class FederationSecurityManager {
       logger.error('Failed to verify federation JWT:', error);
       return {
         valid: false,
-        errors: [error instanceof Error ? error.message : 'Token verification failed']
+        errors: [error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Token verification failed']
       };
     }
   }
@@ -651,7 +651,7 @@ export class FederationSecurityManager {
 
     } catch (error) {
       logger.error('Failed to encrypt federation payload:', error);
-      throw new Error(`Failed to encrypt federation payload: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to encrypt federation payload: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -706,7 +706,7 @@ export class FederationSecurityManager {
         eventType: 'federation_decryption_failure',
         sourceNodeId,
         details: {
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error),
           algorithm: encryptionMetadata.algorithm,
           key_id: encryptionMetadata.key_id,
           failure_time: new Date().toISOString()
@@ -716,7 +716,7 @@ export class FederationSecurityManager {
         riskScore: 0.8
       });
       
-      throw new Error(`Failed to decrypt federation payload: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to decrypt federation payload: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -749,7 +749,7 @@ export class FederationSecurityManager {
       try {
         certificate = new crypto.X509Certificate(certificatePem);
       } catch (error) {
-        errors.push(`Invalid certificate format: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(`Invalid certificate format: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
         return { valid: false, errors, certificateInfo: null };
       }
 
@@ -815,7 +815,7 @@ export class FederationSecurityManager {
       logger.error('Failed to validate certificate:', error);
       return {
         valid: false,
-        errors: [`Certificate validation failed: ${error.message}`],
+        errors: [`Certificate validation failed: ${error instanceof Error ? error.message : String(error)}`],
         certificateInfo: null
       };
     }
@@ -906,7 +906,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to generate certificate:', error);
-      throw new Error(`Certificate generation failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Certificate generation failed: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -959,7 +959,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to get signing key:', error);
-      throw new Error(`Failed to get signing key: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to get signing key: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 
@@ -1108,7 +1108,7 @@ ${Buffer.from(JSON.stringify(certMetadata)).toString('base64').match(/.{1,64}/g)
 
     } catch (error) {
       logger.error('Failed to get security metrics:', error);
-      throw new Error(`Failed to get security metrics: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to get security metrics: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`);
     }
   }
 }

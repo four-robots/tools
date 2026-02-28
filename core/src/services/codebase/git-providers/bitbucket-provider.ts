@@ -82,7 +82,7 @@ export class BitbucketProvider implements GitProvider {
         updatedAt: new Date(data.updated_on)
       };
     } catch (error) {
-      throw new Error(`Failed to fetch Bitbucket repository info: ${error.message}`);
+      throw new Error(`Failed to fetch Bitbucket repository info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -134,7 +134,7 @@ export class BitbucketProvider implements GitProvider {
         files
       };
     } catch (error) {
-      throw new Error(`Failed to fetch Bitbucket repository tree: ${error.message}`);
+      throw new Error(`Failed to fetch Bitbucket repository tree: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -171,7 +171,7 @@ export class BitbucketProvider implements GitProvider {
 
       return branches;
     } catch (error) {
-      throw new Error(`Failed to fetch Bitbucket repository branches: ${error.message}`);
+      throw new Error(`Failed to fetch Bitbucket repository branches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -192,7 +192,7 @@ export class BitbucketProvider implements GitProvider {
       if (error.response?.status === 404) {
         throw new Error(`File not found: ${path}`);
       }
-      throw new Error(`Failed to fetch file content: ${error.message}`);
+      throw new Error(`Failed to fetch file content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -248,7 +248,7 @@ export class BitbucketProvider implements GitProvider {
         files: Array.from(fileChanges.values())
       };
     } catch (error) {
-      throw new Error(`Failed to fetch Bitbucket changes since ${since}: ${error.message}`);
+      throw new Error(`Failed to fetch Bitbucket changes since ${since}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -325,7 +325,7 @@ export class BitbucketProvider implements GitProvider {
 
       return response.data.uuid;
     } catch (error) {
-      throw new Error(`Failed to create Bitbucket webhook: ${error.message}`);
+      throw new Error(`Failed to create Bitbucket webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -340,7 +340,7 @@ export class BitbucketProvider implements GitProvider {
         `/repositories/${workspace}/${repo}/hooks/${webhookId}`
       );
     } catch (error) {
-      throw new Error(`Failed to delete Bitbucket webhook: ${error.message}`);
+      throw new Error(`Failed to delete Bitbucket webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

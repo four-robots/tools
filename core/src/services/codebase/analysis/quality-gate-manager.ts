@@ -594,9 +594,9 @@ export class QualityGateManager {
         status: 'ERROR',
         gates: [],
         blockers: [],
-        warnings: [`Error getting quality gate status: ${error.message}`],
+        warnings: [`Error getting quality gate status: ${error instanceof Error ? error.message : String(error)}`],
         canProceed: false,
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
         lastEvaluation: new Date()
       };
     }

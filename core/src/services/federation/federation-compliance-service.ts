@@ -141,7 +141,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to create compliance policy:', error);
-      throw new Error(`Failed to create compliance policy: ${error.message}`);
+      throw new Error(`Failed to create compliance policy: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -218,7 +218,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to create data sovereignty control:', error);
-      throw new Error(`Failed to create data sovereignty control: ${error.message}`);
+      throw new Error(`Failed to create data sovereignty control: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -329,7 +329,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to validate data transfer:', error);
-      throw new Error(`Failed to validate data transfer: ${error.message}`);
+      throw new Error(`Failed to validate data transfer: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -432,7 +432,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to check processing compliance:', error);
-      throw new Error(`Failed to check processing compliance: ${error.message}`);
+      throw new Error(`Failed to check processing compliance: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -535,7 +535,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to generate audit trail:', error);
-      throw new Error(`Failed to generate audit trail: ${error.message}`);
+      throw new Error(`Failed to generate audit trail: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -605,7 +605,7 @@ export class FederationComplianceService {
 
     } catch (error) {
       logger.error('Failed to generate compliance report:', error);
-      throw new Error(`Failed to generate compliance report: ${error.message}`);
+      throw new Error(`Failed to generate compliance report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

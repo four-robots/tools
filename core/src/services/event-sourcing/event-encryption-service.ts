@@ -97,10 +97,10 @@ export class EventEncryptionService {
 
     } catch (error) {
       logger.error('Failed to encrypt event data', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         dataKeys: Object.keys(data)
       });
-      throw new EventEncryptionError(`Event encryption failed: ${error.message}`);
+      throw new EventEncryptionError(`Event encryption failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -144,11 +144,11 @@ export class EventEncryptionService {
 
     } catch (error) {
       logger.error('Failed to decrypt event data', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         encryptedDataPresent: !!encryptedData.data,
         version: encryptedData.version
       });
-      throw new EventEncryptionError(`Event decryption failed: ${error.message}`);
+      throw new EventEncryptionError(`Event decryption failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -249,9 +249,9 @@ export class EventEncryptionService {
 
     } catch (error) {
       logger.error('Failed to rotate encryption key', {
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
-      throw new Error(`Key rotation failed: ${error.message}`);
+      throw new Error(`Key rotation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

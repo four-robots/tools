@@ -191,7 +191,7 @@ export class InsightsEngine {
     }));
 
     // Find best performing days
-    const avgCompletionRate = dailyData.reduce((sum, d) => sum + d.completionRate, 0) / dailyData.length;
+    const avgCompletionRate = dailyData.length > 0 ? dailyData.reduce((sum, d) => sum + d.completionRate, 0) / dailyData.length : 0;
     const bestDays = dailyData
       .filter(d => d.completionRate > avgCompletionRate * 1.2 && d.created >= 2)
       .map(d => d.date.toLocaleDateString('en-US', { weekday: 'long' }));
@@ -491,7 +491,7 @@ export class InsightsEngine {
 
     // Analyze time gaps between related actions
     const sessionGaps = this.analyzeSessionGaps(data.events);
-    const avgGap = sessionGaps.reduce((sum, gap) => sum + gap, 0) / sessionGaps.length;
+    const avgGap = sessionGaps.length > 0 ? sessionGaps.reduce((sum, gap) => sum + gap, 0) / sessionGaps.length : 0;
     
     const confidence = Math.min(0.75, 0.4 + (taskCreations.length / 30) * 0.35);
 

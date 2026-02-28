@@ -74,7 +74,7 @@ export class SagaOrchestrator {
     // Cleanup completed sagas periodically
     this.cleanupInterval = setInterval(() => {
       this.cleanupCompletedSagas().catch(error => {
-        logger.error('Failed to cleanup completed sagas', { error: error.message });
+        logger.error('Failed to cleanup completed sagas', { error: error instanceof Error ? error.message : String(error) });
       });
     }, 60 * 60 * 1000); // Every hour
   }
@@ -141,7 +141,7 @@ export class SagaOrchestrator {
       logger.error(`Failed to start saga ${sagaType}`, {
         sagaType,
         triggerEventId: triggerEvent.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -178,7 +178,7 @@ export class SagaOrchestrator {
     } catch (error) {
       logger.error(`Failed to complete saga ${sagaId}`, {
         sagaId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -220,7 +220,7 @@ export class SagaOrchestrator {
     } catch (error) {
       logger.error(`Failed to fail saga ${sagaId}`, {
         sagaId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -263,7 +263,7 @@ export class SagaOrchestrator {
     } catch (error) {
       logger.error(`Failed to get saga ${sagaId}`, {
         sagaId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -303,7 +303,7 @@ export class SagaOrchestrator {
         sagaType,
         eventType: event.eventType,
         eventId: event.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -387,11 +387,11 @@ export class SagaOrchestrator {
         sagaId,
         eventType: event.eventType,
         eventId: event.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
 
       // Fail the saga on unhandled errors
-      await this.failSaga(sagaId, `Unhandled error: ${error.message}`, true);
+      await this.failSaga(sagaId, `Unhandled error: ${error instanceof Error ? error.message : String(error)}`, true);
     }
   }
 
@@ -430,7 +430,7 @@ export class SagaOrchestrator {
       logger.error(`Failed to compensate saga ${sagaId}`, {
         sagaId,
         reason,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -455,7 +455,7 @@ export class SagaOrchestrator {
     } catch (error) {
       logger.error(`Failed to execute command: ${command.commandType}`, {
         commandType: command.commandType,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -586,7 +586,7 @@ export class SagaOrchestrator {
       });
 
     } catch (error) {
-      logger.error('Failed to load active sagas', { error: error.message });
+      logger.error('Failed to load active sagas', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -617,7 +617,7 @@ export class SagaOrchestrator {
         client.release();
       }
     } catch (error) {
-      logger.error('Failed to cleanup completed sagas', { error: error.message });
+      logger.error('Failed to cleanup completed sagas', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
