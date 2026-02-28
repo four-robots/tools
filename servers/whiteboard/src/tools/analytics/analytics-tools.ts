@@ -592,7 +592,7 @@ export const getPerformanceMetrics: Tool = {
           sampleCount: metrics.length,
           thresholdExceeded,
           thresholdExceededPercentage: (thresholdExceeded / metrics.length) * 100,
-          trend: values.length > 1 ? (values[values.length - 1] - values[0]) / values[0] * 100 : 0,
+          trend: values.length > 1 && values[0] !== 0 ? (values[values.length - 1] - values[0]) / values[0] * 100 : 0,
         };
       });
 
