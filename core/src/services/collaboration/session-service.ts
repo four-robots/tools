@@ -82,7 +82,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return session;
     } catch (error) {
       logger.error('Failed to create collaboration session', { error, sessionData });
-      throw new Error(`Failed to create collaboration session: ${error.message}`);
+      throw new Error(`Failed to create collaboration session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -103,7 +103,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return this.mapRowToSession(result.rows[0]);
     } catch (error) {
       logger.error('Failed to get collaboration session', { error, sessionId: id });
-      throw new Error(`Failed to get collaboration session: ${error.message}`);
+      throw new Error(`Failed to get collaboration session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -166,7 +166,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return session;
     } catch (error) {
       logger.error('Failed to update collaboration session', { error, sessionId: id, updates });
-      throw new Error(`Failed to update collaboration session: ${error.message}`);
+      throw new Error(`Failed to update collaboration session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -187,7 +187,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       logger.info('Collaboration session deleted', { sessionId: id });
     } catch (error) {
       logger.error('Failed to delete collaboration session', { error, sessionId: id });
-      throw new Error(`Failed to delete collaboration session: ${error.message}`);
+      throw new Error(`Failed to delete collaboration session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -211,7 +211,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return result.rows.map(row => this.mapRowToSession(row));
     } catch (error) {
       logger.error('Failed to list active collaboration sessions', { error, workspace_id });
-      throw new Error(`Failed to list active collaboration sessions: ${error.message}`);
+      throw new Error(`Failed to list active collaboration sessions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -294,7 +294,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return participant;
     } catch (error) {
       logger.error('Failed to add participant to collaboration session', { error, participantData });
-      throw new Error(`Failed to add participant: ${error.message}`);
+      throw new Error(`Failed to add participant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -356,7 +356,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return participant;
     } catch (error) {
       logger.error('Failed to update session participant', { error, participantId: id, updates });
-      throw new Error(`Failed to update participant: ${error.message}`);
+      throw new Error(`Failed to update participant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -384,7 +384,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
         sessionId, 
         userId 
       });
-      throw new Error(`Failed to remove participant: ${error.message}`);
+      throw new Error(`Failed to remove participant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -405,7 +405,7 @@ export class CollaborationSessionService implements ICollaborationSessionService
       return result.rows.map(row => this.mapRowToParticipant(row));
     } catch (error) {
       logger.error('Failed to get session participants', { error, sessionId });
-      throw new Error(`Failed to get session participants: ${error.message}`);
+      throw new Error(`Failed to get session participants: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -244,11 +244,18 @@ export class QueryBuilderService {
       .execute();
 
     // Track analytics
-    if (this.enableAnalytics && userId) {
-      await this.trackAnalytics(userId, 'load_template', JSON.parse(template.filter_tree));
+    let parsedTree: FilterTree;
+    try {
+      parsedTree = JSON.parse(template.filter_tree);
+    } catch {
+      throw new Error(`Invalid filter tree JSON in template ${templateId}`);
     }
 
-    return JSON.parse(template.filter_tree);
+    if (this.enableAnalytics && userId) {
+      await this.trackAnalytics(userId, 'load_template', parsedTree);
+    }
+
+    return parsedTree;
   }
 
   /**

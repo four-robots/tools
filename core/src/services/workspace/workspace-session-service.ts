@@ -17,15 +17,26 @@ import { randomUUID } from 'crypto';
 export class WorkspaceSessionService {
   private logger: Logger;
   private sessionTimeout: number = 3600000; // 1 hour in milliseconds
+  private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private db: DatabasePool,
     logger?: Logger
   ) {
     this.logger = logger || new Logger('WorkspaceSessionService');
-    
+
     // Start cleanup interval
     this.startSessionCleanup();
+  }
+
+  /**
+   * Stop background cleanup and release resources
+   */
+  destroy(): void {
+    if (this.cleanupIntervalHandle) {
+      clearInterval(this.cleanupIntervalHandle);
+      this.cleanupIntervalHandle = null;
+    }
   }
 
   /**
@@ -587,7 +598,7 @@ export class WorkspaceSessionService {
 
   private startSessionCleanup(): void {
     // Run cleanup every 15 minutes
-    setInterval(() => {
+    this.cleanupIntervalHandle = setInterval(() => {
       this.cleanupExpiredSessions().catch(error => {
         this.logger.error('Session cleanup failed', { error });
       });

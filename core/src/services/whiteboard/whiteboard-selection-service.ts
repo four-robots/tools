@@ -1041,9 +1041,11 @@ export class WhiteboardSelectionService {
   }
 
   private startBackgroundTasks(): void {
-    this.cleanupInterval = setInterval(async () => {
+    this.cleanupInterval = setInterval(() => {
       if (this.config.enableAggressiveCleanup) {
-        await this.forceCleanup();
+        this.forceCleanup().catch(error => {
+          console.error('[SelectionService] Background cleanup failed', error);
+        });
       }
     }, this.config.cleanupIntervalMs);
   }

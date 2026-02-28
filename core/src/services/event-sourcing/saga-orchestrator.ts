@@ -506,14 +506,16 @@ export class SagaOrchestrator {
     }
 
     // Schedule new timeout
-    const timeout = setTimeout(async () => {
+    const timeout = setTimeout(() => {
       logger.warn(`Saga timeout reached: ${sagaId}`, {
         sagaId,
         sagaType,
         timeoutMs
       });
 
-      await this.failSaga(sagaId, 'timeout', true);
+      this.failSaga(sagaId, 'timeout', true).catch(error => {
+        logger.error(`Failed to timeout saga: ${sagaId}`, { error });
+      });
     }, timeoutMs);
 
     this.sagaTimeouts.set(sagaId, timeout);

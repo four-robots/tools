@@ -149,7 +149,7 @@ export class CodeQualityService {
         analysisTime: Date.now() - startTime,
         analysisDate: new Date(),
         version: '1.0',
-        errors: [{ type: 'analysis_error', message: error.message }]
+        errors: [{ type: 'analysis_error', message: error instanceof Error ? error.message : String(error) }]
       };
     }
   }
