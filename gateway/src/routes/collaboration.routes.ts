@@ -711,15 +711,12 @@ export function createCollaborationRoutes(
         });
       }
 
-      // Build presence update
+      // Build presence update (only update activity timestamps, preserve existing data)
       const updateData: any = {
         user_id: req.user!.id,
         session_id: sessionId,
         last_activity: new Date(),
-        connection_count: 1,
-        connection_ids: [],
-        last_heartbeat: new Date(),
-        joined_session_at: new Date()
+        last_heartbeat: new Date()
       };
 
       if (validatedData.status) {
