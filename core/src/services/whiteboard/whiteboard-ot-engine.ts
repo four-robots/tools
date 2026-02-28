@@ -215,6 +215,7 @@ export class WhiteboardOTEngine {
   private spatialIndex: SpatialIndex;
   private memoryCache: LRUCache<string, any>;
   private activeTransactions: Map<string, Transaction> = new Map();
+  private performanceMonitorInterval: ReturnType<typeof setInterval> | null = null;
   private performanceMonitor: {
     operationLatencies: number[];
     memorySnapshots: number[];
@@ -252,9 +253,14 @@ export class WhiteboardOTEngine {
    * Start background performance monitoring
    */
   private startPerformanceMonitoring(): void {
-    setInterval(() => {
+    this.performanceMonitorInterval = setInterval(() => {
       this.performCleanup();
     }, 30000); // Cleanup every 30 seconds
+  }
+
+  shutdown(): void {
+    if (this.performanceMonitorInterval) clearInterval(this.performanceMonitorInterval);
+    this.performanceMonitorInterval = null;
   }
 
   /**
