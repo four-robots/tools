@@ -187,6 +187,7 @@ export default function useAnalyticsSocket(
   
   const disconnect = useCallback(() => {
     if (socket) {
+      socket.removeAllListeners();
       socket.disconnect();
       setSocket(null);
     }

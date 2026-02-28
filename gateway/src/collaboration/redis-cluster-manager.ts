@@ -24,6 +24,7 @@ export class RedisClusterManager {
   private readonly gatewayInstanceId: string;
   private readonly channelPrefix = 'collaboration:';
   private subscribedChannels = new Set<string>();
+  private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
 
   // Callback functions for handling messages
   public onRoomMessage?: (roomId: string, message: CollaborationMessage, excludeConnectionId?: string) => Promise<void>;
@@ -191,7 +192,7 @@ export class RedisClusterManager {
    * Starts instance heartbeat to maintain registration
    */
   private startInstanceHeartbeat(): void {
-    setInterval(async () => {
+    this.heartbeatIntervalId = setInterval(async () => {
       try {
         await this.publisher.setex(
           `${this.channelPrefix}instance:${this.gatewayInstanceId}`,
@@ -568,6 +569,12 @@ export class RedisClusterManager {
     logger.info('Shutting down Redis Cluster Manager');
 
     try {
+      // Stop heartbeat
+      if (this.heartbeatIntervalId) {
+        clearInterval(this.heartbeatIntervalId);
+        this.heartbeatIntervalId = null;
+      }
+
       // Unsubscribe from all channels
       const unsubscribePromises: Promise<number>[] = [];
       for (const channel of this.subscribedChannels) {

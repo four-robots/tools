@@ -433,8 +433,10 @@ export class FacetCacheManager {
       clearInterval(this.precomputeInterval);
     }
     
-    this.precomputeInterval = setInterval(async () => {
-      await this.processPrecomputeQueue();
+    this.precomputeInterval = setInterval(() => {
+      this.processPrecomputeQueue().catch(error => {
+        console.error('Facet precomputation failed:', error instanceof Error ? error.message : error);
+      });
     }, this.options.precomputeInterval);
   }
 
