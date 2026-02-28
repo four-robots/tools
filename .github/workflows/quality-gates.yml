@@ -45,7 +45,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
+        npm ci --ignore-scripts
         cd core && npm run build
 
     - name: Create reports directory
@@ -251,7 +251,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
+        npm ci --ignore-scripts
         cd core && npm run build
     
     - name: Create reports directory
@@ -441,7 +441,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
+        npm ci --ignore-scripts
         cd core && npm run build
     
     - name: Check Quality Gates
