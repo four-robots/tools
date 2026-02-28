@@ -187,7 +187,7 @@ export class AlertProcessorWorker {
       this.logger.info('Database connection test successful');
     } catch (error) {
       this.logger.error('Database connection test failed', { error });
-      throw new Error(`Database connection failed: ${error.message}`);
+      throw new Error(`Database connection failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

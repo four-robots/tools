@@ -67,6 +67,7 @@ export class ConflictNotificationService implements IConflictNotificationService
     scheduled: Date;
     attempts: number;
   }> = [];
+  private processorInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private db: Pool,
@@ -708,9 +709,21 @@ export class ConflictNotificationService implements IConflictNotificationService
 
   private startNotificationProcessor(): void {
     // Background processor for queued notifications
-    setInterval(async () => {
-      await this.processNotificationQueue();
+    this.processorInterval = setInterval(() => {
+      this.processNotificationQueue().catch(error => {
+        logger.error('Failed to process notification queue', { error: error instanceof Error ? error.message : String(error) });
+      });
     }, 5000); // Process every 5 seconds
+  }
+
+  destroy(): void {
+    if (this.processorInterval) {
+      clearInterval(this.processorInterval);
+      this.processorInterval = null;
+    }
+    this.subscribers.clear();
+    this.userPreferences.clear();
+    this.notificationQueue = [];
   }
 
   private async processNotificationQueue(): Promise<void> {

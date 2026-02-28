@@ -28,6 +28,7 @@ import {
 
 export class ScraperService {
   private processingJobs = new Map<string, Promise<void>>();
+  private jobProcessorInterval: ReturnType<typeof setInterval> | null = null;
   
   constructor(
     private database: ScraperDatabaseManager,
@@ -320,13 +321,21 @@ export class ScraperService {
   }
 
   async startJobProcessor(intervalMs: number = 5000): Promise<void> {
-    setInterval(async () => {
-      try {
-        await this.processNextJob();
-      } catch (error) {
+    if (this.jobProcessorInterval) {
+      clearInterval(this.jobProcessorInterval);
+    }
+    this.jobProcessorInterval = setInterval(() => {
+      this.processNextJob().catch(error => {
         console.error('Error in job processor:', error);
-      }
+      });
     }, intervalMs);
+  }
+
+  stopJobProcessor(): void {
+    if (this.jobProcessorInterval) {
+      clearInterval(this.jobProcessorInterval);
+      this.jobProcessorInterval = null;
+    }
   }
 
   // Performance monitoring methods

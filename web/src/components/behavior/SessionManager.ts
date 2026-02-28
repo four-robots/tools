@@ -21,6 +21,7 @@ export class SessionManager {
   private inactivityTimer?: number;
   private heartbeatInterval?: number;
   private listeners: Map<string, Function[]> = new Map();
+  private domListeners: Array<{ target: EventTarget; event: string; handler: EventListener }> = [];
 
   constructor(sessionId?: string, options: {
     activityTimeout?: number;
@@ -183,6 +184,11 @@ export class SessionManager {
    */
   shutdown(): void {
     this.clearTimers();
+    // Remove all DOM event listeners
+    for (const { target, event, handler } of this.domListeners) {
+      target.removeEventListener(event, handler);
+    }
+    this.domListeners = [];
     this.persistSession();
     this.emit('shutdown', this.getSessionMetrics());
   }
@@ -191,22 +197,28 @@ export class SessionManager {
     return crypto.randomUUID();
   }
 
+  private addDomListener(target: EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void {
+    target.addEventListener(event, handler, options);
+    this.domListeners.push({ target, event, handler });
+  }
+
   private setupActivityTracking(): void {
     // Track various user activities
     const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
+
     const activityHandler = () => this.updateActivity();
-    
+
     activities.forEach(activity => {
-      document.addEventListener(activity, activityHandler, { passive: true });
+      this.addDomListener(document, activity, activityHandler, { passive: true });
     });
 
     // Track visibility changes
-    document.addEventListener('visibilitychange', () => {
+    const visibilityHandler = () => {
       if (document.visibilityState === 'visible') {
         this.updateActivity();
       }
-    });
+    };
+    this.addDomListener(document, 'visibilitychange', visibilityHandler);
 
     // Setup initial inactivity timer
     this.resetInactivityTimer();
