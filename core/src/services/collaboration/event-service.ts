@@ -114,7 +114,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       return event;
     } catch (error) {
       logger.error('Failed to broadcast collaboration event', { error, eventData });
-      throw new Error(`Failed to broadcast event: ${error.message}`);
+      throw new Error(`Failed to broadcast event: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -150,7 +150,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       return result.rows.map(row => this.mapRowToEvent(row));
     } catch (error) {
       logger.error('Failed to get event history', { error, sessionId, fromSequence, limit });
-      throw new Error(`Failed to get event history: ${error.message}`);
+      throw new Error(`Failed to get event history: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -175,7 +175,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       logger.debug('Event marked as delivered', { eventId });
     } catch (error) {
       logger.error('Failed to mark event as delivered', { error, eventId });
-      throw new Error(`Failed to mark event as delivered: ${error.message}`);
+      throw new Error(`Failed to mark event as delivered: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -206,7 +206,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       return events;
     } catch (error) {
       logger.error('Failed to replay events', { error, sessionId, fromTimestamp });
-      throw new Error(`Failed to replay events: ${error.message}`);
+      throw new Error(`Failed to replay events: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -229,7 +229,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       return result.rows.map(row => this.mapRowToEvent(row));
     } catch (error) {
       logger.error('Failed to get failed events', { error, maxAge });
-      throw new Error(`Failed to get failed events: ${error.message}`);
+      throw new Error(`Failed to get failed events: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -258,7 +258,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       logger.warn('Event marked as failed', { eventId, reason });
     } catch (error) {
       logger.error('Failed to mark event as failed', { error, eventId, reason });
-      throw new Error(`Failed to mark event as failed: ${error.message}`);
+      throw new Error(`Failed to mark event as failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -327,7 +327,7 @@ export class EventBroadcastingService implements IEventBroadcastingService {
       return conflicts;
     } catch (error) {
       logger.error('Failed to detect conflicts', { error, sessionId, windowMs });
-      throw new Error(`Failed to detect conflicts: ${error.message}`);
+      throw new Error(`Failed to detect conflicts: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

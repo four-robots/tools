@@ -86,7 +86,7 @@ export class PresenceService implements IPresenceService {
       return presence;
     } catch (error) {
       logger.error('Failed to update user presence', { error, presenceData });
-      throw new Error(`Failed to update user presence: ${error.message}`);
+      throw new Error(`Failed to update user presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -109,7 +109,7 @@ export class PresenceService implements IPresenceService {
       return result.rows.map(row => this.mapRowToPresence(row));
     } catch (error) {
       logger.error('Failed to get session presence', { error, sessionId });
-      throw new Error(`Failed to get session presence: ${error.message}`);
+      throw new Error(`Failed to get session presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -132,7 +132,7 @@ export class PresenceService implements IPresenceService {
       return result.rows.map(row => this.mapRowToPresence(row));
     } catch (error) {
       logger.error('Failed to get user presence', { error, userId });
-      throw new Error(`Failed to get user presence: ${error.message}`);
+      throw new Error(`Failed to get user presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -153,7 +153,7 @@ export class PresenceService implements IPresenceService {
       }
     } catch (error) {
       logger.error('Failed to remove user presence', { error, userId, sessionId });
-      throw new Error(`Failed to remove user presence: ${error.message}`);
+      throw new Error(`Failed to remove user presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -192,7 +192,7 @@ export class PresenceService implements IPresenceService {
       logger.debug('Heartbeat updated', { userId, sessionId });
     } catch (error) {
       logger.error('Failed to update heartbeat', { error, userId, sessionId });
-      throw new Error(`Failed to update heartbeat: ${error.message}`);
+      throw new Error(`Failed to update heartbeat: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -258,7 +258,7 @@ export class PresenceService implements IPresenceService {
         sessionId, 
         connectionId 
       });
-      throw new Error(`Failed to add connection: ${error.message}`);
+      throw new Error(`Failed to add connection: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -322,7 +322,7 @@ export class PresenceService implements IPresenceService {
         sessionId, 
         connectionId 
       });
-      throw new Error(`Failed to remove connection: ${error.message}`);
+      throw new Error(`Failed to remove connection: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -347,7 +347,7 @@ export class PresenceService implements IPresenceService {
       logger.debug('User location updated', { userId, sessionId, location });
     } catch (error) {
       logger.error('Failed to update user location', { error, userId, sessionId, location });
-      throw new Error(`Failed to update user location: ${error.message}`);
+      throw new Error(`Failed to update user location: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -396,7 +396,7 @@ export class PresenceService implements IPresenceService {
       return result.rows.map(row => this.mapRowToPresence(row));
     } catch (error) {
       logger.error('Failed to get stale presence records', { error, thresholdMinutes });
-      throw new Error(`Failed to get stale presence: ${error.message}`);
+      throw new Error(`Failed to get stale presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -430,7 +430,7 @@ export class PresenceService implements IPresenceService {
       return cleanedCount;
     } catch (error) {
       logger.error('Failed to cleanup stale presence', { error, thresholdMinutes });
-      throw new Error(`Failed to cleanup stale presence: ${error.message}`);
+      throw new Error(`Failed to cleanup stale presence: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -468,7 +468,7 @@ export class PresenceService implements IPresenceService {
       };
     } catch (error) {
       logger.error('Failed to get session presence stats', { error, sessionId });
-      throw new Error(`Failed to get session presence stats: ${error.message}`);
+      throw new Error(`Failed to get session presence stats: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

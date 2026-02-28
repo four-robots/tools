@@ -118,7 +118,7 @@ export class FederationManagementService {
       return summaries;
     } catch (error) {
       logger.error('Error getting all federation nodes', { error, tenantId });
-      throw new Error(`Failed to get federation nodes: ${error.message}`);
+      throw new Error(`Failed to get federation nodes: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -159,7 +159,7 @@ export class FederationManagementService {
       return node;
     } catch (error) {
       logger.error('Error registering federation node', { error, tenantId, registrationRequest });
-      throw new Error(`Failed to register node: ${error.message}`);
+      throw new Error(`Failed to register node: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -187,7 +187,7 @@ export class FederationManagementService {
       });
     } catch (error) {
       logger.error('Error removing federation node', { error, nodeId, tenantId });
-      throw new Error(`Failed to remove node: ${error.message}`);
+      throw new Error(`Failed to remove node: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -228,7 +228,7 @@ export class FederationManagementService {
       return response;
     } catch (error) {
       logger.error('Error executing federation search', { error, tenantId, searchRequest });
-      throw new Error(`Federation search failed: ${error.message}`);
+      throw new Error(`Federation search failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -270,7 +270,7 @@ export class FederationManagementService {
       };
     } catch (error) {
       logger.error('Error getting dashboard metrics', { error, tenantId });
-      throw new Error(`Failed to get dashboard metrics: ${error.message}`);
+      throw new Error(`Failed to get dashboard metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -316,10 +316,10 @@ export class FederationManagementService {
       return {
         overall: 'critical',
         components: {
-          nodes: { status: 'error', details: { error: error.message } },
-          security: { status: 'error', details: { error: error.message } },
-          performance: { status: 'error', details: { error: error.message } },
-          compliance: { status: 'error', details: { error: error.message } }
+          nodes: { status: 'error', details: { error: error instanceof Error ? error.message : String(error) } },
+          security: { status: 'error', details: { error: error instanceof Error ? error.message : String(error) } },
+          performance: { status: 'error', details: { error: error instanceof Error ? error.message : String(error) } },
+          compliance: { status: 'error', details: { error: error instanceof Error ? error.message : String(error) } }
         }
       };
     }

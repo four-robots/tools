@@ -145,7 +145,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
         // Check connection limits
         if (this.connections.size >= this.config.maxConnections) {
           const error = new ServerCapacityExceededError(this.config.maxConnections);
-          ws.close(1008, error.message);
+          ws.close(1008, error instanceof Error ? error.message : String(error));
           logger.warn('Connection rejected due to capacity', {
             currentConnections: this.connections.size,
             maxConnections: this.config.maxConnections,
@@ -160,10 +160,10 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
           userId = await this.authenticateConnection(ws, request);
         } catch (authError) {
           const error = toCollaborationError(authError);
-          ws.close(1008, error.message);
+          ws.close(1008, error instanceof Error ? error.message : String(error));
           logger.warn('Connection rejected due to authentication failure', {
             error: error.code,
-            message: error.message,
+            message: error instanceof Error ? error.message : String(error),
             userAgent: request.headers['user-agent'],
             ip: this.getClientIP(request)
           });
@@ -189,7 +189,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
           logger.error('WebSocket connection error', { 
             connectionId, 
             userId, 
-            error: error.message 
+            error: error instanceof Error ? error.message : String(error) 
           });
         });
 
@@ -263,16 +263,16 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
 
       // Convert JWT verification errors to InvalidTokenError
       if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-        throw new InvalidTokenError(`JWT verification failed: ${error.message}`);
+        throw new InvalidTokenError(`JWT verification failed: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       // Convert other errors to generic authentication error
       logger.error('WebSocket authentication failed', { 
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userAgent: request.headers['user-agent'],
         ip: this.getClientIP(request)
       });
-      throw new AuthenticationRequiredError(`Authentication failed: ${error.message}`);
+      throw new AuthenticationRequiredError(`Authentication failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -377,7 +377,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
             sessionId: ws.sessionId || '',
             userId: ws.userId,
             data: { 
-              error: error.message, 
+              error: error instanceof Error ? error.message : String(error), 
               code: error.code,
               statusCode: error.statusCode,
               details: error.details

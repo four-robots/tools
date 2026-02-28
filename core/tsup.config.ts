@@ -36,6 +36,14 @@ export default defineConfig({
     '@octokit/rest',
     '@octokit/plugin-throttling',
     '@gitbeaker/rest',
-    'axios'
+    'axios',
+    'onnxruntime-node',
+    '@tensorflow/tfjs-node',
+    'tree-sitter',
+    'tree-sitter-javascript',
+    'tree-sitter-python',
+    'tree-sitter-go',
+    'tree-sitter-rust',
+    'tree-sitter-cpp'
   ]
 });

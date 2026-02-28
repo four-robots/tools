@@ -68,7 +68,7 @@ export class LocalGitProvider implements GitProvider {
         updatedAt: lastCommit
       };
     } catch (error) {
-      throw new Error(`Failed to fetch local repository info: ${error.message}`);
+      throw new Error(`Failed to fetch local repository info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -132,7 +132,7 @@ export class LocalGitProvider implements GitProvider {
         files
       };
     } catch (error) {
-      throw new Error(`Failed to fetch local repository tree: ${error.message}`);
+      throw new Error(`Failed to fetch local repository tree: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -178,7 +178,7 @@ export class LocalGitProvider implements GitProvider {
 
       return branches;
     } catch (error) {
-      throw new Error(`Failed to fetch local repository branches: ${error.message}`);
+      throw new Error(`Failed to fetch local repository branches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -195,10 +195,10 @@ export class LocalGitProvider implements GitProvider {
 
       return content;
     } catch (error) {
-      if (error.message.includes('does not exist')) {
+      if (error instanceof Error ? error.message : String(error).includes('does not exist')) {
         throw new Error(`File not found: ${path}`);
       }
-      throw new Error(`Failed to fetch file content: ${error.message}`);
+      throw new Error(`Failed to fetch file content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -246,7 +246,7 @@ export class LocalGitProvider implements GitProvider {
         files: fileChanges
       };
     } catch (error) {
-      throw new Error(`Failed to fetch local changes since ${since}: ${error.message}`);
+      throw new Error(`Failed to fetch local changes since ${since}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -288,7 +288,7 @@ export class LocalGitProvider implements GitProvider {
     try {
       return await execAsync(`git ${args.join(' ')}`, { cwd });
     } catch (error) {
-      throw new Error(`Git command failed: ${error.message}`);
+      throw new Error(`Git command failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -115,7 +115,7 @@ export class RecommendationSystem implements IRecommendationSystem {
 
     } catch (error) {
       logger.error(`Error generating recommendations for user ${userId}:`, error);
-      throw new Error(`Failed to generate recommendations: ${error.message}`);
+      throw new Error(`Failed to generate recommendations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -149,7 +149,7 @@ export class RecommendationSystem implements IRecommendationSystem {
 
     } catch (error) {
       logger.error(`Error providing feedback for recommendation ${recommendationId}:`, error);
-      throw new Error(`Failed to provide feedback: ${error.message}`);
+      throw new Error(`Failed to provide feedback: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -171,7 +171,7 @@ export class RecommendationSystem implements IRecommendationSystem {
 
     } catch (error) {
       logger.error(`Error getting active recommendations for user ${userId}:`, error);
-      throw new Error(`Failed to get active recommendations: ${error.message}`);
+      throw new Error(`Failed to get active recommendations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

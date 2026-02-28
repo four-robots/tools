@@ -467,7 +467,7 @@ export class NotificationService {
     // Simple variable substitution - in production, use a proper template engine
     for (const [key, value] of Object.entries(variables)) {
       const placeholder = `{{${key}}}`;
-      rendered = rendered.replace(new RegExp(placeholder, 'g'), String(value));
+      rendered = rendered.split(placeholder).join(String(value));
     }
 
     return rendered;

@@ -107,7 +107,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to create tenant:', error);
-      throw new Error(`Failed to create tenant: ${error.message}`);
+      throw new Error(`Failed to create tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -168,7 +168,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to update tenant:', error);
-      throw new Error(`Failed to update tenant: ${error.message}`);
+      throw new Error(`Failed to update tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -214,7 +214,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to suspend tenant:', error);
-      throw new Error(`Failed to suspend tenant: ${error.message}`);
+      throw new Error(`Failed to suspend tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -260,7 +260,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to activate tenant:', error);
-      throw new Error(`Failed to activate tenant: ${error.message}`);
+      throw new Error(`Failed to activate tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -302,7 +302,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to delete tenant:', error);
-      throw new Error(`Failed to delete tenant: ${error.message}`);
+      throw new Error(`Failed to delete tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -353,7 +353,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to add user to tenant:', error);
-      throw new Error(`Failed to add user to tenant: ${error.message}`);
+      throw new Error(`Failed to add user to tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -393,7 +393,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to update user role:', error);
-      throw new Error(`Failed to update user role: ${error.message}`);
+      throw new Error(`Failed to update user role: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -419,7 +419,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to remove user from tenant:', error);
-      throw new Error(`Failed to remove user from tenant: ${error.message}`);
+      throw new Error(`Failed to remove user from tenant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -469,7 +469,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to set tenant configuration:', error);
-      throw new Error(`Failed to set tenant configuration: ${error.message}`);
+      throw new Error(`Failed to set tenant configuration: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -499,7 +499,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to get tenant configuration:', error);
-      throw new Error(`Failed to get tenant configuration: ${error.message}`);
+      throw new Error(`Failed to get tenant configuration: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -559,7 +559,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to get tenant metrics:', error);
-      throw new Error(`Failed to get tenant metrics: ${error.message}`);
+      throw new Error(`Failed to get tenant metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -583,7 +583,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to get tenant by ID:', error);
-      throw new Error(`Failed to get tenant by ID: ${error.message}`);
+      throw new Error(`Failed to get tenant by ID: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -603,7 +603,7 @@ export class TenantManagementService {
 
     } catch (error) {
       logger.error('Failed to get tenant by slug:', error);
-      throw new Error(`Failed to get tenant by slug: ${error.message}`);
+      throw new Error(`Failed to get tenant by slug: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

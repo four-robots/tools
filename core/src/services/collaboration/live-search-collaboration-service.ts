@@ -126,7 +126,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Failed to create collaborative search session', { error, sessionData });
-      throw new Error(`Failed to create search session: ${error.message}`);
+      throw new Error(`Failed to create search session: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -149,7 +149,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return this.mapRowToSearchSession(result.rows[0]);
     } catch (error) {
       logger.error('Failed to get collaborative search session', { error, sessionId: id });
-      throw new Error(`Failed to get search session: ${error.message}`);
+      throw new Error(`Failed to get search session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -238,7 +238,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       };
     } catch (error) {
       logger.error('Failed to get search session details', { error, sessionId: id });
-      throw new Error(`Failed to get search session details: ${error.message}`);
+      throw new Error(`Failed to get search session details: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -321,7 +321,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return session;
     } catch (error) {
       logger.error('Failed to update collaborative search session', { error, sessionId: id, updates });
-      throw new Error(`Failed to update search session: ${error.message}`);
+      throw new Error(`Failed to update search session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -361,7 +361,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Failed to delete collaborative search session', { error, sessionId: id });
-      throw new Error(`Failed to delete search session: ${error.message}`);
+      throw new Error(`Failed to delete search session: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -406,7 +406,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       });
     } catch (error) {
       logger.error('Failed to list active search sessions', { error, workspaceId });
-      throw new Error(`Failed to list active search sessions: ${error.message}`);
+      throw new Error(`Failed to list active search sessions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -494,7 +494,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Failed to join search session', { error, sessionId, userId, role });
-      throw new Error(`Failed to join search session: ${error.message}`);
+      throw new Error(`Failed to join search session: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -520,7 +520,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       });
     } catch (error) {
       logger.error('Failed to leave search session', { error, sessionId, userId });
-      throw new Error(`Failed to leave search session: ${error.message}`);
+      throw new Error(`Failed to leave search session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -599,7 +599,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return participant;
     } catch (error) {
       logger.error('Failed to update search participant', { error, participantId, updates });
-      throw new Error(`Failed to update search participant: ${error.message}`);
+      throw new Error(`Failed to update search participant: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -628,7 +628,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return result.rows.map(row => this.mapRowToSearchParticipant(row));
     } catch (error) {
       logger.error('Failed to get search session participants', { error, sessionId });
-      throw new Error(`Failed to get search session participants: ${error.message}`);
+      throw new Error(`Failed to get search session participants: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -715,7 +715,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Failed to update search state', { error, update });
-      throw new Error(`Failed to update search state: ${error.message}`);
+      throw new Error(`Failed to update search state: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -738,7 +738,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return this.mapRowToSearchState(result.rows[0]);
     } catch (error) {
       logger.error('Failed to get search state', { error, sessionId, stateKey });
-      throw new Error(`Failed to get search state: ${error.message}`);
+      throw new Error(`Failed to get search state: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -762,7 +762,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return stateMap;
     } catch (error) {
       logger.error('Failed to sync search state', { error, sessionId });
-      throw new Error(`Failed to sync search state: ${error.message}`);
+      throw new Error(`Failed to sync search state: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -821,7 +821,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return event;
     } catch (error) {
       logger.error('Failed to broadcast search event', { error, eventData });
-      throw new Error(`Failed to broadcast search event: ${error.message}`);
+      throw new Error(`Failed to broadcast search event: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -845,7 +845,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return result.rows.map(row => this.mapRowToSearchEvent(row));
     } catch (error) {
       logger.error('Failed to get search event history', { error, sessionId, fromSequence, limit });
-      throw new Error(`Failed to get search event history: ${error.message}`);
+      throw new Error(`Failed to get search event history: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -914,7 +914,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return annotation;
     } catch (error) {
       logger.error('Failed to create search annotation', { error, annotationData });
-      throw new Error(`Failed to create search annotation: ${error.message}`);
+      throw new Error(`Failed to create search annotation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -999,7 +999,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return annotation;
     } catch (error) {
       logger.error('Failed to update search annotation', { error, annotationId: id, updates });
-      throw new Error(`Failed to update search annotation: ${error.message}`);
+      throw new Error(`Failed to update search annotation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1020,7 +1020,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       logger.info('Search annotation deleted', { annotationId: id });
     } catch (error) {
       logger.error('Failed to delete search annotation', { error, annotationId: id });
-      throw new Error(`Failed to delete search annotation: ${error.message}`);
+      throw new Error(`Failed to delete search annotation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1041,7 +1041,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return result.rows.map(row => this.mapRowToSearchAnnotation(row));
     } catch (error) {
       logger.error('Failed to get session annotations', { error, sessionId });
-      throw new Error(`Failed to get session annotations: ${error.message}`);
+      throw new Error(`Failed to get session annotations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1132,7 +1132,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       return conflicts;
     } catch (error) {
       logger.error('Failed to detect conflicts', { error, sessionId, stateKey });
-      throw new Error(`Failed to detect conflicts: ${error.message}`);
+      throw new Error(`Failed to detect conflicts: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1165,7 +1165,7 @@ export class LiveSearchCollaborationService implements ILiveSearchCollaborationS
       });
     } catch (error) {
       logger.error('Failed to resolve conflict', { error, conflictId, resolution });
-      throw new Error(`Failed to resolve conflict: ${error.message}`);
+      throw new Error(`Failed to resolve conflict: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

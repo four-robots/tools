@@ -144,7 +144,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to register federation node:', error);
-      throw new Error(`Failed to register federation node: ${error.message}`);
+      throw new Error(`Failed to register federation node: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -204,7 +204,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to update node capabilities:', error);
-      throw new Error(`Failed to update node capabilities: ${error.message}`);
+      throw new Error(`Failed to update node capabilities: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -268,7 +268,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to deactivate federation node:', error);
-      throw new Error(`Failed to deactivate federation node: ${error.message}`);
+      throw new Error(`Failed to deactivate federation node: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -359,7 +359,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to discover federation nodes:', error);
-      throw new Error(`Failed to discover federation nodes: ${error.message}`);
+      throw new Error(`Failed to discover federation nodes: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -390,7 +390,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to get node details:', error);
-      throw new Error(`Failed to get node details: ${error.message}`);
+      throw new Error(`Failed to get node details: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -464,7 +464,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to perform health check:', error);
-      throw new Error(`Failed to perform health check: ${error.message}`);
+      throw new Error(`Failed to perform health check: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -674,7 +674,7 @@ export class FederationNodeRegistry {
 
     } catch (error) {
       logger.error('Failed to get federation statistics:', error);
-      throw new Error(`Failed to get federation statistics: ${error.message}`);
+      throw new Error(`Failed to get federation statistics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

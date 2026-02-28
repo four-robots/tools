@@ -144,10 +144,10 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to start resolution session', { error, conflictId, moderatorId });
-      throw new ResolutionSessionError(`Failed to start resolution: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to start resolution: ${error instanceof Error ? error.message : String(error)}`, {
         conflictId,
         moderatorId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -201,11 +201,11 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to join resolution session', { error, sessionId, userId, role });
-      throw new ResolutionSessionError(`Failed to join resolution: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to join resolution: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
         userId,
         role,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -287,11 +287,11 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to propose solution', { error, sessionId, userId, strategy });
-      throw new ResolutionSessionError(`Failed to propose solution: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to propose solution: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
         userId,
         strategy,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -366,12 +366,12 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to cast vote', { error, sessionId, solutionId, userId, vote });
-      throw new ResolutionSessionError(`Failed to cast vote: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to cast vote: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
         solutionId,
         userId,
         vote,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -465,11 +465,11 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to finalize resolution', { error, sessionId, decision });
-      throw new ResolutionSessionError(`Failed to finalize resolution: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to finalize resolution: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
         decision,
         selectedSolutionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -521,10 +521,10 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
 
     } catch (error) {
       logger.error('Failed to escalate resolution', { error, sessionId, reason });
-      throw new ResolutionSessionError(`Failed to escalate resolution: ${error.message}`, {
+      throw new ResolutionSessionError(`Failed to escalate resolution: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
         reason,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }

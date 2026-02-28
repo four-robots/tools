@@ -185,6 +185,7 @@ export function useSearchAnalytics(
 
     // Search volume trend
     const recentSearches = metrics.dailyStats.slice(-7);
+    if (recentSearches.length === 0) return insights;
     const avgRecentSearches = recentSearches.reduce((sum, stat) => sum + stat.searches, 0) / recentSearches.length;
     const previousAvg = metrics.dailyStats.slice(-14, -7).reduce((sum, stat) => sum + stat.searches, 0) / 7;
     

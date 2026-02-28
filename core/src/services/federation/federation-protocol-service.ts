@@ -130,7 +130,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to initialize federation:', error);
-      throw new Error(`Failed to initialize federation: ${error.message}`);
+      throw new Error(`Failed to initialize federation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -173,7 +173,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to execute federated search:', error);
-      throw new Error(`Failed to execute federated search: ${error.message}`);
+      throw new Error(`Failed to execute federated search: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -218,7 +218,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to register external node:', error);
-      throw new Error(`Failed to register external node: ${error.message}`);
+      throw new Error(`Failed to register external node: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -251,7 +251,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to syndicate content:', error);
-      throw new Error(`Failed to syndicate content: ${error.message}`);
+      throw new Error(`Failed to syndicate content: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -291,7 +291,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to get federation status:', error);
-      throw new Error(`Failed to get federation status: ${error.message}`);
+      throw new Error(`Failed to get federation status: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -347,7 +347,7 @@ export class FederationProtocolService {
 
     } catch (error) {
       logger.error('Failed to get federation metrics:', error);
-      throw new Error(`Failed to get federation metrics: ${error.message}`);
+      throw new Error(`Failed to get federation metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

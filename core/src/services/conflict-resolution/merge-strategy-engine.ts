@@ -127,7 +127,7 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
       MetricsCollector.recordError(
         'merge_execution',
         'merge_strategy_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         duration,
         { conflictId, strategy }
       );
@@ -240,7 +240,7 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
    * Sanitizes error messages to prevent information leakage
    */
   private sanitizeErrorMessage(error: Error, context: string): string {
-    let message = error.message || 'Unknown error';
+    let message = error instanceof Error ? error.message : String(error) || 'Unknown error';
     
     // Remove sensitive patterns
     message = message
@@ -428,9 +428,9 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
 
     } catch (error) {
       logger.error('Failed to evaluate merge strategies', { error, conflictId });
-      throw new MergeStrategyError(`Failed to evaluate strategies: ${error.message}`, {
+      throw new MergeStrategyError(`Failed to evaluate strategies: ${error instanceof Error ? error.message : String(error)}`, {
         conflictId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -623,7 +623,7 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
       MetricsCollector.recordError(
         'operational_transform',
         'transformation_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         duration,
         { operationCount: operations.length }
       );
@@ -700,10 +700,10 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
 
     } catch (error) {
       logger.error('Custom rule merge failed', { error, conflictId, ruleId });
-      throw new MergeStrategyError(`Custom rule merge failed: ${error.message}`, {
+      throw new MergeStrategyError(`Custom rule merge failed: ${error instanceof Error ? error.message : String(error)}`, {
         conflictId,
         ruleId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }

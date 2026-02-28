@@ -141,7 +141,7 @@ export class AdaptiveInterfaceService implements IAdaptiveInterfaceService {
 
     } catch (error) {
       logger.error(`Error customizing search interface for user ${userId}:`, error);
-      throw new Error(`Failed to customize search interface: ${error.message}`);
+      throw new Error(`Failed to customize search interface: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -172,7 +172,7 @@ export class AdaptiveInterfaceService implements IAdaptiveInterfaceService {
 
     } catch (error) {
       logger.error(`Error syncing personalization across devices for user ${userId}:`, error);
-      throw new Error(`Failed to sync personalization across devices: ${error.message}`);
+      throw new Error(`Failed to sync personalization across devices: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

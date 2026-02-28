@@ -360,7 +360,7 @@ export class FederationAuditLogger {
 
     } catch (error) {
       logger.error('Failed to generate compliance report:', error);
-      throw new Error(`Failed to generate compliance report: ${error.message}`);
+      throw new Error(`Failed to generate compliance report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -119,7 +119,7 @@ export class RepositoryService {
 
       return repository;
     } catch (error) {
-      throw new Error(`Failed to add repository: ${error.message}`);
+      throw new Error(`Failed to add repository: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -137,7 +137,7 @@ export class RepositoryService {
 
       return result ? this.mapDbRowToRepository(result) : null;
     } catch (error) {
-      throw new Error(`Failed to get repository: ${error.message}`);
+      throw new Error(`Failed to get repository: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -205,7 +205,7 @@ export class RepositoryService {
         pageSize
       };
     } catch (error) {
-      throw new Error(`Failed to list repositories: ${error.message}`);
+      throw new Error(`Failed to list repositories: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -258,7 +258,7 @@ export class RepositoryService {
 
       return (await this.getRepository(repositoryId))!;
     } catch (error) {
-      throw new Error(`Failed to update repository: ${error.message}`);
+      throw new Error(`Failed to update repository: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -297,7 +297,7 @@ export class RepositoryService {
         .where('id', '=', repositoryId)
         .execute();
     } catch (error) {
-      throw new Error(`Failed to delete repository: ${error.message}`);
+      throw new Error(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -353,7 +353,7 @@ export class RepositoryService {
 
       return syncResult;
     } catch (error) {
-      await this.updateSyncStatus(repositoryId, SyncStatus.FAILED, error.message);
+      await this.updateSyncStatus(repositoryId, SyncStatus.FAILED, error instanceof Error ? error.message : String(error));
       await this.failSyncLog(syncLog.id, error);
       throw error;
     }
@@ -387,7 +387,7 @@ export class RepositoryService {
         updatedAt: row.updated_at
       }));
     } catch (error) {
-      throw new Error(`Failed to get repository branches: ${error.message}`);
+      throw new Error(`Failed to get repository branches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -448,7 +448,7 @@ export class RepositoryService {
         syncStatus
       };
     } catch (error) {
-      throw new Error(`Failed to get repository stats: ${error.message}`);
+      throw new Error(`Failed to get repository stats: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -740,7 +740,7 @@ export class RepositoryService {
       .updateTable('repository_sync_logs')
       .set({
         status: SyncOperationStatus.FAILED,
-        error_details: { error: error.message, stack: error.stack },
+        error_details: { error: error instanceof Error ? error.message : String(error), stack: error.stack },
         completed_at: new Date()
       })
       .where('id', '=', syncLogId)

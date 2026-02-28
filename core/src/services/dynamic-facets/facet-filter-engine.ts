@@ -498,7 +498,7 @@ export class FacetFilterEngine {
       return result.source_field;
     } catch (error) {
       console.error('Failed to get source field for facet:', error);
-      throw new Error(`Failed to retrieve facet source field: ${error.message}`);
+      throw new Error(`Failed to retrieve facet source field: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

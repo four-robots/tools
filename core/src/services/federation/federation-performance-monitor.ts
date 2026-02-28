@@ -126,7 +126,7 @@ export class FederationPerformanceMonitor {
 
     } catch (error) {
       logger.error('Failed to record performance metric:', error);
-      throw new Error(`Failed to record performance metric: ${error.message}`);
+      throw new Error(`Failed to record performance metric: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -229,14 +229,14 @@ export class FederationPerformanceMonitor {
         average_response_time: executionTimes.length > 0
           ? executionTimes.reduce((sum, time) => sum + Number(time), 0) / executionTimes.length
           : 0,
-        fastest_response: Math.min(...executionTimes.map(t => Number(t))),
-        slowest_response: Math.max(...executionTimes.map(t => Number(t))),
+        fastest_response: executionTimes.length > 0 ? Math.min(...executionTimes.map(t => Number(t))) : 0,
+        slowest_response: executionTimes.length > 0 ? Math.max(...executionTimes.map(t => Number(t))) : 0,
         timeout_rate: 0 // Would calculate from timeout metrics
       };
 
     } catch (error) {
       logger.error('Failed to get search metrics:', error);
-      throw new Error(`Failed to get search metrics: ${error.message}`);
+      throw new Error(`Failed to get search metrics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -294,7 +294,7 @@ export class FederationPerformanceMonitor {
 
       } catch (error: any) {
         status = 'unhealthy';
-        errorMessage = error.message;
+        errorMessage = error instanceof Error ? error.message : String(error);
 
         // Record failed health check
         await this.recordMetric(
@@ -303,7 +303,7 @@ export class FederationPerformanceMonitor {
           'failure',
           1,
           'count',
-          { error: error.message }
+          { error: error instanceof Error ? error.message : String(error) }
         );
       }
 
@@ -332,7 +332,7 @@ export class FederationPerformanceMonitor {
 
     } catch (error) {
       logger.error('Failed to perform health check:', error);
-      throw new Error(`Failed to perform health check: ${error.message}`);
+      throw new Error(`Failed to perform health check: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -358,7 +358,7 @@ export class FederationPerformanceMonitor {
 
     } catch (error) {
       logger.error('Failed to schedule health check:', error);
-      throw new Error(`Failed to schedule health check: ${error.message}`);
+      throw new Error(`Failed to schedule health check: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -411,7 +411,7 @@ export class FederationPerformanceMonitor {
 
     } catch (error) {
       logger.error('Failed to get circuit breaker:', error);
-      throw new Error(`Failed to get circuit breaker: ${error.message}`);
+      throw new Error(`Failed to get circuit breaker: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -573,7 +573,7 @@ export class FederationPerformanceMonitor {
 
     } catch (error) {
       logger.error('Failed to generate node performance report:', error);
-      throw new Error(`Failed to generate node performance report: ${error.message}`);
+      throw new Error(`Failed to generate node performance report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
