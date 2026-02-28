@@ -216,7 +216,7 @@ async function createApp() {
     await scraperDatabase.initialize();
     console.log('✅ ScraperDatabase initialized');
   } catch (error) {
-    console.warn('⚠️  ScraperDatabase initialization failed, continuing without scraper service:', error.message);
+    console.warn('⚠️  ScraperDatabase initialization failed, continuing without scraper service:', error instanceof Error ? error.message : String(error));
     // Don't throw - continue without scraper service
   }
   
@@ -258,7 +258,7 @@ async function createApp() {
     await apiDocumentationDiscovery.initialize();
     console.log('✅ APIDocumentationDiscoveryService created and initialized');
   } catch (error) {
-    console.warn('⚠️  APIDocumentationDiscoveryService initialization failed, continuing without service:', error.message);
+    console.warn('⚠️  APIDocumentationDiscoveryService initialization failed, continuing without service:', error instanceof Error ? error.message : String(error));
   }
 
   // Initialize AI Summary Service
@@ -300,7 +300,7 @@ async function createApp() {
     );
     console.log('✅ AISummaryService created and initialized');
   } catch (error) {
-    console.warn('⚠️  AISummaryService initialization failed, continuing without service:', error.message);
+    console.warn('⚠️  AISummaryService initialization failed, continuing without service:', error instanceof Error ? error.message : String(error));
   }
 
   // Initialize collaboration services

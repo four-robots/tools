@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,6 +167,16 @@ export function ImportDialog({
   const [isImporting, setIsImporting] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollCleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollCleanupRef.current) {
+        pollCleanupRef.current();
+      }
+    };
+  }, []);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -322,8 +332,8 @@ export function ImportDialog({
       }
 
       // Poll for job status
-      pollJobStatus(job.id);
-      
+      pollCleanupRef.current = pollJobStatus(job.id);
+
     } catch (error) {
       setIsImporting(false);
       const errorMessage = error instanceof Error ? error.message : 'Import failed';
@@ -333,7 +343,7 @@ export function ImportDialog({
     }
   };
 
-  const pollJobStatus = async (jobId: string) => {
+  const pollJobStatus = (jobId: string): (() => void) => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/whiteboards/import/${jobId}`);
@@ -346,28 +356,33 @@ export function ImportDialog({
 
         if (job.status === 'completed') {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsImporting(false);
-          
+
           if (onImportComplete) {
             onImportComplete(job.id, job.elementsCreated);
           }
         } else if (job.status === 'failed') {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsImporting(false);
-          
+
           if (onImportError) {
             onImportError(job.errorMessage || 'Import failed');
           }
         }
       } catch (error) {
         clearInterval(pollInterval);
+        pollCleanupRef.current = null;
         setIsImporting(false);
-        
+
         if (onImportError) {
           onImportError('Failed to check import status');
         }
       }
     }, 1000);
+
+    return () => clearInterval(pollInterval);
   };
 
   const cancelImport = async () => {

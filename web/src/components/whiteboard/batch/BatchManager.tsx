@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,6 +126,16 @@ export function BatchManager({
   const [currentOperation, setCurrentOperation] = useState<BatchOperation | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('selection');
+  const pollCleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollCleanupRef.current) {
+        pollCleanupRef.current();
+      }
+    };
+  }, []);
 
   // Initialize filename based on workspace name
   useEffect(() => {
@@ -222,7 +232,7 @@ export function BatchManager({
       }
 
       // Start polling for progress
-      pollOperationStatus(operation.id);
+      pollCleanupRef.current = pollOperationStatus(operation.id);
 
     } catch (error) {
       setIsProcessing(false);
@@ -233,7 +243,7 @@ export function BatchManager({
     }
   };
 
-  const pollOperationStatus = async (operationId: string) => {
+  const pollOperationStatus = (operationId: string): (() => void) => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/whiteboards/batch-operation/${operationId}`);
@@ -246,28 +256,33 @@ export function BatchManager({
 
         if (operation.status === 'completed' && operation.downloadUrl) {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsProcessing(false);
-          
+
           if (onBatchComplete) {
             onBatchComplete(operation.id, operation.downloadUrl);
           }
         } else if (operation.status === 'failed') {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsProcessing(false);
-          
+
           if (onBatchError) {
             onBatchError('Batch operation failed');
           }
         }
       } catch (error) {
         clearInterval(pollInterval);
+        pollCleanupRef.current = null;
         setIsProcessing(false);
-        
+
         if (onBatchError) {
           onBatchError('Failed to check operation status');
         }
       }
     }, 2000);
+
+    return () => clearInterval(pollInterval);
   };
 
   const cancelOperation = async () => {

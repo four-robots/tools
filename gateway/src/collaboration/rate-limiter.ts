@@ -476,7 +476,7 @@ export class RateLimiter {
       const statKeys = await this.redis.keys(`${this.keyPrefix}stats:*`);
       for (const key of statKeys) {
         const keyParts = key.split(':');
-        if (keyParts.length >= 3) {
+        if (keyParts.length >= 4) {
           const timestamp = parseInt(keyParts[3] || '0');
           if (timestamp < cutoffTime) {
             await this.redis.del(key);

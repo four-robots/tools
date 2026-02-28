@@ -975,7 +975,7 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
   private getClientIP(request?: IncomingMessage): string | undefined {
     if (!request) return undefined;
     
-    return (request.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    return (request.headers['x-forwarded-for'] as string)?.split(',')?.[0]?.trim() ||
            (request.headers['x-real-ip'] as string) ||
            request.socket.remoteAddress;
   }

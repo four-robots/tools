@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,6 +147,16 @@ export function ExportDialog({
   const [currentJob, setCurrentJob] = useState<ExportJob | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const pollCleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollCleanupRef.current) {
+        pollCleanupRef.current();
+      }
+    };
+  }, []);
 
   // Initialize filename based on whiteboard name
   useEffect(() => {
@@ -207,8 +217,8 @@ export function ExportDialog({
       }
 
       // Poll for job status
-      pollJobStatus(job.id);
-      
+      pollCleanupRef.current = pollJobStatus(job.id);
+
     } catch (error) {
       setIsExporting(false);
       const errorMessage = error instanceof Error ? error.message : 'Export failed';
@@ -218,7 +228,7 @@ export function ExportDialog({
     }
   };
 
-  const pollJobStatus = async (jobId: string) => {
+  const pollJobStatus = (jobId: string): (() => void) => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/whiteboards/export/${jobId}`);
@@ -231,30 +241,32 @@ export function ExportDialog({
 
         if (job.status === 'completed' && job.downloadUrl) {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsExporting(false);
-          
+
           if (onExportComplete) {
             onExportComplete(job.id, job.downloadUrl);
           }
         } else if (job.status === 'failed') {
           clearInterval(pollInterval);
+          pollCleanupRef.current = null;
           setIsExporting(false);
-          
+
           if (onExportError) {
             onExportError(job.errorMessage || 'Export failed');
           }
         }
       } catch (error) {
         clearInterval(pollInterval);
+        pollCleanupRef.current = null;
         setIsExporting(false);
-        
+
         if (onExportError) {
           onExportError('Failed to check export status');
         }
       }
     }, 1000);
 
-    // Cleanup interval if component unmounts
     return () => clearInterval(pollInterval);
   };
 

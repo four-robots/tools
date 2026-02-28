@@ -1398,9 +1398,11 @@ router.use((error: Error, req: Request, res: Response, next: NextFunction) => {
     message: 'An unexpected error occurred',
     correlationId,
     // Only provide details in development
-    ...(process.env.NODE_ENV === 'development' && { 
-      details: error.message,
-      stack: error.stack?.split('\n').slice(0, 5).join('\n') // Limit stack trace
+    ...(process.env.NODE_ENV === 'development' && {
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error && error.stack
+        ? error.stack.split('\n').slice(0, 5).join('\n')
+        : undefined
     })
   });
 });

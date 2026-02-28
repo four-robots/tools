@@ -969,14 +969,18 @@ export class WhiteboardPresenceService {
 
   private startBackgroundTasks(): void {
     // Status update task - automatically update status based on activity
-    this.statusUpdateInterval = setInterval(async () => {
-      await this.updateAllUserStatuses();
+    this.statusUpdateInterval = setInterval(() => {
+      this.updateAllUserStatuses().catch(error => {
+        this.logger.error('Status update failed', { error: error instanceof Error ? error.message : String(error) });
+      });
     }, 30 * 1000); // Every 30 seconds
-    
+
     // Aggressive cleanup task - run more frequently
-    this.cleanupInterval = setInterval(async () => {
+    this.cleanupInterval = setInterval(() => {
       if (this.config.aggressiveCleanupEnabled) {
-        await this.forceCleanup();
+        this.forceCleanup().catch(error => {
+          this.logger.error('Force cleanup failed', { error: error instanceof Error ? error.message : String(error) });
+        });
       }
     }, this.config.cleanupIntervalMs); // Every 30 seconds (configurable)
   }

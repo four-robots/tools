@@ -80,6 +80,7 @@ export class AISummaryService {
   private factChecker: FactChecker;
   private keyPointsExtractor: KeyPointsExtractor;
   private summaryCache: Map<string, SearchSummary> = new Map();
+  private cacheCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private llmService: LLMService,
@@ -775,10 +776,18 @@ export class AISummaryService {
 
   private setupCacheCleanup(): void {
     // Clean up expired cache entries periodically
-    setInterval(() => {
+    this.cacheCleanupInterval = setInterval(() => {
       console.log('🧹 Cleaning up AI summary cache');
       // Cache entries are automatically cleaned up via setTimeout
     }, 60000); // Check every minute
+  }
+
+  destroy(): void {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
+    this.summaryCache.clear();
   }
 
   async getAnalytics(options?: {
