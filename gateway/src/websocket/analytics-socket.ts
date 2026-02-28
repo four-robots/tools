@@ -160,12 +160,14 @@ export class AnalyticsSocketHandler extends EventEmitter {
       });
       
       // Widget data subscriptions
-      socket.on('subscribe_widget', (data: { 
-        dashboardId: string; 
-        widgetId: string; 
-        refreshInterval?: number 
+      socket.on('subscribe_widget', (data: {
+        dashboardId: string;
+        widgetId: string;
+        refreshInterval?: number
       }) => {
-        this.handleWidgetSubscription(socket, data);
+        this.handleWidgetSubscription(socket, data).catch(err => {
+          logger.error('Widget subscription handler error', { error: err, socketId: socket.id });
+        });
       });
       
       socket.on('unsubscribe_widget', (data: { 
@@ -193,7 +195,9 @@ export class AnalyticsSocketHandler extends EventEmitter {
         eventType: string;
         eventData: any;
       }) => {
-        this.handleEventTracking(socket, data);
+        this.handleEventTracking(socket, data).catch(err => {
+          logger.error('Event tracking handler error', { error: err, socketId: socket.id });
+        });
       });
       
       // Alert management

@@ -42,6 +42,7 @@ export class AlertManager extends EventEmitter {
   private escalationPolicies = new Map<string, EscalationLevel[]>();
   private evaluationInterval: NodeJS.Timer;
   private metricCache = new Map<string, { values: number[]; timestamps: Date[] }>();
+  private escalationTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly db: DatabaseConnection,
@@ -378,10 +379,15 @@ export class AlertManager extends EventEmitter {
       // Schedule next escalation if available
       if (escalationLevel + 1 < escalationPolicy.length) {
         const nextEscalation = escalationPolicy[escalationLevel + 1];
-        setTimeout(
-          () => this.escalateAlert(alertId, escalationLevel + 1),
+        const timeoutKey = `${alertId}_${escalationLevel + 1}`;
+        const timeout = setTimeout(
+          () => {
+            this.escalationTimeouts.delete(timeoutKey);
+            this.escalateAlert(alertId, escalationLevel + 1);
+          },
           nextEscalation.delayMinutes * 60 * 1000
         );
+        this.escalationTimeouts.set(timeoutKey, timeout);
       }
 
       // Update alert escalation status
@@ -628,10 +634,15 @@ export class AlertManager extends EventEmitter {
     if (!escalationPolicy || escalationPolicy.length === 0) return;
 
     const firstEscalation = escalationPolicy[0];
-    setTimeout(
-      () => this.escalateAlert(alert.id!, 0),
+    const timeoutKey = `${alert.id}_0`;
+    const timeout = setTimeout(
+      () => {
+        this.escalationTimeouts.delete(timeoutKey);
+        this.escalateAlert(alert.id!, 0);
+      },
       firstEscalation.delayMinutes * 60 * 1000
     );
+    this.escalationTimeouts.set(timeoutKey, timeout);
   }
 
   private validateAlertRule(rule: AlertRule): void {
@@ -830,7 +841,12 @@ export class AlertManager extends EventEmitter {
     if (this.evaluationInterval) {
       clearInterval(this.evaluationInterval);
     }
-    
+
+    for (const timeout of this.escalationTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.escalationTimeouts.clear();
+
     this.activeRules.clear();
     this.activeAlerts.clear();
     this.notificationChannels.clear();

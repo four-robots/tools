@@ -136,23 +136,35 @@ export class EmbeddingsWorker {
     // Process single embedding messages
     (async () => {
       for await (const msg of embeddingSub) {
-        await this.handleEmbeddingRequest(msg);
+        try {
+          await this.handleEmbeddingRequest(msg);
+        } catch (error) {
+          this.logger.error('Error handling embedding request', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('Embedding subscription loop failed', { error }));
 
     // Process batch embedding messages
     (async () => {
       for await (const msg of batchSub) {
-        await this.handleBatchRequest(msg);
+        try {
+          await this.handleBatchRequest(msg);
+        } catch (error) {
+          this.logger.error('Error handling batch request', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('Batch subscription loop failed', { error }));
 
     // Process stats requests
     (async () => {
       for await (const msg of statsSub) {
-        await this.handleStatsRequest(msg);
+        try {
+          await this.handleStatsRequest(msg);
+        } catch (error) {
+          this.logger.error('Error handling stats request', { error });
+        }
       }
-    })();
+    })().catch(error => this.logger.error('Stats subscription loop failed', { error }));
 
     this.logger.info('Message handlers set up', {
       subjects: ['embeddings.request', 'embeddings.batch', 'embeddings.stats']

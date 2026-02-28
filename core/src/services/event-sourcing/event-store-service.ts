@@ -170,7 +170,7 @@ export class PostgresEventStore implements EventStore {
       }
       
       throw new EventSourcingError(
-        `Failed to append events to stream ${streamId}: ${error.message}`,
+        `Failed to append events to stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'APPEND_EVENTS_FAILED',
         { streamId, events: events.map(e => e.eventType), error }
       );
@@ -229,7 +229,7 @@ export class PostgresEventStore implements EventStore {
       return events;
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to get events from stream ${streamId}: ${error.message}`,
+        `Failed to get events from stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'GET_EVENTS_FAILED',
         { streamId, fromVersion, toVersion }
       );
@@ -270,7 +270,7 @@ export class PostgresEventStore implements EventStore {
       return result.rows.map(this.mapRowToEvent);
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to get events by type ${eventType}: ${error.message}`,
+        `Failed to get events by type ${eventType}: ${error instanceof Error ? error.message : String(error)}`,
         'GET_EVENTS_BY_TYPE_FAILED',
         { eventType, fromTime, toTime }
       );
@@ -298,7 +298,7 @@ export class PostgresEventStore implements EventStore {
       return result.rows.map(this.mapRowToEvent);
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to get events from sequence ${fromSequence}: ${error.message}`,
+        `Failed to get events from sequence ${fromSequence}: ${error instanceof Error ? error.message : String(error)}`,
         'GET_EVENTS_FROM_SEQUENCE_FAILED',
         { fromSequence, batchSize }
       );
@@ -325,7 +325,7 @@ export class PostgresEventStore implements EventStore {
       });
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to create snapshot for stream ${streamId}: ${error.message}`,
+        `Failed to create snapshot for stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'CREATE_SNAPSHOT_FAILED',
         { streamId, version }
       );
@@ -351,16 +351,18 @@ export class PostgresEventStore implements EventStore {
       }
 
       const row = result.rows[0];
+      let snapshotData: any;
+      try { snapshotData = JSON.parse(row.snapshot_data); } catch { snapshotData = {}; }
       return {
         id: row.id,
         streamId: row.stream_id,
         streamVersion: row.stream_version,
-        snapshotData: JSON.parse(row.snapshot_data),
+        snapshotData,
         createdAt: row.created_at
       };
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to get snapshot for stream ${streamId}: ${error.message}`,
+        `Failed to get snapshot for stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'GET_SNAPSHOT_FAILED',
         { streamId }
       );
@@ -394,7 +396,7 @@ export class PostgresEventStore implements EventStore {
       };
     } catch (error) {
       throw new EventSourcingError(
-        `Failed to get stream ${streamId}: ${error.message}`,
+        `Failed to get stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'GET_STREAM_FAILED',
         { streamId }
       );
@@ -473,7 +475,7 @@ export class PostgresEventStore implements EventStore {
     } catch (error) {
       await client.query('ROLLBACK');
       throw new EventSourcingError(
-        `Failed to delete stream ${streamId}: ${error.message}`,
+        `Failed to delete stream ${streamId}: ${error instanceof Error ? error.message : String(error)}`,
         'DELETE_STREAM_FAILED',
         { streamId }
       );
@@ -491,7 +493,7 @@ export class PostgresEventStore implements EventStore {
     } catch (error) {
       logger.error('Failed to maintain partitions', { error: error.message });
       throw new EventSourcingError(
-        `Failed to maintain partitions: ${error.message}`,
+        `Failed to maintain partitions: ${error instanceof Error ? error.message : String(error)}`,
         'MAINTAIN_PARTITIONS_FAILED',
         { error }
       );
@@ -595,13 +597,16 @@ export class PostgresEventStore implements EventStore {
       // In production, you might want to handle this differently based on your security policy
     }
 
+    let metadata: any;
+    try { metadata = JSON.parse(row.metadata); } catch { metadata = {}; }
+
     return {
       id: row.id,
       streamId: row.stream_id,
       eventType: row.event_type,
       eventVersion: row.event_version,
       eventData,
-      metadata: JSON.parse(row.metadata),
+      metadata,
       timestamp: new Date(row.timestamp),
       sequenceNumber: parseInt(row.sequence_number),
       causationId: row.causation_id,
