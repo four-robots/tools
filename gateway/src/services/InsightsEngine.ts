@@ -358,7 +358,7 @@ export class InsightsEngine {
     const firstHalfAvg = firstHalf.reduce((sum, score) => sum + score, 0) / firstHalf.length;
     const secondHalfAvg = secondHalf.reduce((sum, score) => sum + score, 0) / secondHalf.length;
     
-    const trendPercentage = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+    const trendPercentage = firstHalfAvg > 0 ? ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100 : 0;
     
     let trendDirection = 'stable';
     let recommendation = '';

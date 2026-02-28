@@ -22,6 +22,7 @@ import {
 import { SearchResult, ContentType } from '@mcp-tools/core';
 import { SearchResultCardProps } from '../types';
 import { formatRelativeDate, formatContentType } from '../utils/searchHelpers';
+import { sanitizeHtml, SanitizationProfiles } from '../../../lib/sanitization';
 import styles from './SearchResultCard.module.css';
 
 /**
@@ -181,13 +182,18 @@ export function SearchResultCard({
       <div className={styles.resultPreview}>
         <div 
           className={styles.previewText}
-          dangerouslySetInnerHTML={{ 
-            __html: result.preview.highlights
-              ? previewText.replace(
-                  new RegExp(`(${result.preview.highlights.map(h => h.match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi'),
-                  `<mark class="${styles.highlight}">$1</mark>`
-                )
-              : previewText
+          dangerouslySetInnerHTML={{
+            __html: sanitizeHtml(
+              result.preview.highlights
+                ? previewText
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                    .replace(
+                      new RegExp(`(${result.preview.highlights.map(h => h.match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi'),
+                      `<mark class="${styles.highlight}">$1</mark>`
+                    )
+                : previewText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+              SanitizationProfiles.RICH_TEXT
+            )
           }}
         />
         {needsExpansion && (

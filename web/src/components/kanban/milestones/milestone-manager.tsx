@@ -129,7 +129,7 @@ export function MilestoneManager({
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const sortedMilestones = milestones.sort((a, b) => {
+  const sortedMilestones = [...milestones].sort((a, b) => {
     if (a.is_completed !== b.is_completed) {
       return a.is_completed ? 1 : -1; // Incomplete first
     }

@@ -261,7 +261,7 @@ export class EmbeddingsWorker {
         batchId: request.batch_id,
         batchSize: embeddings.length,
         processingTimeMs,
-        avgTimePerEmbedding: Math.round(processingTimeMs / embeddings.length)
+        avgTimePerEmbedding: embeddings.length > 0 ? Math.round(processingTimeMs / embeddings.length) : 0
       });
 
     } catch (error) {
