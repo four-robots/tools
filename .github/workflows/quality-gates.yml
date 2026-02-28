@@ -55,7 +55,7 @@ jobs:
       run: |
         echo "Running technical debt analysis..."
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
@@ -93,7 +93,7 @@ jobs:
         npm audit --audit-level=moderate
         
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
@@ -145,7 +145,7 @@ jobs:
         cd ..
         
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
@@ -185,7 +185,7 @@ jobs:
         echo "Running code complexity analysis..."
         
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
@@ -258,7 +258,7 @@ jobs:
         echo "Generating comprehensive quality report..."
         
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
@@ -444,7 +444,7 @@ jobs:
         echo "Checking quality gates for PR..."
         
         node -e "
-          import { QualityService } from './core/dist/services/quality/service.js';
+          import { QualityService } from './core/dist/services/quality/index.js';
           
           const service = new QualityService({
             projectPath: process.cwd(),
