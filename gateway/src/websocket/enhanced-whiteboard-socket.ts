@@ -174,7 +174,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true, elementId: data.elementId });
     } catch (error) {
       logger.error('Element create failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -189,7 +189,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true });
     } catch (error) {
       logger.error('Element update failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -204,7 +204,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true });
     } catch (error) {
       logger.error('Element delete failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -221,7 +221,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true });
     } catch (error) {
       logger.error('Element move failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -238,7 +238,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true });
     } catch (error) {
       logger.error('Layer change failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -249,7 +249,7 @@ function setupPermissionAwareHandlers(
       callback({ success: true, commentId: generateCommentId() });
     } catch (error) {
       logger.error('Comment create failed', { error });
-      callback({ success: false, error: error.message });
+      callback({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -313,7 +313,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permission });
       } catch (error) {
         logger.error('Grant permission failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -338,7 +338,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true });
       } catch (error) {
         logger.error('Revoke permission failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -362,7 +362,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permission });
       } catch (error) {
         logger.error('Grant element permission failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -386,7 +386,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permission });
       } catch (error) {
         logger.error('Grant area permission failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -409,7 +409,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permission });
       } catch (error) {
         logger.error('Grant layer permission failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -427,7 +427,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permissions });
       } catch (error) {
         logger.error('Get permissions failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -448,7 +448,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, customRole });
       } catch (error) {
         logger.error('Create custom role failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -479,7 +479,7 @@ function setupPermissionManagementHandlers(
         callback({ success: true, permission });
       } catch (error) {
         logger.error('Delegate permissions failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
@@ -498,7 +498,7 @@ function setupPermissionManagementHandlers(
         });
       } catch (error) {
         logger.error('Get permission stats failed', { error });
-        callback({ success: false, error: error.message });
+        callback({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
   });

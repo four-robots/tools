@@ -415,9 +415,11 @@ export class BehaviorTrackingService extends EventEmitter {
   }
 
   private startBatchProcessor(): void {
-    this.batchTimer = setInterval(async () => {
+    this.batchTimer = setInterval(() => {
       if (this.processingQueue.events.length >= this.config.batchSize) {
-        await this.flushQueue();
+        this.flushQueue().catch(error => {
+          this.logger.error('Batch processor flush failed', error);
+        });
       }
     }, this.config.flushInterval);
   }

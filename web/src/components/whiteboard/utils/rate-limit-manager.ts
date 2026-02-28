@@ -78,6 +78,7 @@ class RateLimitManager {
   
   // Backpressure state
   private backpressureActive = false;
+  private backpressureTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private lastBackpressureCheck = 0;
 
   constructor(config: Partial<RateLimitConfig> = {}) {
@@ -170,9 +171,15 @@ class RateLimitManager {
     // Temporarily increase backpressure
     this.backpressureActive = true;
     this.config.backpressureDelay = Math.max(this.config.backpressureDelay, retryAfterMs);
-    
+
+    // Clear any pending reset
+    if (this.backpressureTimeoutId) {
+      clearTimeout(this.backpressureTimeoutId);
+    }
+
     // Auto-reset backpressure after delay
-    setTimeout(() => {
+    this.backpressureTimeoutId = setTimeout(() => {
+      this.backpressureTimeoutId = null;
       this.backpressureActive = false;
       this.config.backpressureDelay = 100; // Reset to default
     }, retryAfterMs * 2);
@@ -218,7 +225,11 @@ class RateLimitManager {
     this.lastFailureTime = 0;
     
     this.backpressureActive = false;
-    
+    if (this.backpressureTimeoutId) {
+      clearTimeout(this.backpressureTimeoutId);
+      this.backpressureTimeoutId = null;
+    }
+
     // Clear queue
     for (const request of this.requestQueue) {
       if (request.timeoutHandle) {

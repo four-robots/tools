@@ -82,7 +82,7 @@ export class ConnectionManager {
 
     } catch (error) {
       logger.error('Failed to register connection', { error, connectionData });
-      throw new Error(`Failed to register connection: ${error.message}`);
+      throw new Error(`Failed to register connection: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -124,7 +124,7 @@ export class ConnectionManager {
 
     } catch (error) {
       logger.error('Failed to unregister connection', { error, connectionId });
-      throw new Error(`Failed to unregister connection: ${error.message}`);
+      throw new Error(`Failed to unregister connection: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -468,7 +468,7 @@ export class EventStreamService {
       logger.error(`Failed to stream event`, {
         eventType: event.eventType,
         eventId: event.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -489,7 +489,7 @@ export class EventStreamService {
         logger.error(`Invalid message from client ${clientId}`, {
           clientId,
           consecutiveErrors: client.consecutiveErrors,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     });
@@ -508,7 +508,7 @@ export class EventStreamService {
       logger.error(`WebSocket client error`, {
         clientId,
         userId: client.userId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       this.removeClient(clientId);
     });
@@ -568,7 +568,7 @@ export class EventStreamService {
       this.sendToClient(clientId, {
         type: 'error',
         data: {
-          message: error.message,
+          message: error instanceof Error ? error.message : String(error),
           originalMessage: message
         }
       });
@@ -595,7 +595,7 @@ export class EventStreamService {
       logger.error(`Failed to send message to client`, {
         clientId,
         consecutiveErrors: client.consecutiveErrors,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       
       if (client.consecutiveErrors >= 5) {
@@ -650,7 +650,7 @@ export class EventStreamService {
         userId: client.userId,
         bufferSize: client.buffer.length,
         consecutiveErrors: client.consecutiveErrors,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       
       if (client.consecutiveErrors >= BackpressureHandler['ERROR_THRESHOLD']) {
