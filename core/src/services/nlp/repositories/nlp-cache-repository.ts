@@ -164,8 +164,20 @@ export class NLPCacheRepository {
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-      const limitClause = options.limit ? `LIMIT ${options.limit}` : '';
-      const offsetClause = options.offset ? `OFFSET ${options.offset}` : '';
+
+      let limitClause = '';
+      if (options.limit) {
+        limitClause = `LIMIT $${paramIndex}`;
+        params.push(options.limit);
+        paramIndex++;
+      }
+
+      let offsetClause = '';
+      if (options.offset) {
+        offsetClause = `OFFSET $${paramIndex}`;
+        params.push(options.offset);
+        paramIndex++;
+      }
 
       const query = `
         SELECT * FROM query_processing_cache
@@ -211,10 +223,10 @@ export class NLPCacheRepository {
   async cleanupExpiredCache(maxAgeHours: number = 24): Promise<number> {
     try {
       const result = await this.db.query(`
-        DELETE FROM query_processing_cache 
-        WHERE created_at < NOW() - INTERVAL '${maxAgeHours} hours'
+        DELETE FROM query_processing_cache
+        WHERE created_at < NOW() - ($1 || ' hours')::INTERVAL
         AND accessed_count <= 1
-      `);
+      `, [maxAgeHours]);
 
       return result.rowCount || 0;
     } catch (error) {
@@ -274,7 +286,7 @@ export class NLPCacheRepository {
       const distributionResult = await this.db.query(`
         SELECT feedback_type, COUNT(*) as count
         FROM query_feedback 
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
         GROUP BY feedback_type
       `);
 
@@ -295,7 +307,7 @@ export class NLPCacheRepository {
             ELSE -1
           END)::float / COUNT(*) as avg_sentiment
         FROM query_feedback 
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
       `);
 
       const averageSentiment = parseFloat(sentimentResult.rows[0]?.avg_sentiment || '0');
@@ -306,7 +318,7 @@ export class NLPCacheRepository {
           feedback_data->>'issue' as issue,
           COUNT(*) as count
         FROM query_feedback 
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
           AND feedback_data->>'issue' IS NOT NULL
         GROUP BY feedback_data->>'issue'
         ORDER BY count DESC
@@ -347,7 +359,7 @@ export class NLPCacheRepository {
           AVG(confidence) as avg_confidence,
           AVG(accessed_count::float) as avg_access_count
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
       `);
 
       const stats = basicStats.rows[0];
@@ -362,7 +374,7 @@ export class NLPCacheRepository {
       const languageResult = await this.db.query(`
         SELECT language, COUNT(*) as count
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
           AND language IS NOT NULL
         GROUP BY language
         ORDER BY count DESC
@@ -377,7 +389,7 @@ export class NLPCacheRepository {
       const intentResult = await this.db.query(`
         SELECT intent, COUNT(*) as count
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
           AND intent IS NOT NULL
         GROUP BY intent
         ORDER BY count DESC
@@ -395,7 +407,7 @@ export class NLPCacheRepository {
           accessed_count as count,
           AVG(confidence) as avg_confidence
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
         GROUP BY original_query, accessed_count
         ORDER BY accessed_count DESC, avg_confidence DESC
         LIMIT 10
@@ -543,7 +555,7 @@ export class NLPCacheRepository {
           COUNT(*) as count,
           AVG(confidence) as avg_confidence
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
         GROUP BY 1
         ORDER BY count DESC
       `);
@@ -585,7 +597,7 @@ export class NLPCacheRepository {
           AVG(processing_time_ms) as avg_time,
           COUNT(*) as count
         FROM query_processing_cache
-        WHERE created_at > NOW() - INTERVAL '${timeframeHours} hours'
+        WHERE created_at > NOW() - INTERVAL '1 hour' * ${Number(timeframeHours)}
           AND processing_time_ms IS NOT NULL
         GROUP BY 1
         ORDER BY avg_time DESC
