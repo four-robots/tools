@@ -57,6 +57,8 @@ export class PrivacyComplianceService extends EventEmitter {
   private config: PrivacyConfig;
   private dataAnonymizer: DataAnonymizer;
   private logger: Logger;
+  private retentionCleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private consentExpirationInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     db: Kysely<any>,
@@ -715,24 +717,31 @@ export class PrivacyComplianceService extends EventEmitter {
 
   private startRetentionCleanup(): void {
     // Run cleanup daily at 2 AM
-    setInterval(async () => {
-      try {
-        await this.cleanupExpiredData();
-      } catch (error) {
+    this.retentionCleanupInterval = setInterval(() => {
+      this.cleanupExpiredData().catch(error => {
         this.logger.error('Retention cleanup failed', error);
-      }
+      });
     }, 24 * 60 * 60 * 1000);
   }
 
   private startConsentExpirationCheck(): void {
     // Check consent expiration weekly
-    setInterval(async () => {
-      try {
-        await this.checkConsentExpiration();
-      } catch (error) {
+    this.consentExpirationInterval = setInterval(() => {
+      this.checkConsentExpiration().catch(error => {
         this.logger.error('Consent expiration check failed', error);
-      }
+      });
     }, 7 * 24 * 60 * 60 * 1000);
+  }
+
+  destroy(): void {
+    if (this.retentionCleanupInterval) {
+      clearInterval(this.retentionCleanupInterval);
+      this.retentionCleanupInterval = null;
+    }
+    if (this.consentExpirationInterval) {
+      clearInterval(this.consentExpirationInterval);
+      this.consentExpirationInterval = null;
+    }
   }
 
   // Database operations and utility methods
