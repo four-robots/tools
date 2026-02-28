@@ -22,7 +22,7 @@ RUN npm ci --workspaces
 
 # Stage 2: Production Dependencies
 FROM node:22-alpine AS prod-deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Copy workspace package files
