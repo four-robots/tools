@@ -796,17 +796,22 @@ export class ProjectionService {
           }
           
           contribution.preferredStrategy = resolvedEvent.eventData.resolution.strategy;
-          contribution.successRate = userResolvedConflicts.length / 
-            projection.conflicts.filter(c => c.participants.includes(resolverUserId)).length;
+          const participatedConflicts = projection.conflicts.filter(c => c.participants.includes(resolverUserId)).length;
+          contribution.successRate = participatedConflicts > 0
+            ? userResolvedConflicts.length / participatedConflicts
+            : 0;
         }
 
         // Recalculate overall metrics
         const resolvedConflicts = projection.conflicts.filter(c => c.status === 'resolved');
         const totalConflicts = projection.conflicts.length;
         
-        projection.resolutionMetrics.resolutionSuccessRate = resolvedConflicts.length / totalConflicts;
-        projection.resolutionMetrics.escalationRate = 
-          projection.conflicts.filter(c => c.status === 'escalated').length / totalConflicts;
+        projection.resolutionMetrics.resolutionSuccessRate = totalConflicts > 0
+          ? resolvedConflicts.length / totalConflicts
+          : 0;
+        projection.resolutionMetrics.escalationRate = totalConflicts > 0
+          ? projection.conflicts.filter(c => c.status === 'escalated').length / totalConflicts
+          : 0;
         
         if (resolvedConflicts.length > 0) {
           const totalResolutionTime = resolvedConflicts.reduce((sum, c) => sum + (c.resolutionTime || 0), 0);

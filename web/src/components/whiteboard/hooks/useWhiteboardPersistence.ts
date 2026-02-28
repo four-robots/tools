@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useApi } from '@/hooks/use-api';
-import { useDebounce } from '@/hooks/useDebounce';
 
 interface PersistenceState {
   saveCanvasData: (data: any) => void;
@@ -23,10 +22,14 @@ export const useWhiteboardPersistence = (
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced save function - saves after 5 seconds of inactivity
-  const saveCanvasData = useCallback(
-    useDebounce(async (canvasData: any) => {
-      if (!whiteboardId || !workspaceId) return;
+  const saveCanvasData = useCallback((canvasData: any) => {
+    if (!whiteboardId || !workspaceId) return;
 
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
       try {
         setIsSaving(true);
         setSaveError(null);
@@ -49,9 +52,8 @@ export const useWhiteboardPersistence = (
       } finally {
         setIsSaving(false);
       }
-    }, 5000), // 5 second debounce
-    [whiteboardId, workspaceId, put]
-  );
+    }, 5000);
+  }, [whiteboardId, workspaceId, put]);
 
   return {
     saveCanvasData,
