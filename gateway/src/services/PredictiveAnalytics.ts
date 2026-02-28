@@ -488,10 +488,9 @@ export class PredictiveAnalyticsService {
       smoothed = alpha * data[i] + (1 - alpha) * smoothed;
     }
 
-    // Generate forecast
+    // Generate forecast (simple ES forecasts the last smoothed value for all future periods)
     for (let i = 0; i < forecastPeriods; i++) {
       forecast.push(smoothed);
-      smoothed = alpha * smoothed + (1 - alpha) * smoothed; // Simple trend continuation
     }
 
     return forecast;

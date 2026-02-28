@@ -243,6 +243,7 @@ export class StatisticalAnalyzer {
   }
 
   private calculateVariance(data: number[], mean: number): number {
+    if (data.length <= 1) return 0;
     return data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / (data.length - 1);
   }
 
@@ -290,11 +291,14 @@ export class StatisticalAnalyzer {
     const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
 
-    return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const denominator = n * sumX2 - sumX * sumX;
+    return denominator === 0 ? 0 : (n * sumXY - sumX * sumY) / denominator;
   }
 
   private calculateCorrelationSignificance(r: number, n: number): number {
-    const t = r * Math.sqrt((n - 2) / (1 - r * r));
+    const rSquared = r * r;
+    if (rSquared >= 1 || n <= 2) return 0;
+    const t = r * Math.sqrt((n - 2) / (1 - rSquared));
     return this.calculateTTestPValue(Math.abs(t), n - 2);
   }
 
