@@ -44,14 +44,9 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
-        cd core && npm ci && npm run build
-        cd ../gateway && npm ci
-        cd ../web && npm ci
-        cd ../servers/kanban && npm ci
-        cd ../servers/memory && npm ci
-        cd ../servers/wiki && npm ci
-    
+        npm ci --omit=optional
+        cd core && npm run build
+
     - name: Create reports directory
       run: mkdir -p ${{ env.QUALITY_REPORT_PATH }}
     
@@ -252,8 +247,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
-        cd core && npm ci && npm run build
+        npm ci --omit=optional
+        cd core && npm run build
     
     - name: Create reports directory
       run: mkdir -p ${{ env.QUALITY_REPORT_PATH }}
@@ -441,8 +436,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        npm ci
-        cd core && npm ci && npm run build
+        npm ci --omit=optional
+        cd core && npm run build
     
     - name: Check Quality Gates
       run: |
