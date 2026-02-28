@@ -151,8 +151,8 @@ export class AlertManager extends EventEmitter {
     const maxChangePercent = condition.threshold || 50; // Default 50% change threshold
 
     const previousRate = await this.getPreviousRate(condition.metric);
-    if (previousRate === null) {
-      return false; // No previous data to compare
+    if (previousRate === null || previousRate === 0) {
+      return false; // No previous data to compare or zero baseline
     }
 
     const changePercent = Math.abs((currentRate - previousRate) / previousRate) * 100;
@@ -525,6 +525,7 @@ export class AlertManager extends EventEmitter {
     const stdDev = Math.sqrt(variance);
 
     const latestValue = timeSeries[timeSeries.length - 1];
+    if (stdDev === 0) return false; // All values identical, no anomaly
     const zScore = Math.abs(latestValue - mean) / stdDev;
 
     // Higher sensitivity = lower z-score threshold

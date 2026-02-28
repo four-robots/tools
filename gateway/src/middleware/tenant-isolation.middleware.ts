@@ -500,7 +500,7 @@ export class TenantIsolationMiddleware {
         .raw("SELECT current_setting('app.current_tenant_id', true) as tenant_id")
         .execute();
 
-      if (setTenantId.rows[0]?.tenant_id !== tenantContext.tenant_id) {
+      if (!setTenantId.rows.length || setTenantId.rows[0]?.tenant_id !== tenantContext.tenant_id) {
         throw new Error('Failed to verify database context was set correctly');
       }
 

@@ -65,6 +65,9 @@ export function setupWorkspaceWebSocket(
   
   // Track failed authentication attempts for rate limiting
   const authFailures = new Map<string, { count: number; lastAttempt: Date }>();
+
+  // Track active socket sessions for lifecycle management
+  const activeSessions = new Map<string, any>();
   
   logger.info('WebSocket session storage initialized', { 
     type: options?.useRedis ? 'Redis' : 'In-Memory',
@@ -751,9 +754,9 @@ export function setupWorkspaceWebSocket(
     }
   };
 
-  // Handle process termination
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  // Handle process termination (use once to prevent handler accumulation)
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
 
   logger.info('Workspace WebSocket handlers configured with enhanced session management');
 

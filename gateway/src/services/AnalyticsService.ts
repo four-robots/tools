@@ -253,8 +253,9 @@ export class AnalyticsService {
     if (this.eventBuffer.length === 0) return;
 
     try {
-      const events = this.eventBuffer.splice(0);
-      
+      const events = [...this.eventBuffer];
+      this.eventBuffer.length = 0;
+
       const values = events.map((event, index) => {
         const baseIndex = index * 13;
         return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10}, $${baseIndex + 11}, $${baseIndex + 12}, $${baseIndex + 13})`;
@@ -286,6 +287,8 @@ export class AnalyticsService {
       // Update daily analytics
       await this.updateDailyAnalytics(events);
     } catch (error) {
+      // Restore events to buffer to prevent data loss
+      this.eventBuffer.unshift(...events);
       console.error('Error flushing event buffer:', error);
     }
   }
@@ -399,6 +402,10 @@ export class AnalyticsService {
    */
   private buildDateFilter(timeRange: string, startDate?: Date, endDate?: Date): string {
     if (timeRange === 'custom' && startDate && endDate) {
+      // Validate dates are actual Date objects to prevent injection
+      if (!(startDate instanceof Date) || !(endDate instanceof Date) || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return "created_at >= CURRENT_DATE - INTERVAL '7 days'";
+      }
       return `created_at BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'`;
     }
 
@@ -430,6 +437,13 @@ export class AnalyticsService {
     `, [userId]);
 
     const row = result.rows[0];
+    if (!row) {
+      return {
+        totalTasks: 0, completedTasks: 0, completionRate: 0,
+        wikiPages: 0, memories: 0, activeDays: 0,
+        avgSessionDuration: 0, lastActivity: new Date()
+      };
+    }
     const completionRate = row.total_tasks > 0 ? (row.completed_tasks / row.total_tasks) * 100 : 0;
 
     return {

@@ -495,7 +495,7 @@ export class MemoryService {
       id: memoryRecord.id,
       content: memoryRecord.content,
       contentHash: memoryRecord.content_hash,
-      context: JSON.parse(memoryRecord.context),
+      context: this.safeJsonParse(memoryRecord.context, {}),
       concepts,
       importance: memoryRecord.importance as 1 | 2 | 3 | 4 | 5,
       status: memoryRecord.status,
@@ -505,8 +505,18 @@ export class MemoryService {
       createdAt: memoryRecord.created_at,
       updatedAt: memoryRecord.updated_at,
       createdBy: memoryRecord.created_by || undefined,
-      metadata: memoryRecord.metadata ? JSON.parse(memoryRecord.metadata) : {}
+      metadata: memoryRecord.metadata ? this.safeJsonParse(memoryRecord.metadata, {}) : {}
     };
+  }
+
+  private safeJsonParse(value: unknown, fallback: any = {}): any {
+    if (typeof value === 'object' && value !== null) return value;
+    if (typeof value !== 'string') return fallback;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
   }
 
   private extractConcepts(content: string): string[] {

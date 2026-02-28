@@ -216,6 +216,7 @@ export class StatisticalAnalyzer {
   // Private helper methods
 
   private calculateMean(data: number[]): number {
+    if (data.length === 0) return 0;
     return data.reduce((sum, value) => sum + value, 0) / data.length;
   }
 

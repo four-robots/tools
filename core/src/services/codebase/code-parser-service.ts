@@ -353,7 +353,7 @@ export class CodeParserService {
       languageBreakdown[entry.language] = (languageBreakdown[entry.language] || 0) + 1;
     });
 
-    const dates = cacheEntries.map(e => new Date(e.created_at)).sort();
+    const dates = cacheEntries.map(e => new Date(e.created_at)).sort((a, b) => a.getTime() - b.getTime());
     
     return {
       totalEntries,

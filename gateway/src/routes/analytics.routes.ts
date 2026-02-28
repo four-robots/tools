@@ -56,6 +56,13 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
    */
   router.post('/events/batch', async (req: Request, res: Response) => {
     try {
+      if (!Array.isArray(req.body?.events)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Request body must contain an events array'
+        });
+      }
+
       const userId = req.user?.id;
       const sessionId = req.headers['x-session-id'] as string || req.sessionID;
       const userAgent = req.headers['user-agent'];
@@ -92,6 +99,13 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
    */
   router.post('/performance', async (req: Request, res: Response) => {
     try {
+      if (!req.body?.startTime || !req.body?.endTime) {
+        return res.status(400).json({
+          success: false,
+          error: 'startTime and endTime are required'
+        });
+      }
+
       const userId = req.user?.id;
       
       const metric = {
@@ -157,7 +171,7 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
       
       const query = {
         ...req.query,
-        userId: req.query.userId || userId, // Allow admins to query other users
+        userId, // Only query own data
         startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
         endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
         limit: parseInt(req.query.limit as string) || 100,

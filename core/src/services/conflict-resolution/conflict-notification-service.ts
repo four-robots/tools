@@ -596,6 +596,10 @@ export class ConflictNotificationService implements IConflictNotificationService
         timeZone: quietHours.timezone 
       }).substring(0, 5);
       
+      // Handle overnight ranges (e.g. 22:00-06:00) where start > end
+      if (quietHours.start > quietHours.end) {
+        return now >= quietHours.start || now <= quietHours.end;
+      }
       return now >= quietHours.start && now <= quietHours.end;
     } catch (error) {
       logger.warn('Failed to check quiet hours', { error, quietHours });

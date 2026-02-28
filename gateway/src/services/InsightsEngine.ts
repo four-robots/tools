@@ -134,10 +134,12 @@ export class InsightsEngine {
 
     // Find peak hours (top 25% with significant activity)
     const significantHours = productivityScores.filter(h => h.activity >= 3);
-    const sortedHours = significantHours.sort((a, b) => b.score - a.score);
+    const sortedHours = [...significantHours].sort((a, b) => b.score - a.score);
     const peakHours = sortedHours.slice(0, Math.ceil(sortedHours.length * 0.25)).map(h => h.hour);
 
-    const avgScore = significantHours.reduce((sum, h) => sum + h.score, 0) / significantHours.length;
+    const avgScore = significantHours.length > 0
+      ? significantHours.reduce((sum, h) => sum + h.score, 0) / significantHours.length
+      : 0;
     const confidence = Math.min(0.9, 0.3 + (significantHours.length / 24) * 0.6);
 
     let recommendation = '';
@@ -584,7 +586,7 @@ export class InsightsEngine {
   private identifyWorkSessions(events: any[]): Array<{duration: number, eventCount: number, startTime: Date, endTime: Date}> {
     if (events.length === 0) return [];
 
-    const sortedEvents = events.sort((a, b) => 
+    const sortedEvents = [...events].sort((a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
 
@@ -627,7 +629,7 @@ export class InsightsEngine {
 
   private analyzeSessionGaps(events: any[]): number[] {
     const gaps = [];
-    const sortedEvents = events.sort((a, b) => 
+    const sortedEvents = [...events].sort((a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
 

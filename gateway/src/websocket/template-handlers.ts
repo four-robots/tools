@@ -129,13 +129,17 @@ export class TemplateWebSocketHandler {
   private async handleConnection(socket: TemplateAuthenticatedSocket): Promise<void> {
     try {
       // Authenticate the connection
-      const authResult = await authenticateWebSocketConnection(socket);
-      if (!authResult) {
+      const token = socket.handshake?.auth?.token || socket.handshake?.query?.token as string;
+      if (!token) {
+        socket.disconnect();
+        return;
+      }
+      const authResult = await authenticateWebSocketConnection(socket as any, token);
+      if (!authResult.success) {
         socket.disconnect();
         return;
       }
 
-      socket.user = authResult;
       this.activeConnections.set(socket.id, socket);
 
       this.logger.info('Template WebSocket connection established', {

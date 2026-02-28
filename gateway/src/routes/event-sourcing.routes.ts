@@ -290,13 +290,11 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     try {
       const subscriptions = eventStreamService.getActiveSubscriptions();
       
-      // Filter subscriptions to only show user's own (unless admin)
-      const filteredSubscriptions = req.user?.isAdmin 
-        ? subscriptions 
-        : subscriptions.filter(sub => {
-            // This would need proper client-user mapping in a real implementation
-            return true; // For now, show all
-          });
+      // Filter subscriptions to only show user's own
+      const userId = req.user?.id;
+      const filteredSubscriptions = subscriptions.filter(sub => {
+        return (sub as any).userId === userId || (sub as any).clientId === userId;
+      });
 
       res.json({
         success: true,
@@ -421,10 +419,10 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
     } catch (error) {
       logger.error('Failed to get user engagement patterns', {
-        userId: req.params.userId,
+        targetUserId: req.params.userId,
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
-        error: error.message,
-        userId: req.user?.id
+        error: error instanceof Error ? error.message : String(error),
+        authenticatedUserId: req.user?.id
       });
 
       res.status(500).json({

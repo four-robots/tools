@@ -118,7 +118,7 @@ export class EventBus extends EventEmitter {
     this.on(eventType, wrappedHandler);
 
     // Store subscription metadata
-    const subscription: EventSubscription = {
+    const subscription: EventSubscription & { handler: EventHandler<any> } = {
       id: subscriptionId,
       subscriptionName: subscriptionId,
       eventTypes: [eventType],
@@ -126,7 +126,8 @@ export class EventBus extends EventEmitter {
       handlerConfig: { retry: options?.retry || true },
       isActive: true,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      handler: wrappedHandler
     };
 
     this.subscriptions.set(subscriptionId, subscription);
@@ -153,7 +154,7 @@ export class EventBus extends EventEmitter {
 
     this.on(`stream:${streamId}`, wrappedHandler);
 
-    const subscription: EventSubscription = {
+    const subscription: EventSubscription & { handler: EventHandler<any> } = {
       id: subscriptionId,
       subscriptionName: subscriptionId,
       eventTypes: ['stream:*'],
@@ -161,7 +162,8 @@ export class EventBus extends EventEmitter {
       handlerConfig: { fromVersion: options?.fromVersion },
       isActive: true,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      handler: wrappedHandler
     };
 
     this.subscriptions.set(subscriptionId, subscription);
@@ -189,7 +191,7 @@ export class EventBus extends EventEmitter {
 
     this.on('*', wrappedHandler);
 
-    const subscription: EventSubscription = {
+    const subscription: EventSubscription & { handler: EventHandler<any> } = {
       id: subscriptionId,
       subscriptionName: subscriptionId,
       eventTypes: options?.eventTypeFilter || ['*'],
@@ -197,7 +199,8 @@ export class EventBus extends EventEmitter {
       handlerConfig: {},
       isActive: true,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      handler: wrappedHandler
     };
 
     this.subscriptions.set(subscriptionId, subscription);
@@ -216,17 +219,21 @@ export class EventBus extends EventEmitter {
       return false;
     }
 
+    const targetHandler = (subscription as any).handler;
+
     // Remove from EventEmitter
     for (const eventType of subscription.eventTypes) {
       const handlers = this.handlerMap.get(eventType);
       if (handlers) {
         this.removeAllListeners(eventType);
-        // Re-add other handlers
+        // Re-add all handlers except the one being unsubscribed
         handlers.forEach(handler => {
-          if (handler !== handlers[0]) { // Skip the one we're removing
+          if (handler !== targetHandler) {
             this.on(eventType, handler);
           }
         });
+        // Remove the target handler from the handlerMap array
+        this.handlerMap.set(eventType, handlers.filter(handler => handler !== targetHandler));
       }
     }
 

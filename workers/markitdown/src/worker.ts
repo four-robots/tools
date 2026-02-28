@@ -20,6 +20,7 @@ export class MarkItDownWorker {
   private startTime = Date.now();
   private config: WorkerConfig;
   private jsonCodec = JSONCodec();
+  private healthCheckInterval?: ReturnType<typeof setInterval>;
 
   constructor(config: WorkerConfig) {
     this.config = config;
@@ -237,7 +238,7 @@ export class MarkItDownWorker {
   }
 
   private setupHealthCheck(): void {
-    setInterval(() => {
+    this.healthCheckInterval = setInterval(() => {
       if (this.natsConnection) {
         const stats = this.converter.getStats();
         this.logger.debug('Health check', {
@@ -254,6 +255,11 @@ export class MarkItDownWorker {
       this.logger.info(`Received ${signal}, shutting down gracefully...`);
       
       try {
+        // Clear health check interval
+        if (this.healthCheckInterval) {
+          clearInterval(this.healthCheckInterval);
+        }
+
         // Stop accepting new work
         if (this.natsConnection) {
           await this.natsConnection.drain();

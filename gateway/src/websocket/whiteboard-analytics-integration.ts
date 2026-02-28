@@ -684,7 +684,6 @@ export class AnalyticsBatcher {
       batch.lastUpdate = Date.now();
     }
   }
-}
 
   /**
    * Get current batcher statistics

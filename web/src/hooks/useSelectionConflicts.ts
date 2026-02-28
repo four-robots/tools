@@ -128,19 +128,23 @@ const useAutoResolution = (
           switch (strategy.auto) {
             case 'priority':
               // Resolve in favor of highest priority user
-              const highestPriority = Math.max(...conflict.conflictingUsers.map(u => u.priority));
-              const winner = conflict.conflictingUsers.find(u => u.priority === highestPriority);
-              if (winner) {
-                resolution = 'ownership';
+              if (conflict.conflictingUsers.length > 0) {
+                const highestPriority = Math.max(...conflict.conflictingUsers.map(u => u.priority));
+                const winner = conflict.conflictingUsers.find(u => u.priority === highestPriority);
+                if (winner) {
+                  resolution = 'ownership';
+                }
               }
               break;
 
             case 'timestamp':
               // Resolve in favor of earliest timestamp (first to select)
-              const earliestTime = Math.min(...conflict.conflictingUsers.map(u => u.timestamp));
-              const firstUser = conflict.conflictingUsers.find(u => u.timestamp === earliestTime);
-              if (firstUser) {
-                resolution = 'ownership';
+              if (conflict.conflictingUsers.length > 0) {
+                const earliestTime = Math.min(...conflict.conflictingUsers.map(u => u.timestamp));
+                const firstUser = conflict.conflictingUsers.find(u => u.timestamp === earliestTime);
+                if (firstUser) {
+                  resolution = 'ownership';
+                }
               }
               break;
 
@@ -428,7 +432,7 @@ export const useSelectionConflicts = (
         const elementConflicts = getElementConflicts(elementId);
         
         // Resolve oldest conflict in favor of highest priority user
-        const oldestConflict = elementConflicts.sort((a, b) => 
+        const oldestConflict = [...elementConflicts].sort((a, b) =>
           (a.conflictingUsers[0]?.timestamp || 0) - (b.conflictingUsers[0]?.timestamp || 0)
         )[0];
 

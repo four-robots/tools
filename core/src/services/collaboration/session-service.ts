@@ -244,10 +244,10 @@ export class CollaborationSessionService implements ICollaborationSessionService
         [validatedData.session_id]
       );
 
-      const currentCount = parseInt(participantCount.rows[0].count);
-      const maxParticipants = sessionCheck.rows[0].max_participants;
+      const currentCount = parseInt(participantCount.rows[0]?.count, 10) || 0;
+      const maxParticipants = sessionCheck.rows[0]?.max_participants;
 
-      if (currentCount >= maxParticipants) {
+      if (maxParticipants != null && currentCount >= maxParticipants) {
         throw new Error(`Session has reached maximum capacity of ${maxParticipants} participants`);
       }
 

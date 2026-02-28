@@ -219,6 +219,13 @@ export function useWhiteboardPresence(options: UseWhiteboardPresenceOptions) {
       transform: translate(-2px, -2px);
     `;
 
+    // Escape userName to prevent XSS via innerHTML
+    const escapedName = presence.userName
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
     cursorElement.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <path
@@ -232,7 +239,7 @@ export function useWhiteboardPresence(options: UseWhiteboardPresenceOptions) {
         class="absolute top-5 left-3 px-2 py-1 text-xs font-medium text-white rounded shadow-lg whitespace-nowrap"
         style="background-color: ${color};"
       >
-        ${presence.userName}
+        ${escapedName}
       </div>
     `;
 

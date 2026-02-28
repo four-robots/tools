@@ -166,6 +166,7 @@ export class ExportImportSocketHandler {
   private subscriptions: LRUCache<string, UserSubscription>;
   private userJobsCache: LRUCache<string, Set<string>>;
   private progressCache: LRUCache<string, ProgressUpdateEvent>;
+  private progressPollingInterval?: ReturnType<typeof setInterval>;
 
   constructor(
     private io: SocketIOServer,
@@ -228,18 +229,15 @@ export class ExportImportSocketHandler {
       throw new Error('No authentication token provided');
     }
 
-    const authResult = await authenticateWebSocketConnection(token);
-    if (!authResult.success || !authResult.user) {
+    const authResult = await authenticateWebSocketConnection(socket as any, token);
+    if (!authResult.success) {
       throw new Error('Invalid authentication token');
     }
 
     // Check token freshness
-    if (!validateTokenFreshness(authResult.user.lastActivity)) {
+    if (!validateTokenFreshness(socket as any)) {
       throw new Error('Token expired');
     }
-
-    // Attach user info to socket
-    (socket as AuthenticatedSocket).user = authResult.user;
   }
 
   /**
@@ -581,13 +579,22 @@ export class ExportImportSocketHandler {
    * Start polling for job progress updates
    */
   private startProgressPolling(): void {
-    setInterval(async () => {
+    this.progressPollingInterval = setInterval(async () => {
       try {
         await this.pollAndBroadcastUpdates();
       } catch (error) {
         this.logger.error('Failed to poll progress updates', { error });
       }
     }, 2000); // Poll every 2 seconds
+  }
+
+  /**
+   * Stop progress polling and clear the interval
+   */
+  public stopProgressPolling(): void {
+    if (this.progressPollingInterval) {
+      clearInterval(this.progressPollingInterval);
+    }
   }
 
   /**
