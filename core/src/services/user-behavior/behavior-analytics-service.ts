@@ -232,7 +232,7 @@ export class BehaviorAnalyticsService extends EventEmitter {
         const step = steps[i];
         const stepUsers = await this.getUsersForStep(step.eventTypes, timeframe, previousUsers);
         
-        const conversionRate = i === 0 ? 1 : (stepUsers.length / previousUsers.length);
+        const conversionRate = i === 0 ? 1 : (previousUsers.length > 0 ? stepUsers.length / previousUsers.length : 0);
         const dropoffRate = 1 - conversionRate;
 
         // Calculate average time to next step
@@ -260,7 +260,7 @@ export class BehaviorAnalyticsService extends EventEmitter {
 
       // Calculate overall conversion
       const overallConversion = funnelSteps.length > 0 
-        ? funnelSteps[funnelSteps.length - 1].users / funnelSteps[0].users
+        ? (funnelSteps[0].users > 0 ? funnelSteps[funnelSteps.length - 1].users / funnelSteps[0].users : 0)
         : 0;
 
       // Identify bottlenecks

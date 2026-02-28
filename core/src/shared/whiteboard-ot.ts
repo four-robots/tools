@@ -970,8 +970,8 @@ export function applyOperation(
             ...newState.elements[elementIndex],
             zIndex: operation.zIndex,
           };
-          // Re-sort elements by zIndex
-          newState.elements.sort((a: any, b: any) => (a.zIndex || 0) - (b.zIndex || 0));
+          // Re-sort elements by zIndex (create new array to avoid mutating original)
+          newState.elements = [...newState.elements].sort((a: any, b: any) => (a.zIndex || 0) - (b.zIndex || 0));
         }
       }
       break;
