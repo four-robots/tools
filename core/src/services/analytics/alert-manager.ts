@@ -200,7 +200,7 @@ export class AlertManager extends EventEmitter {
 
     } catch (error) {
       logger.error('Failed to send email alert', { error, alertId: alert.id, recipients });
-      await this.updateAlertNotificationStatus(alert.id!, 'email', 'failed', recipients, error.message);
+      await this.updateAlertNotificationStatus(alert.id!, 'email', 'failed', recipients, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -227,7 +227,7 @@ export class AlertManager extends EventEmitter {
 
     } catch (error) {
       logger.error('Failed to send Slack alert', { error, alertId: alert.id, channel });
-      await this.updateAlertNotificationStatus(alert.id!, 'slack', 'failed', [channel], error.message);
+      await this.updateAlertNotificationStatus(alert.id!, 'slack', 'failed', [channel], error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -264,7 +264,7 @@ export class AlertManager extends EventEmitter {
 
     } catch (error) {
       logger.error('Failed to send webhook alert', { error, alertId: alert.id, url });
-      await this.updateAlertNotificationStatus(alert.id!, 'webhook', 'failed', [url], error.message);
+      await this.updateAlertNotificationStatus(alert.id!, 'webhook', 'failed', [url], error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
