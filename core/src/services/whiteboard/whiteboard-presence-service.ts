@@ -6,6 +6,7 @@
  */
 
 import { Logger } from '../../utils/logger.js';
+import { validateWhiteboardId, validateCustomStatus, validateActivityInfo } from '../../utils/input-validation.js';
 import { getCursorService, WhiteboardCursorService } from './whiteboard-cursor-service.js';
 import {
   WhiteboardPresenceData,
@@ -279,7 +280,7 @@ export class WhiteboardPresenceService {
         timestamp: now,
       }]);
       
-      this.logger.info('User joined whiteboard', { userId, whiteboardId: sanitizedWhiteboardId, sessionId: sanitizedSessionId });
+      this.logger.info('User joined whiteboard', { userId, whiteboardId, sessionId });
       
       return presenceState;
     } catch (error) {
