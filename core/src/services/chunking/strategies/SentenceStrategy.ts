@@ -313,7 +313,7 @@ export class SentenceStrategy implements ChunkingStrategy {
       const lengths = sentences.map(s => s.text.length);
       const avgLength = lengths.reduce((a, b) => a + b, 0) / lengths.length;
       const variance = lengths.reduce((sum, len) => sum + Math.pow(len - avgLength, 2), 0) / lengths.length;
-      const coefficient = Math.sqrt(variance) / avgLength;
+      const coefficient = avgLength > 0 ? Math.sqrt(variance) / avgLength : 0;
       
       // Good variation (not too uniform, not too chaotic)
       if (coefficient > 0.2 && coefficient < 0.8) score += 0.1;

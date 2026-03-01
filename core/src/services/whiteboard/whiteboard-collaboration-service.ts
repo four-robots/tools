@@ -249,7 +249,7 @@ export class WhiteboardCollaborationService {
       startedAt: row.started_at,
       endedAt: row.ended_at,
       lastActivity: row.last_activity,
-      presence: row.presence_data ? JSON.parse(row.presence_data) : null,
+      presence: row.presence_data ? (() => { try { return JSON.parse(row.presence_data); } catch { return null; } })() : null,
     }));
   }
 
@@ -278,7 +278,7 @@ export class WhiteboardCollaborationService {
       startedAt: row.started_at,
       endedAt: row.ended_at,
       lastActivity: row.last_activity,
-      presence: row.presence_data ? JSON.parse(row.presence_data) : null,
+      presence: row.presence_data ? (() => { try { return JSON.parse(row.presence_data); } catch { return null; } })() : null,
     });
   }
 
@@ -336,7 +336,7 @@ export class WhiteboardCollaborationService {
       operationType: row.operation_type,
       elementId: row.element_id,
       elementType: row.element_type,
-      operationData: JSON.parse(row.operation_data),
+      operationData: (() => { try { return JSON.parse(row.operation_data); } catch { return {}; } })(),
       version: row.version,
       timestamp: row.timestamp,
     }));
@@ -444,7 +444,7 @@ export class WhiteboardCollaborationService {
       id: row.id,
       whiteboardId: row.whiteboard_id,
       elementId: row.element_id,
-      position: JSON.parse(row.position),
+      position: (() => { try { return JSON.parse(row.position); } catch { return { x: 0, y: 0 }; } })(),
       content: row.content,
       authorId: row.author_id,
       parentCommentId: row.parent_comment_id,

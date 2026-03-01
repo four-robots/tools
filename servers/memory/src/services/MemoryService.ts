@@ -276,7 +276,7 @@ export class MemoryService {
               relationshipType: rel.relationship_type,
               strength: rel.strength,
               bidirectional: rel.bidirectional,
-              metadata: JSON.parse(rel.metadata),
+              metadata: (() => { try { return JSON.parse(rel.metadata); } catch { return {}; } })(),
               lastUpdated: rel.last_updated,
               createdAt: rel.created_at,
               updatedAt: rel.updated_at
@@ -453,7 +453,7 @@ export class MemoryService {
         await this.graphEngine.updateVector(
           updatedMemory.vector_id,
           mergedContent,
-          JSON.parse(updatedMemory.context)
+          (() => { try { return JSON.parse(updatedMemory.context); } catch { return {}; } })()
         );
       }
 
@@ -622,7 +622,7 @@ export class MemoryService {
             strength: rel.strength,
             bidirectional: rel.bidirectional,
             metadata: JSON.stringify({
-              ...JSON.parse(rel.metadata),
+              ...(() => { try { return JSON.parse(rel.metadata); } catch { return {}; } })(),
               redirected_from: fromMemoryId,
               redirected_at: new Date().toISOString()
             })

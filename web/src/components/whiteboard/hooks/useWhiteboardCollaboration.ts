@@ -328,8 +328,9 @@ export function useWhiteboardCollaboration(options: UseWhiteboardCollaborationOp
     // Error handling
     socket.on('error', (error) => {
       console.error('Whiteboard error:', error);
-      setState(prev => ({ ...prev, connectionError: error.message }));
-      
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setState(prev => ({ ...prev, connectionError: errorMsg }));
+
       if (onError) {
         onError(error);
       }
@@ -337,7 +338,7 @@ export function useWhiteboardCollaboration(options: UseWhiteboardCollaborationOp
       toast({
         variant: 'destructive',
         title: 'Connection Error',
-        description: error.message,
+        description: errorMsg,
       });
     });
 

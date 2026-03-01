@@ -138,7 +138,7 @@ function checkServiceAvailability(appLocals: GatewayAppLocals): ServiceStatus {
     totalAvailable: 0
   };
   
-  status.totalAvailable = Object.values(status).filter(Boolean).length - 1; // -1 for totalAvailable itself
+  status.totalAvailable = Object.values(status).filter(v => v === true).length;
   
   return status;
 }

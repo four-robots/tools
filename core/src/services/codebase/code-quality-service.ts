@@ -841,7 +841,7 @@ export class CodeQualityService {
         blockers: [],
         warnings: ['Error evaluating quality gates'],
         canProceed: false,
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
         lastEvaluation: new Date()
       };
     }

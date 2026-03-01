@@ -343,10 +343,11 @@ export class WhiteboardConflictService {
         conflictId: conflict.id
       });
 
-      await this.logConflictResolution(conflict, 'resolution_failed', context, error.message);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      await this.logConflictResolution(conflict, 'resolution_failed', context, errorMsg);
       return {
         success: false,
-        error: error.message,
+        error: errorMsg,
         requiresManualIntervention: true
       };
 

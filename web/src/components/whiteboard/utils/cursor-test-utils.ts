@@ -279,8 +279,8 @@ export class CursorPerformanceTester {
 
   private calculateResults(): PerformanceResults {
     const frameTimes = this.frameTimeBuffer.filter(time => time > 0);
-    const avgFrameTime = frameTimes.reduce((sum, time) => sum + time, 0) / frameTimes.length;
-    const fps = 1000 / avgFrameTime;
+    const avgFrameTime = frameTimes.length > 0 ? frameTimes.reduce((sum, time) => sum + time, 0) / frameTimes.length : 0;
+    const fps = avgFrameTime > 0 ? 1000 / avgFrameTime : 0;
     
     const sortedTimes = [...frameTimes].sort((a, b) => a - b);
     const p50 = sortedTimes[Math.floor(sortedTimes.length * 0.5)];

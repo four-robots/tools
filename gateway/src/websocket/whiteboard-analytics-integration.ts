@@ -570,6 +570,7 @@ export class AnalyticsBatcher {
   private batchTimeout = 1000; // 1 second
   private maxBatchSize = 50;
   private batchProcessingInterval: ReturnType<typeof setInterval> | null = null;
+  private isProcessing = false;
 
   constructor(
     private analytics: WhiteboardAnalyticsIntegration,
@@ -638,16 +639,21 @@ export class AnalyticsBatcher {
    * Process all pending batches
    */
   private async processBatches(): Promise<void> {
-    const now = Date.now();
-    const promises: Promise<void>[] = [];
+    this.isProcessing = true;
+    try {
+      const now = Date.now();
+      const promises: Promise<void>[] = [];
 
-    for (const [batchKey, batch] of this.batches.entries()) {
-      if (now - batch.lastUpdate >= this.batchTimeout && batch.events.length > 0) {
-        promises.push(this.processBatch(batchKey, batch));
+      for (const [batchKey, batch] of this.batches.entries()) {
+        if (now - batch.lastUpdate >= this.batchTimeout && batch.events.length > 0) {
+          promises.push(this.processBatch(batchKey, batch));
+        }
       }
-    }
 
-    await Promise.allSettled(promises);
+      await Promise.allSettled(promises);
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   /**
@@ -730,9 +736,9 @@ export class AnalyticsBatcher {
    * Clean shutdown - process remaining batches
    */
   async shutdown(): Promise<void> {
-    if (this.processingInterval) {
-      clearInterval(this.processingInterval);
-      this.processingInterval = null;
+    if (this.batchProcessingInterval) {
+      clearInterval(this.batchProcessingInterval);
+      this.batchProcessingInterval = null;
     }
 
     // Process any remaining batches
