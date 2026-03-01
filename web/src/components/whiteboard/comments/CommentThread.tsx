@@ -222,7 +222,8 @@ export const CommentThread: React.FC<CommentThreadProps> = ({
     const mentionElements: JSX.Element[] = [];
 
     mentions.forEach((mention, index) => {
-      const mentionRegex = new RegExp(`@${mention.userName}`, 'gi');
+      const escapedName = mention.userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const mentionRegex = new RegExp(`@${escapedName}`, 'gi');
       processedContent = processedContent.replace(mentionRegex, `__MENTION_${index}__`);
       
       mentionElements[index] = (

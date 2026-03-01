@@ -553,7 +553,9 @@ export class CodeParserService {
       const compiledPatterns: RegExp[] = [];
       for (const pattern of options.excludePatterns) {
         try {
-          compiledPatterns.push(new RegExp(pattern));
+          // Escape user-provided pattern to prevent ReDoS
+          const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          compiledPatterns.push(new RegExp(escapedPattern));
         } catch {
           // Skip invalid regex patterns
         }

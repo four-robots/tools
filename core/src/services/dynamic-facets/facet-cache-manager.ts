@@ -261,7 +261,8 @@ export class FacetCacheManager {
    * Invalidate cache based on pattern
    */
   async invalidatePattern(pattern: string): Promise<number> {
-    const regex = new RegExp(pattern);
+    const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedPattern);
     const keysToDelete: string[] = [];
     
     for (const key of this.cache.keys()) {
