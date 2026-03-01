@@ -228,7 +228,8 @@ export class ComplexityScanner {
 
     for (const keyword of cyclomaticKeywords) {
       if (keyword === '&&' || keyword === '||' || keyword === '?') {
-        const matches = line.match(new RegExp(`\\${keyword}`, 'g'));
+        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const matches = line.match(new RegExp(escaped, 'g'));
         cyclomatic += matches ? matches.length : 0;
       } else {
         const regex = new RegExp(`\\b${keyword}\\b`, 'g');

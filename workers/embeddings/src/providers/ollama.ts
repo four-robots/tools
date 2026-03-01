@@ -13,6 +13,7 @@ export interface OllamaConfig {
   retryAttempts?: number;     // Default: 3
   retryDelay?: number;        // Default: 1000ms
   maxMemoryUsage?: number;    // Default: 512MB in bytes
+  requestTimeout?: number;    // Default: 30000ms (30s)
 }
 
 export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
@@ -34,7 +35,8 @@ export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
       batchSize: config?.batchSize || 10,
       retryAttempts: config?.retryAttempts || 3,
       retryDelay: config?.retryDelay || 1000,
-      maxMemoryUsage: config?.maxMemoryUsage || 512 * 1024 * 1024 // 512MB
+      maxMemoryUsage: config?.maxMemoryUsage || 512 * 1024 * 1024, // 512MB
+      requestTimeout: config?.requestTimeout || 30_000, // 30s
     };
     
     // Initialize concurrency limiter
@@ -73,16 +75,24 @@ export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
     this.trackMemoryUsage(text.length * 2); // Rough estimate: 2 bytes per character
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: this.modelName,
-          prompt: text,
-        }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.requestTimeout);
+      let response: Response;
+      try {
+        response = await fetch(`${this.baseUrl}/api/embeddings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: this.modelName,
+            prompt: text,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new EmbeddingProviderError(
@@ -222,12 +232,20 @@ export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.requestTimeout);
+      let response: Response;
+      try {
+        response = await fetch(`${this.baseUrl}/api/tags`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         return false;
@@ -251,15 +269,25 @@ export class OllamaEmbeddingProvider extends BaseEmbeddingProvider {
 
   async pullModel(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/pull`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: this.modelName,
-        }),
-      });
+      const controller = new AbortController();
+      // Model pulls can take longer — use 5x the normal timeout
+      const pullTimeout = this.config.requestTimeout * 5;
+      const timeoutId = setTimeout(() => controller.abort(), pullTimeout);
+      let response: Response;
+      try {
+        response = await fetch(`${this.baseUrl}/api/pull`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: this.modelName,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new EmbeddingProviderError(`Failed to pull model ${this.modelName}: ${response.status} ${response.statusText}`, 'ollama', response.status

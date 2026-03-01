@@ -278,7 +278,7 @@ export class MarkdownProcessor {
         })
         .replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
           let counter = 1;
-          const items = content.replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${counter++}. $1\n`);
+          const items = content.replace(/<li[^>]*>(.*?)<\/li>/gi, (_match: string, item: string) => `${counter++}. ${item}\n`);
           return items + '\n';
         })
         
