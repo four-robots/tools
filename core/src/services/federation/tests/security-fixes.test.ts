@@ -415,4 +415,90 @@ describe('Security Regression Tests', () => {
     // Verify all required audit fields are present
     expect(capturedData).toBeDefined();
   });
+
+  describe('Error Handling - Non-Error Thrown Values', () => {
+    it('should handle non-Error thrown values in cancelSearch', async () => {
+      // Mock updateSearchStatus to throw a string (non-Error)
+      (searchOrchestrator as any).db = {
+        db: {
+          selectFrom: jest.fn(() => ({
+            select: jest.fn(() => ({
+              where: jest.fn(() => ({
+                executeTakeFirst: jest.fn().mockResolvedValue({
+                  id: 'search-1',
+                  status: 'in_progress',
+                  tenant_id: 'tenant-1',
+                }),
+              })),
+            })),
+          })),
+          updateTable: jest.fn(() => ({
+            set: jest.fn(() => ({
+              where: jest.fn(() => ({
+                execute: jest.fn().mockRejectedValue('string error'),
+              })),
+            })),
+          })),
+        },
+      };
+
+      await expect(
+        searchOrchestrator.cancelSearch('search-1', 'tenant-1', 'user-1')
+      ).rejects.toThrow();
+    });
+
+    it('should categorize non-Error objects without crashing', () => {
+      const categorize = (searchOrchestrator as any).categorizeError.bind(searchOrchestrator);
+
+      // Non-Error values should return 'unknown' without throwing
+      expect(categorize('string error')).toBe('unknown');
+      expect(categorize(42)).toBe('unknown');
+      expect(categorize(null)).toBe('unknown');
+      expect(categorize(undefined)).toBe('unknown');
+
+      // String containing known patterns should still categorize correctly
+      expect(categorize('Rate limit exceeded')).toBe('rate_limit');
+      expect(categorize('HTTP 401 Unauthorized')).toBe('authentication');
+      expect(categorize('HTTP 403 Forbidden')).toBe('authentication');
+      expect(categorize('HTTP 404 Not Found')).toBe('not_found');
+      expect(categorize('HTTP 500 Server Error')).toBe('server_error');
+      expect(categorize('network timeout')).toBe('network');
+      expect(categorize('ECONNREFUSED')).toBe('network');
+    });
+
+    it('should categorize Error objects correctly', () => {
+      const categorize = (searchOrchestrator as any).categorizeError.bind(searchOrchestrator);
+
+      const abortError = new Error('Aborted');
+      abortError.name = 'AbortError';
+      expect(categorize(abortError)).toBe('timeout');
+
+      expect(categorize(new Error('Rate limit exceeded'))).toBe('rate_limit');
+      expect(categorize(new Error('HTTP 401'))).toBe('authentication');
+      expect(categorize(new Error('HTTP 500 Internal'))).toBe('server_error');
+      expect(categorize(new Error('Some other error'))).toBe('unknown');
+    });
+
+    it('should include error message string for non-Error values in thrown errors', async () => {
+      // Mock the database to throw a non-Error value during aggregation
+      (searchOrchestrator as any).db = {
+        db: {
+          insertInto: jest.fn(() => ({
+            values: jest.fn(() => ({
+              returningAll: jest.fn(() => ({
+                execute: jest.fn().mockRejectedValue('custom string error'),
+              })),
+            })),
+          })),
+        },
+      };
+
+      try {
+        await (searchOrchestrator as any).aggregateResults('search-1', [], {});
+        fail('Should have thrown');
+      } catch (e: any) {
+        expect(e.message).toContain('custom string error');
+      }
+    });
+  });
 });

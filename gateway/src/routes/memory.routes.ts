@@ -84,7 +84,7 @@ router.post('/memories', [
     
     res.status(201).success(memory);
   } catch (error: any) {
-    return res.error('STORE_ERROR', 'Failed to store memory', error.message);
+    return res.error('STORE_ERROR', 'Failed to store memory', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -122,7 +122,7 @@ router.get('/memories/search', [
       related_concepts: searchResults.relatedConcepts || []
     });
   } catch (error: any) {
-    return res.error('SEARCH_ERROR', 'Failed to search memories', error.message);
+    return res.error('SEARCH_ERROR', 'Failed to search memories', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -197,7 +197,7 @@ router.post('/connections', [
     
     res.status(201).success(connection);
   } catch (error: any) {
-    return res.error('CONNECTION_ERROR', 'Failed to create connection', error.message);
+    return res.error('CONNECTION_ERROR', 'Failed to create connection', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -219,7 +219,7 @@ router.get('/stats', [
     
     res.success(stats);
   } catch (error: any) {
-    return res.error('STATS_ERROR', 'Failed to get memory statistics', error.message);
+    return res.error('STATS_ERROR', 'Failed to get memory statistics', error instanceof Error ? error.message : String(error));
   }
 }));
 

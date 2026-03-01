@@ -49,14 +49,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to reconstruct session', {
         sessionId: req.params.sessionId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to reconstruct session',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -74,14 +74,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to get session timeline', {
         sessionId: req.params.sessionId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get session timeline',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -117,14 +117,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
       logger.error('Failed to get session state', {
         sessionId: req.params.sessionId,
         timestamp: req.query.timestamp,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get session state',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -142,14 +142,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to generate audit trail', {
         sessionId: req.params.sessionId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to generate audit trail',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -193,14 +193,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
       logger.error('Failed to search sessions', {
         criteria: req.body.criteria,
         timeRange: req.body.timeRange,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to search sessions',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -240,14 +240,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
       logger.error('Failed to get participant activity', {
         userId: req.params.userId,
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         authenticatedUserId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get participant activity',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -274,14 +274,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
     } catch (error) {
       logger.error('Failed to get connected clients', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get connected clients',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -306,14 +306,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
     } catch (error) {
       logger.error('Failed to get active subscriptions', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get active subscriptions',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -328,14 +328,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
 
     } catch (error) {
       logger.error('Failed to get stream service stats', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get stream service stats',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -374,14 +374,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to get collaboration metrics', {
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get collaboration metrics',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -428,7 +428,7 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
       res.status(500).json({
         success: false,
         error: 'Failed to get user engagement patterns',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -466,14 +466,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to get conflict resolution trends', {
         timeRange: { startDate: req.query.startDate, endDate: req.query.endDate },
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to get conflict resolution trends',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -491,14 +491,14 @@ export function createEventSourcingRoutes(deps: EventSourcingRouterDependencies)
     } catch (error) {
       logger.error('Failed to generate session insights', {
         sessionId: req.params.sessionId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         userId: req.user?.id
       });
 
       res.status(500).json({
         success: false,
         error: 'Failed to generate session insights',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -541,14 +541,14 @@ export function handleEventStreamWebSocket(
     }).catch(error => {
       logger.error('Failed to add WebSocket client', {
         userId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       ws.close(1011, 'Failed to establish connection');
     });
 
   } catch (error) {
     logger.error('Failed to handle WebSocket connection', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId: req.user?.id
     });
     ws.close(1011, 'Internal server error');

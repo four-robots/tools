@@ -186,7 +186,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to cancel search:', error);
-      throw new Error(`Failed to cancel search: ${error.message}`);
+      throw new Error(`Failed to cancel search: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -301,7 +301,7 @@ export class DistributedSearchOrchestrator {
       const executionTime = Date.now() - startTime;
       
       await this.updateSearchStatus(search.id, 'failed', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         execution_time_ms: executionTime,
         nodes_contacted: nodesContacted,
         nodes_responded: nodesResponded
@@ -372,7 +372,7 @@ export class DistributedSearchOrchestrator {
       try {
         responseData = await response.json();
       } catch (error) {
-        throw new Error(`Invalid JSON response: ${error.message}`);
+        throw new Error(`Invalid JSON response: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       // Validate response structure
@@ -410,25 +410,28 @@ export class DistributedSearchOrchestrator {
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
       
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+
       // Log detailed error information for security monitoring
       logger.error(`Federation search failed for node ${node.node_id}:`, {
-        error: error.message,
+        error: errorMsg,
         searchId,
         nodeId: node.node_id,
         responseTime,
-        errorType: error.name
+        errorType: errorName
       });
 
       // Determine error status
       let responseStatus: 'error' | 'timeout' | 'partial';
-      if (error.name === 'AbortError') {
+      if (errorName === 'AbortError') {
         responseStatus = 'timeout';
-      } else if (error.message.includes('Rate limit')) {
+      } else if (errorMsg.includes('Rate limit')) {
         responseStatus = 'error';
       } else {
         responseStatus = 'error';
       }
-      
+
       const nodeResponse: SearchNodeResponse = {
         id: crypto.randomUUID(),
         search_id: searchId,
@@ -438,8 +441,8 @@ export class DistributedSearchOrchestrator {
         response_time_ms: responseTime,
         results_data: [],
         ranking_metadata: {},
-        error_code: error.name || 'UnknownError',
-        error_message: error.message || 'Unknown error occurred',
+        error_code: errorName,
+        error_message: errorMsg || 'Unknown error occurred',
         partial_results: false,
         cache_hit: false,
         response_metadata: {
@@ -536,7 +539,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to aggregate search results:', error);
-      throw new Error(`Failed to aggregate search results: ${error.message}`);
+      throw new Error(`Failed to aggregate search results: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -664,7 +667,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to plan search execution:', error);
-      throw new Error(`Failed to plan search execution: ${error.message}`);
+      throw new Error(`Failed to plan search execution: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -781,23 +784,25 @@ export class DistributedSearchOrchestrator {
   /**
    * Categorize errors for better monitoring
    */
-  private categorizeError(error: Error): string {
-    if (error.name === 'AbortError') {
+  private categorizeError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const name = error instanceof Error ? error.name : '';
+    if (name === 'AbortError') {
       return 'timeout';
     }
-    if (error.message.includes('Rate limit')) {
+    if (message.includes('Rate limit')) {
       return 'rate_limit';
     }
-    if (error.message.includes('HTTP 401') || error.message.includes('HTTP 403')) {
+    if (message.includes('HTTP 401') || message.includes('HTTP 403')) {
       return 'authentication';
     }
-    if (error.message.includes('HTTP 404')) {
+    if (message.includes('HTTP 404')) {
       return 'not_found';
     }
-    if (error.message.includes('HTTP 5')) {
+    if (message.includes('HTTP 5')) {
       return 'server_error';
     }
-    if (error.message.includes('network') || error.message.includes('ECONNREFUSED')) {
+    if (message.includes('network') || message.includes('ECONNREFUSED')) {
       return 'network';
     }
     return 'unknown';
@@ -981,7 +986,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to get search history:', error);
-      throw new Error(`Failed to get search history: ${error.message}`);
+      throw new Error(`Failed to get search history: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1028,7 +1033,7 @@ export class DistributedSearchOrchestrator {
 
     } catch (error) {
       logger.error('Failed to get search details:', error);
-      throw new Error(`Failed to get search details: ${error.message}`);
+      throw new Error(`Failed to get search details: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
