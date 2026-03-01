@@ -60,15 +60,15 @@ export function AnalyticsChart({
   }), [timeRange, category, eventType]);
 
   // Mock data for now - replace with actual hook implementation
-  const timeSeriesData = [
+  const timeSeriesData = useMemo(() => [
     {
       name: 'Activity',
       data: Array.from({ length: 7 }, (_, i) => ({
         timestamp: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
-        value: Math.floor(Math.random() * 50) + 10
+        value: 10 + ((i * 7 + 13) % 50)
       }))
     }
-  ];
+  ], []);
   const isLoading = false;
   const error = null;
 

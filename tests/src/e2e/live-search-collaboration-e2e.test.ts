@@ -111,7 +111,7 @@ describe('Live Search Collaboration End-to-End Tests', () => {
 
   beforeEach(async () => {
     // Create a fresh collaboration session for each test
-    collaborationSessionId = `e2e-collab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    collaborationSessionId = `e2e-collab-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     
     // Create search session with first user
     const sessionData = {

@@ -237,7 +237,7 @@ export class KafkaStreamProcessor extends EventEmitter implements StreamProcesso
   }
 
   async configureAlert(condition: AlertCondition, action: AlertAction): Promise<string> {
-    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const rule: AlertRule = {
       id: alertId,

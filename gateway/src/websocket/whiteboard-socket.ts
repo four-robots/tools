@@ -343,7 +343,7 @@ export function setupWhiteboardWebSocket(
         // Create whiteboard session
         const whiteboardSession: WhiteboardSession = {
           socketId: socket.id,
-          sessionToken: `wb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          sessionToken: `wb_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           workspaceId,
           whiteboardId,
           userId: socket.user.id,
@@ -765,7 +765,7 @@ export function setupWhiteboardWebSocket(
 
         // Convert legacy operation to enhanced format with comprehensive validation
         const enhancedOperation: EnhancedWhiteboardOperation = {
-          id: `${operation.type}_${operation.elementId}_${socket.user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `${operation.type}_${operation.elementId}_${socket.user.id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           type: operation.type as any,
           elementId: operation.elementId,
           elementType: operation.elementType,

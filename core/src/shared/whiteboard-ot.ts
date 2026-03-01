@@ -1051,7 +1051,7 @@ export function createOperation(
   
   // Generate secure operation ID
   const timestamp = Date.now();
-  const randomPart = Math.random().toString(36).substr(2, 9);
+  const randomPart = Math.random().toString(36).substring(2, 11);
   const operationId = `${type}_${elementId}_${userId}_${timestamp}_${randomPart}`;
 
   return {

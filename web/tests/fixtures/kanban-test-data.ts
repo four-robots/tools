@@ -398,7 +398,7 @@ export class KanbanDataGenerator {
   }
 
   static createCard(overrides: Partial<TestKanbanCard> = {}): TestKanbanCard {
-    const id = overrides.id || `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = overrides.id || `card-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     return {
       id,
       title: overrides.title || `Test Card ${id}`,

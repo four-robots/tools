@@ -207,7 +207,7 @@ export class WhiteboardAnalyticsIntegration {
     operationType: string,
     context?: Record<string, unknown>
   ): string {
-    const trackerId = `${operationType}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const trackerId = `${operationType}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     
     if (socket.performanceTrackers) {
       socket.performanceTrackers.set(trackerId, {

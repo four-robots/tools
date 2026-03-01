@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -57,12 +57,15 @@ interface BehaviorDashboardProps {
 export const BehaviorDashboard: React.FC<BehaviorDashboardProps> = ({
   userId,
   apiUrl = '/api/v1/behavior',
-  dateRange = {
-    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    end: new Date(),
-  },
+  dateRange: dateRangeProp,
   className = '',
 }) => {
+  const defaultDateRange = useMemo(() => ({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    end: new Date(),
+  }), []);
+  const dateRange = dateRangeProp ?? defaultDateRange;
+
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,9 +113,11 @@ export const BehaviorDashboard: React.FC<BehaviorDashboardProps> = ({
     await fetchDashboardMetrics();
   };
 
+  const startTime = dateRange.start.getTime();
+  const endTime = dateRange.end.getTime();
   useEffect(() => {
     fetchDashboardMetrics();
-  }, [userId, dateRange.start, dateRange.end]);
+  }, [userId, startTime, endTime]);
 
   const formatDuration = (ms: number): string => {
     const minutes = Math.round(ms / 1000 / 60);

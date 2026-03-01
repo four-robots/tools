@@ -87,7 +87,7 @@ class AtomicOperationQueue {
       }
     }
 
-    const id = `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const atomicOp: AtomicOperation<T> = {
       id,

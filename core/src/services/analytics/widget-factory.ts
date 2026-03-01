@@ -538,7 +538,7 @@ export class WidgetFactory {
   }
 
   private generateWidgetId(): string {
-    return `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `widget_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private validateWidgetConfig(

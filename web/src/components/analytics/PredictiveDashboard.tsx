@@ -655,13 +655,13 @@ export function PredictiveDashboard({ className }: PredictiveDashboardProps) {
 // Helper functions for chart data generation
 function generateTrendData(forecast: any) {
   if (!forecast) return [];
-  
+
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const baseValue = forecast.predictions.tasksCompleted / 7;
-  
+
   return days.map((day, index) => ({
     day,
-    predicted: Math.round(baseValue + (Math.random() - 0.5) * 2)
+    predicted: Math.round(baseValue + (index % 2 === 0 ? 1 : -1) * (index * 0.3))
   }));
 }
 

@@ -19,7 +19,7 @@ export class MarkItDownConverter {
 
   async convertDocument(request: ConvertDocumentRequest): Promise<ConvertDocumentResponse> {
     const startTime = Date.now();
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     this.activeJobs.add(jobId);
     this.stats.totalRequests++;
@@ -66,7 +66,7 @@ export class MarkItDownConverter {
 
   async convertFromUrl(url: string, options?: any): Promise<ConvertDocumentResponse> {
     const startTime = Date.now();
-    const jobId = `url_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const jobId = `url_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     this.activeJobs.add(jobId);
     this.stats.totalRequests++;
