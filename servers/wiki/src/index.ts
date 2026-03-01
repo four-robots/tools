@@ -121,7 +121,12 @@ async function createWikiServer() {
       throw new Error('Invalid slug URI format');
     }
 
-    const slug = decodeURIComponent(match[1]);
+    let slug: string;
+    try {
+      slug = decodeURIComponent(match[1]);
+    } catch {
+      throw new Error('Invalid slug URI: malformed percent-encoding');
+    }
     const page = await db.getPageBySlug(slug);
     if (!page) {
       throw new Error(`Page with slug "${slug}" not found`);
@@ -208,7 +213,12 @@ async function createWikiServer() {
       throw new Error('Invalid search URI format');
     }
 
-    const query = decodeURIComponent(match[1]);
+    let query: string;
+    try {
+      query = decodeURIComponent(match[1]);
+    } catch {
+      throw new Error('Invalid search URI: malformed percent-encoding');
+    }
     const pages = await db.searchPages(query);
 
     const searchResults = {

@@ -248,7 +248,12 @@ async function main() {
         throw new Error('Invalid search URI format');
       }
 
-      const query = decodeURIComponent(match[1]);
+      let query: string;
+      try {
+        query = decodeURIComponent(match[1]);
+      } catch {
+        throw new Error('Invalid search URI: malformed percent-encoding');
+      }
       const results = await memoryService.searchMemories({ query });
       
       return {
