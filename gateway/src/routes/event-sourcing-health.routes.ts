@@ -530,8 +530,7 @@ router.get('/health', async (req: Request, res: Response) => {
 
     const health = await healthCheck.performSystemHealthCheck();
     
-    const statusCode = health.status === 'healthy' ? 200 : 
-                      health.status === 'degraded' ? 200 : 503;
+    const statusCode = health.status === 'healthy' ? 200 : 503;
 
     res.status(statusCode).json(health);
     

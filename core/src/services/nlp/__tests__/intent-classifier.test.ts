@@ -382,6 +382,18 @@ describe('IntentClassifier', () => {
       expect(result.confidence).toBeGreaterThan(0.5);
     });
 
+    it('should classify question-mark-only queries as questions', async () => {
+      // Tests the fix for the tautological condition:
+      // Before: features.hasQuestionWords && (query.includes('?') || features.hasQuestionWords)
+      //   - The inner || was always true, making query.includes('?') dead code
+      // After: features.hasQuestionWords || query.includes('?')
+      //   - A question mark alone should trigger question intent
+      const result = await classifier.classifyIntent('React hooks?');
+
+      expect(result.intent).toBe('question');
+      expect(result.confidence).toBeGreaterThan(0.5);
+    });
+
     it('should handle queries with special characters', async () => {
       const result = await classifier.classifyIntent('How to use React.js? @help #tutorial');
 
