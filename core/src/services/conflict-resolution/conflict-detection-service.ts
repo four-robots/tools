@@ -124,10 +124,10 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to detect conflicts', { error, contentId, sessionId });
-      throw new ConflictDetectionError(`Failed to detect conflicts: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to detect conflicts: ${error instanceof Error ? error.message : String(error)}`, {
         contentId,
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -173,9 +173,9 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to analyze conflict', { error, conflictId });
-      throw new ConflictDetectionError(`Failed to analyze conflict: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to analyze conflict: ${error instanceof Error ? error.message : String(error)}`, {
         conflictId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -204,10 +204,10 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to update conflict status', { error, conflictId, status });
-      throw new ConflictDetectionError(`Failed to update conflict status: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to update conflict status: ${error instanceof Error ? error.message : String(error)}`, {
         conflictId,
         status,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -232,9 +232,9 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to get active conflicts', { error, sessionId });
-      throw new ConflictDetectionError(`Failed to get active conflicts: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to get active conflicts: ${error instanceof Error ? error.message : String(error)}`, {
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -259,9 +259,9 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to get conflict history', { error, contentId });
-      throw new ConflictDetectionError(`Failed to get conflict history: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to get conflict history: ${error instanceof Error ? error.message : String(error)}`, {
         contentId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -310,11 +310,11 @@ export class ConflictDetectionService implements IConflictDetectionService {
 
     } catch (error) {
       logger.error('Failed to store content version', { error, contentId, userId });
-      throw new ConflictDetectionError(`Failed to store content version: ${error.message}`, {
+      throw new ConflictDetectionError(`Failed to store content version: ${error instanceof Error ? error.message : String(error)}`, {
         contentId,
         userId,
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -636,13 +636,13 @@ export class ConflictDetectionService implements IConflictDetectionService {
       MetricsCollector.recordError(
         'vector_clock_creation',
         'creation_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         duration,
         { sessionId, userId }
       );
       
       logger.error('Vector clock creation failed', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         sessionId,
         userId,
         duration

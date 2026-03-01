@@ -491,7 +491,7 @@ export class PostgresEventStore implements EventStore {
       await client.query('SELECT maintain_event_partitions()');
       logger.info('Event partitions maintained successfully');
     } catch (error) {
-      logger.error('Failed to maintain partitions', { error: error.message });
+      logger.error('Failed to maintain partitions', { error: error instanceof Error ? error.message : String(error) });
       throw new EventSourcingError(
         `Failed to maintain partitions: ${error instanceof Error ? error.message : String(error)}`,
         'MAINTAIN_PARTITIONS_FAILED',
@@ -556,10 +556,10 @@ export class PostgresEventStore implements EventStore {
         VALUES ($1, $2, $3)
       `, [streamId, version, JSON.stringify(snapshotData)]);
     } catch (error) {
-      logger.warn(`Failed to create automatic snapshot for stream ${streamId}`, { 
-        streamId, 
-        version, 
-        error: error.message 
+      logger.warn(`Failed to create automatic snapshot for stream ${streamId}`, {
+        streamId,
+        version,
+        error: error instanceof Error ? error.message : String(error)
       });
       // Don't throw - snapshot creation is optional
     }
@@ -591,7 +591,7 @@ export class PostgresEventStore implements EventStore {
       logger.error(`Failed to decrypt event data for event ${row.id}`, {
         eventId: row.id,
         eventType: row.event_type,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       // Continue with encrypted data rather than failing completely
       // In production, you might want to handle this differently based on your security policy

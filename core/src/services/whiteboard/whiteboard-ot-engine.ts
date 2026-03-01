@@ -820,6 +820,9 @@ export class WhiteboardOTEngine {
 
     // Priority user strategy
     this.resolutionStrategies.set('priority-user', async (conflict) => {
+      if (conflict.operations.length === 0) {
+        throw new Error('Cannot resolve conflict with no operations');
+      }
       // Implementation would use context.userPriorities
       const highestPriorityOp = conflict.operations.reduce((prev, current) => {
         // For now, use lexicographic ordering as a simple priority

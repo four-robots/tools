@@ -41,7 +41,7 @@ router.post('/scrape', [
     
     res.success(result);
   } catch (error: any) {
-    return res.error('SCRAPE_ERROR', 'Failed to scrape URL', error.message);
+    return res.error('SCRAPE_ERROR', 'Failed to scrape URL', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -74,7 +74,7 @@ router.post('/scrape-enhanced', [
     
     res.success(result);
   } catch (error: any) {
-    return res.error('ENHANCED_SCRAPE_ERROR', 'Failed to perform enhanced scraping', error.message);
+    return res.error('ENHANCED_SCRAPE_ERROR', 'Failed to perform enhanced scraping', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -111,7 +111,7 @@ router.post('/search', [
     
     res.success(results);
   } catch (error: any) {
-    return res.error('SEARCH_ERROR', 'Failed to search scraped content', error.message);
+    return res.error('SEARCH_ERROR', 'Failed to search scraped content', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -145,7 +145,7 @@ router.post('/backfill', [
     
     res.success(results);
   } catch (error: any) {
-    return res.error('BACKFILL_ERROR', 'Failed to backfill content', error.message);
+    return res.error('BACKFILL_ERROR', 'Failed to backfill content', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -161,7 +161,7 @@ router.get('/stats/enhanced', asyncHandler(async (req: any, res: any) => {
     const stats = await enhancedScraperService.getEnhancedStats();
     res.success(stats);
   } catch (error: any) {
-    return res.error('STATS_ERROR', 'Failed to get enhanced statistics', error.message);
+    return res.error('STATS_ERROR', 'Failed to get enhanced statistics', error instanceof Error ? error.message : String(error));
   }
 }));
 
@@ -196,7 +196,7 @@ router.get('/health', asyncHandler(async (req: any, res: any) => {
       enhanced: enhancedStatus
     });
   } catch (error: any) {
-    return res.error('HEALTH_ERROR', 'Failed to get scraper health', error.message);
+    return res.error('HEALTH_ERROR', 'Failed to get scraper health', error instanceof Error ? error.message : String(error));
   }
 }));
 

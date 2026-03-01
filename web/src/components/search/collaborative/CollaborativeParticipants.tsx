@@ -161,7 +161,7 @@ export function CollaborativeParticipants({
     } catch (error) {
       toast({
         title: 'Failed to update role',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -169,7 +169,7 @@ export function CollaborativeParticipants({
 
   const handleRemoveParticipant = useCallback(async (participantId: string) => {
     if (!confirm('Are you sure you want to remove this participant?')) return;
-    
+
     try {
       onRemoveParticipant?.(participantId);
       toast({
@@ -179,7 +179,7 @@ export function CollaborativeParticipants({
     } catch (error) {
       toast({
         title: 'Failed to remove participant',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }

@@ -4492,12 +4492,9 @@ export function setupWhiteboardWebSocket(
     };
   }
 
-  // Cleanup inactive sessions with enhanced monitoring
-  const cleanupInterval = setInterval(enhancedCleanup, 5 * 60 * 1000); // Run every 5 minutes
-
   // Enhanced cleanup with memory monitoring and atomic operations
   let isGlobalCleanupRunning = false;
-  
+
   const enhancedCleanup = async () => {
     // Prevent concurrent global cleanups
     if (isGlobalCleanupRunning) {
@@ -4611,10 +4608,13 @@ export function setupWhiteboardWebSocket(
     }
   };
 
+  // Start cleanup interval (must be after enhancedCleanup is defined)
+  const cleanupInterval = setInterval(enhancedCleanup, 5 * 60 * 1000); // Run every 5 minutes
+
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down whiteboard WebSocket handlers');
-    
+
     if (cleanupInterval) {
       clearInterval(cleanupInterval);
     }

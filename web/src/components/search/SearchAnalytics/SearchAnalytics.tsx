@@ -295,12 +295,12 @@ export function SearchAnalytics({
               <div className={styles.typeBar}>
                 <div 
                   className={styles.typeBarFill}
-                  style={{ width: `${(count / total) * 100}%` }}
+                  style={{ width: `${(count / (total || 1)) * 100}%` }}
                 />
               </div>
               <div className={styles.typeStats}>
                 <span>{formatNumber(count)}</span>
-                <span>({formatPercentage(count / total)})</span>
+                <span>({formatPercentage(count / (total || 1))})</span>
               </div>
             </div>
           ))}

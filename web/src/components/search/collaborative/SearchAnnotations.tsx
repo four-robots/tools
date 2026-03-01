@@ -278,7 +278,7 @@ export function SearchAnnotations({
     } catch (error) {
       toast({
         title: 'Failed to create annotation',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -296,7 +296,7 @@ export function SearchAnnotations({
     } catch (error) {
       toast({
         title: 'Failed to update annotation',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -315,7 +315,7 @@ export function SearchAnnotations({
     } catch (error) {
       toast({
         title: 'Failed to delete annotation',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }

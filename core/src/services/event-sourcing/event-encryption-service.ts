@@ -109,7 +109,11 @@ export class EventEncryptionService {
    */
   decryptSensitiveData(encryptedData: EncryptedData): Record<string, unknown> {
     if (!encryptedData.encrypted) {
-      return JSON.parse(encryptedData.data);
+      try {
+        return JSON.parse(encryptedData.data);
+      } catch {
+        throw new EventEncryptionError('Failed to parse unencrypted data as JSON');
+      }
     }
 
     try {

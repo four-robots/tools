@@ -344,4 +344,44 @@ describe('EventEncryption Security Tests', () => {
       expect(timePerOperation).toBeLessThan(10); // Should be under 10ms per operation
     });
   });
+
+  describe('Edge Cases - Safety Fixes', () => {
+    test('should throw EventEncryptionError for malformed unencrypted data', () => {
+      // Previously, decryptSensitiveData with encrypted=false called
+      // JSON.parse without try/catch. Malformed data would throw a
+      // generic SyntaxError instead of a descriptive EventEncryptionError.
+      const malformedData = {
+        encrypted: false,
+        data: '{invalid json!!!',
+        algorithm: 'none' as const,
+      };
+
+      expect(() => encryptionService.decryptSensitiveData(malformedData as any))
+        .toThrow(EventEncryptionError);
+      expect(() => encryptionService.decryptSensitiveData(malformedData as any))
+        .toThrow('Failed to parse unencrypted data as JSON');
+    });
+
+    test('should handle valid unencrypted data without error', () => {
+      const validData = {
+        encrypted: false,
+        data: '{"key": "value"}',
+        algorithm: 'none' as const,
+      };
+
+      const result = encryptionService.decryptSensitiveData(validData as any);
+      expect(result).toEqual({ key: 'value' });
+    });
+
+    test('should handle empty object as unencrypted data', () => {
+      const emptyObjectData = {
+        encrypted: false,
+        data: '{}',
+        algorithm: 'none' as const,
+      };
+
+      const result = encryptionService.decryptSensitiveData(emptyObjectData as any);
+      expect(result).toEqual({});
+    });
+  });
 });

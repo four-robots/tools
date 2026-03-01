@@ -264,7 +264,7 @@ export function AnalyticsDashboard({
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{data.overview.completed_cards}</span>
                       <Badge className="bg-green-100 text-green-800">
-                        {Math.round((data.overview.completed_cards / data.overview.total_cards) * 100)}%
+                        {Math.round((data.overview.completed_cards / (data.overview.total_cards || 1)) * 100)}%
                       </Badge>
                     </div>
                   </div>
@@ -276,7 +276,7 @@ export function AnalyticsDashboard({
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{data.overview.in_progress_cards}</span>
                       <Badge className="bg-blue-100 text-blue-800">
-                        {Math.round((data.overview.in_progress_cards / data.overview.total_cards) * 100)}%
+                        {Math.round((data.overview.in_progress_cards / (data.overview.total_cards || 1)) * 100)}%
                       </Badge>
                     </div>
                   </div>
@@ -288,7 +288,7 @@ export function AnalyticsDashboard({
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{data.overview.blocked_cards}</span>
                       <Badge className="bg-red-100 text-red-800">
-                        {Math.round((data.overview.blocked_cards / data.overview.total_cards) * 100)}%
+                        {Math.round((data.overview.blocked_cards / (data.overview.total_cards || 1)) * 100)}%
                       </Badge>
                     </div>
                   </div>
@@ -300,7 +300,7 @@ export function AnalyticsDashboard({
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{data.overview.overdue_cards}</span>
                       <Badge className="bg-orange-100 text-orange-800">
-                        {Math.round((data.overview.overdue_cards / data.overview.total_cards) * 100)}%
+                        {Math.round((data.overview.overdue_cards / (data.overview.total_cards || 1)) * 100)}%
                       </Badge>
                     </div>
                   </div>
@@ -504,7 +504,7 @@ export function AnalyticsDashboard({
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-blue-500 h-2 rounded-full"
-                            style={{ width: `${(count / data.overview.total_cards) * 100}%` }}
+                            style={{ width: `${(count / (data.overview.total_cards || 1)) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -531,7 +531,7 @@ export function AnalyticsDashboard({
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-green-500 h-2 rounded-full"
-                            style={{ width: `${(count / data.overview.total_cards) * 100}%` }}
+                            style={{ width: `${(count / (data.overview.total_cards || 1)) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -555,7 +555,7 @@ export function AnalyticsDashboard({
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-purple-500 h-2 rounded-full"
-                            style={{ width: `${(count / data.overview.total_cards) * 100}%` }}
+                            style={{ width: `${(count / (data.overview.total_cards || 1)) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -579,7 +579,7 @@ export function AnalyticsDashboard({
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-orange-500 h-2 rounded-full"
-                            style={{ width: `${(count / data.overview.total_cards) * 100}%` }}
+                            style={{ width: `${(count / (data.overview.total_cards || 1)) * 100}%` }}
                           />
                         </div>
                       </div>

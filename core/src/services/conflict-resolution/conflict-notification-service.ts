@@ -127,9 +127,9 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to send conflict detected notification', { error, conflictId: conflict.id });
-      throw new ConflictResolutionError(`Failed to notify conflict detected: ${error.message}`, 'NOTIFICATION_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to notify conflict detected: ${error instanceof Error ? error.message : String(error)}`, 'NOTIFICATION_ERROR', 500, {
         conflictId: conflict.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -196,9 +196,9 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to send resolution required notification', { error, sessionId: resolutionSession.id });
-      throw new ConflictResolutionError(`Failed to notify resolution required: ${error.message}`, 'NOTIFICATION_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to notify resolution required: ${error instanceof Error ? error.message : String(error)}`, 'NOTIFICATION_ERROR', 500, {
         resolutionSessionId: resolutionSession.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -265,10 +265,10 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to send resolution completed notification', { error, sessionId: resolutionSession.id });
-      throw new ConflictResolutionError(`Failed to notify resolution completed: ${error.message}`, 'NOTIFICATION_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to notify resolution completed: ${error instanceof Error ? error.message : String(error)}`, 'NOTIFICATION_ERROR', 500, {
         resolutionSessionId: resolutionSession.id,
         resultId: result.id,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -325,10 +325,10 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to send voting required notification', { error, sessionId: resolutionSession.id });
-      throw new ConflictResolutionError(`Failed to notify voting required: ${error.message}`, 'NOTIFICATION_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to notify voting required: ${error instanceof Error ? error.message : String(error)}`, 'NOTIFICATION_ERROR', 500, {
         resolutionSessionId: resolutionSession.id,
         solutionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -353,10 +353,10 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to subscribe to conflict updates', { error, userId, sessionId });
-      throw new ConflictResolutionError(`Failed to subscribe to updates: ${error.message}`, 'SUBSCRIPTION_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to subscribe to updates: ${error instanceof Error ? error.message : String(error)}`, 'SUBSCRIPTION_ERROR', 500, {
         userId,
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -399,9 +399,9 @@ export class ConflictNotificationService implements IConflictNotificationService
 
     } catch (error) {
       logger.error('Failed to update notification preferences', { error, userId });
-      throw new ConflictResolutionError(`Failed to update preferences: ${error.message}`, 'PREFERENCES_ERROR', 500, {
+      throw new ConflictResolutionError(`Failed to update preferences: ${error instanceof Error ? error.message : String(error)}`, 'PREFERENCES_ERROR', 500, {
         userId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -479,7 +479,7 @@ export class ConflictNotificationService implements IConflictNotificationService
     } catch (error) {
       logger.debug('WebSocket notification failed (user may be offline)', { 
         userId: notification.userId,
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error) 
       });
       // Don't throw - user might be offline, which is normal
     }
