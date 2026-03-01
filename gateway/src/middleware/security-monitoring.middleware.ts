@@ -346,7 +346,9 @@ export class SecurityMonitoringMiddleware {
     
     // If buffer is getting full, flush immediately
     if (this.securityEventBuffer.length >= 100) {
-      this.flushSecurityEventBuffer();
+      this.flushSecurityEventBuffer().catch(error => {
+        logger.error('Failed to flush security event buffer', { error });
+      });
     }
 
     // Log critical events immediately

@@ -28,7 +28,9 @@ export class AnalyticsService {
     
     // Flush events every 30 seconds or when buffer is full
     this.flushInterval = setInterval(() => {
-      this.flushEventBuffer();
+      this.flushEventBuffer().catch(error => {
+        console.error('[AnalyticsService] Failed to flush event buffer', error);
+      });
     }, ANALYTICS_CONSTANTS.REAL_TIME_UPDATE_INTERVAL);
   }
 

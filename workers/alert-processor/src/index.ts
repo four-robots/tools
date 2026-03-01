@@ -100,7 +100,7 @@ async function main() {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+      logger.error('Uncaught exception', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
       process.exit(1);
     });
 

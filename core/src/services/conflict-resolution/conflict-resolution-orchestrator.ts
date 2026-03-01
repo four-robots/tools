@@ -612,8 +612,10 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
     if (session.expiresAt) {
       const timeoutMs = session.expiresAt.getTime() - Date.now();
       if (timeoutMs > 0) {
-        const timer = setTimeout(async () => {
-          await this.handleSessionTimeout(session.id);
+        const timer = setTimeout(() => {
+          this.handleSessionTimeout(session.id).catch(error => {
+            logger.error('Session timeout handler failed', { error, sessionId: session.id });
+          });
         }, timeoutMs);
         this.sessionTimers.set(session.id, timer);
       }
