@@ -374,4 +374,85 @@ describe('FacetDiscoveryEngine', () => {
       expect(discovered.find(f => f.sourceField === 'metadata.category')).toBeDefined();
     });
   });
+
+  describe('Edge Cases - Safety Fixes', () => {
+    test('should handle empty results without divide-by-zero', async () => {
+      // The getDataConsistencyScore method divides by
+      // (uniqueValues.size + nullCount). When both are 0,
+      // this would produce NaN. Fix: guard with total === 0 check.
+      const results: SearchResult[] = [];
+      const discovered = await discoveryEngine.discoverFacets(results);
+
+      expect(discovered).toEqual([]);
+      // No NaN or Infinity values should appear
+      for (const facet of discovered) {
+        expect(Number.isFinite(facet.qualityScore)).toBe(true);
+      }
+    });
+
+    test('should produce finite quality scores for minimal data', async () => {
+      // Single result with minimal metadata — ensures no divide-by-zero
+      // in scoring calculations.
+      const results: SearchResult[] = [
+        {
+          id: '1',
+          type: 'wiki_page',
+          title: 'Minimal Page',
+          score: { relevance: 0.5 },
+          metadata: {
+            created_at: '2024-01-01T00:00:00Z',
+          }
+        }
+      ];
+
+      const discovered = await discoveryEngine.discoverFacets(results, {
+        maxFacets: 10,
+        minQualityScore: 0.0 // Accept all quality scores
+      });
+
+      // All quality scores should be finite numbers (not NaN, not Infinity)
+      for (const facet of discovered) {
+        expect(Number.isFinite(facet.qualityScore)).toBe(true);
+        expect(facet.qualityScore).toBeGreaterThanOrEqual(0);
+        expect(facet.qualityScore).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('should handle results with only null metadata values', async () => {
+      const results: SearchResult[] = [
+        {
+          id: '1',
+          type: 'wiki_page',
+          title: 'Null Metadata Page',
+          score: { relevance: 0.5 },
+          metadata: {
+            created_at: '2024-01-01T00:00:00Z',
+            category: null,
+            tags: null,
+          }
+        },
+        {
+          id: '2',
+          type: 'wiki_page',
+          title: 'Another Null Page',
+          score: { relevance: 0.4 },
+          metadata: {
+            created_at: '2024-01-02T00:00:00Z',
+            category: null,
+            tags: null,
+          }
+        }
+      ];
+
+      // Should not throw or produce NaN
+      const discovered = await discoveryEngine.discoverFacets(results, {
+        maxFacets: 10,
+        minQualityScore: 0.0
+      });
+
+      for (const facet of discovered) {
+        expect(Number.isFinite(facet.qualityScore)).toBe(true);
+      }
+    });
+  });
 });

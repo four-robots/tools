@@ -383,7 +383,9 @@ export class AlertManager extends EventEmitter {
         const timeout = setTimeout(
           () => {
             this.escalationTimeouts.delete(timeoutKey);
-            this.escalateAlert(alertId, escalationLevel + 1);
+            this.escalateAlert(alertId, escalationLevel + 1).catch(error => {
+              logger.error('Alert escalation failed', { alertId, escalationLevel: escalationLevel + 1, error });
+            });
           },
           nextEscalation.delayMinutes * 60 * 1000
         );
@@ -638,7 +640,9 @@ export class AlertManager extends EventEmitter {
     const timeout = setTimeout(
       () => {
         this.escalationTimeouts.delete(timeoutKey);
-        this.escalateAlert(alert.id!, 0);
+        this.escalateAlert(alert.id!, 0).catch(error => {
+          logger.error('Initial alert escalation failed', { alertId: alert.id, error });
+        });
       },
       firstEscalation.delayMinutes * 60 * 1000
     );
