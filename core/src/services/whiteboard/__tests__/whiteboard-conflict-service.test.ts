@@ -569,4 +569,28 @@ describe('WhiteboardConflictService', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('Edge Cases - Error Type Safety', () => {
+    it('should handle non-Error thrown values in automatic resolution', async () => {
+      // Force a string throw by providing a conflict that causes internal failure
+      const badConflict = { ...sampleConflict, id: undefined as any };
+
+      // Mock internal failure with string error
+      mockDb.query.mockRejectedValueOnce('string error without Error class');
+
+      const result = await service.resolveConflictAutomatically(badConflict, baseContext);
+
+      // Should not crash — error.message is safely handled
+      expect(result).toBeDefined();
+      expect(result.success).toBeDefined();
+    });
+
+    it('should handle null thrown values in resolution', async () => {
+      mockDb.query.mockRejectedValueOnce(null);
+
+      const result = await service.resolveConflictAutomatically(sampleConflict, baseContext);
+
+      expect(result).toBeDefined();
+    });
+  });
 });

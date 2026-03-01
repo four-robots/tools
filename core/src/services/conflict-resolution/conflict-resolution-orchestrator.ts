@@ -685,25 +685,30 @@ export class ConflictResolutionOrchestrator implements IConflictResolutionOrches
     }
   }
 
+  private safeParseJson(data: string | null | undefined, fallback: any): any {
+    if (!data) return fallback;
+    try { return JSON.parse(data); } catch { return fallback; }
+  }
+
   private mapRowToResolutionSession(row: any): ConflictResolutionSession {
     return ConflictResolutionSessionSchema.parse({
       id: row.id,
       conflictId: row.conflict_id,
       collaborationSessionId: row.collaboration_session_id,
       moderatorId: row.moderator_id,
-      participantIds: JSON.parse(row.participant_ids || '[]'),
-      observerIds: JSON.parse(row.observer_ids || '[]'),
+      participantIds: this.safeParseJson(row.participant_ids, []),
+      observerIds: this.safeParseJson(row.observer_ids, []),
       createdAt: new Date(row.created_at),
       startedAt: row.started_at ? new Date(row.started_at) : undefined,
       completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
       expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
       status: row.status,
       currentStep: row.current_step,
-      proposedSolutions: JSON.parse(row.proposed_solutions || '[]'),
+      proposedSolutions: this.safeParseJson(row.proposed_solutions, []),
       finalDecision: row.final_decision,
       selectedSolutionId: row.selected_solution_id,
-      events: JSON.parse(row.events || '[]'),
-      settings: JSON.parse(row.settings || '{}')
+      events: this.safeParseJson(row.events, []),
+      settings: this.safeParseJson(row.settings, {})
     });
   }
 

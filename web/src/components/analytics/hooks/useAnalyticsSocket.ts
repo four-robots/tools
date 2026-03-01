@@ -134,7 +134,7 @@ export default function useAnalyticsSocket(
       setConnectionState(prev => ({
         ...prev,
         status: 'error',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }));
     });
     
@@ -338,7 +338,7 @@ export default function useAnalyticsSocket(
       console.error('Analytics socket error', error);
       setConnectionState(prev => ({
         ...prev,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }));
     });
   };

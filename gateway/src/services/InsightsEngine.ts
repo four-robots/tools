@@ -449,7 +449,7 @@ export class InsightsEngine {
 
     // Calculate workload variance
     const variance = workloads.length > 0 ? workloads.reduce((sum, w) => sum + Math.pow(w - avgWorkload, 2), 0) / workloads.length : 0;
-    const consistency = 1 - Math.min(variance / (avgWorkload * avgWorkload), 1);
+    const consistency = avgWorkload > 0 ? 1 - Math.min(variance / (avgWorkload * avgWorkload), 1) : 0;
 
     const confidence = Math.min(0.8, 0.5 + (workloads.length / 30) * 0.3);
 
@@ -804,9 +804,9 @@ export class InsightsEngine {
       
       let recommendation = '';
       if (capacity.burnoutRisk > 0.7) {
-        recommendation = `High burnout risk detected! Consider reducing workload by ${Math.round((capacity.currentCapacity - capacity.optimalCapacity) * 100 / capacity.currentCapacity)}%.`;
+        recommendation = `High burnout risk detected! Consider reducing workload by ${Math.round((capacity.currentCapacity - capacity.optimalCapacity) * 100 / (capacity.currentCapacity || 1))}%.`;
       } else if (capacity.currentCapacity < capacity.optimalCapacity * 0.8) {
-        recommendation = `You have capacity for more work. Consider increasing tasks by ${Math.round((capacity.optimalCapacity - capacity.currentCapacity) * 100 / capacity.currentCapacity)}%.`;
+        recommendation = `You have capacity for more work. Consider increasing tasks by ${Math.round((capacity.optimalCapacity - capacity.currentCapacity) * 100 / (capacity.currentCapacity || 1))}%.`;
       } else {
         recommendation = 'Your current workload appears well-balanced.';
       }

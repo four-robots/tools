@@ -187,14 +187,15 @@ export function useSearchAnalytics(
     const recentSearches = metrics.dailyStats.slice(-7);
     if (recentSearches.length === 0) return insights;
     const avgRecentSearches = recentSearches.reduce((sum, stat) => sum + stat.searches, 0) / recentSearches.length;
-    const previousAvg = metrics.dailyStats.slice(-14, -7).reduce((sum, stat) => sum + stat.searches, 0) / 7;
-    
-    if (avgRecentSearches > previousAvg * 1.1) {
+    const previousSlice = metrics.dailyStats.slice(-14, -7);
+    const previousAvg = previousSlice.length > 0 ? previousSlice.reduce((sum, stat) => sum + stat.searches, 0) / previousSlice.length : 0;
+
+    if (previousAvg > 0 && avgRecentSearches > previousAvg * 1.1) {
       insights.push({
         type: 'positive',
         message: `Search volume increased by ${Math.round(((avgRecentSearches - previousAvg) / previousAvg) * 100)}% this week`
       });
-    } else if (avgRecentSearches < previousAvg * 0.9) {
+    } else if (previousAvg > 0 && avgRecentSearches < previousAvg * 0.9) {
       insights.push({
         type: 'negative',
         message: `Search volume decreased by ${Math.round(((previousAvg - avgRecentSearches) / previousAvg) * 100)}% this week`

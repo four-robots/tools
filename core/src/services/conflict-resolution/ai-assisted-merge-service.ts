@@ -94,6 +94,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
   private modelCache: Map<string, any> = new Map();
   private analysisCache: Map<string, SemanticAnalysis> = new Map();
   private learningData: LearningFeedback[] = [];
+  private static readonly MAX_LEARNING_DATA_SIZE = 1000;
 
   // Security constants
   private static readonly MAX_CONTENT_LENGTH = 100000; // 100KB limit
@@ -314,7 +315,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
       MetricsCollector.recordError(
         'ai_semantic_analysis',
         'analysis_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         Date.now() - startTime,
         { conflictId: conflict.id }
       );
@@ -392,7 +393,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
       MetricsCollector.recordError(
         'ai_merge_suggestions',
         'generation_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         duration,
         { conflictId: context.conflictId, suggestionsGenerated: 0 }
       );
@@ -483,7 +484,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
       MetricsCollector.recordError(
         'ai_merge_validation',
         'validation_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         Date.now() - startTime,
         { mergeResultId: result.id }
       );
@@ -522,8 +523,11 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
         userModifications: this.extractUserModifications(resolutionSession, result)
       };
 
-      // Store learning data
+      // Store learning data (cap to prevent memory leak)
       this.learningData.push(learningFeedback);
+      if (this.learningData.length > AIAssistedMergeService.MAX_LEARNING_DATA_SIZE) {
+        this.learningData = this.learningData.slice(-AIAssistedMergeService.MAX_LEARNING_DATA_SIZE);
+      }
       await this.persistLearningData(learningFeedback);
 
       // Update AI models and preferences based on feedback
@@ -544,7 +548,7 @@ export class AIAssistedMergeService implements IAIAssistedMergeService {
       MetricsCollector.recordError(
         'ai_learning',
         'learning_failure',
-        error.message,
+        error instanceof Error ? error.message : String(error),
         0, // Duration not tracked for learning
         { sessionId: resolutionSession.id }
       );
