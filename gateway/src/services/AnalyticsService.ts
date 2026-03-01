@@ -650,11 +650,19 @@ export class AnalyticsService {
     
     if (perfData.length === 0) return 0;
     
-    const responseTimes = perfData.map(data => {
-      const parsed = JSON.parse(data);
-      return parsed.responseTime;
-    });
-    
+    const responseTimes: number[] = [];
+    for (const data of perfData) {
+      try {
+        const parsed = JSON.parse(data);
+        if (typeof parsed.responseTime === 'number') {
+          responseTimes.push(parsed.responseTime);
+        }
+      } catch {
+        // Skip malformed entries
+      }
+    }
+
+    if (responseTimes.length === 0) return 0;
     return responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
   }
 
@@ -769,12 +777,22 @@ export class AnalyticsService {
     
     if (perfData.length === 0) return 0;
     
-    const errorCount = perfData.filter(data => {
-      const parsed = JSON.parse(data);
-      return parsed.statusCode && parsed.statusCode >= 400;
-    }).length;
-    
-    return (errorCount / perfData.length) * 100;
+    let errorCount = 0;
+    let validCount = 0;
+    for (const data of perfData) {
+      try {
+        const parsed = JSON.parse(data);
+        validCount++;
+        if (parsed.statusCode && parsed.statusCode >= 400) {
+          errorCount++;
+        }
+      } catch {
+        // Skip malformed entries
+      }
+    }
+
+    if (validCount === 0) return 0;
+    return (errorCount / validCount) * 100;
   }
 
   /**

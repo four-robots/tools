@@ -481,7 +481,9 @@ export class FacetDiscoveryEngine {
    */
   private getDataConsistencyScore(analysis: FieldAnalysis): number {
     // Higher score for consistent data types and patterns
-    const nullRate = analysis.nullCount / (analysis.uniqueValues.size + analysis.nullCount);
+    const total = analysis.uniqueValues.size + analysis.nullCount;
+    if (total === 0) return 1.0;
+    const nullRate = analysis.nullCount / total;
     return 1.0 - nullRate;
   }
 

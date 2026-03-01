@@ -102,9 +102,10 @@ export class OperationalTransformEngine implements IOperationalTransformEngine {
       );
       
       // Race between transformation and timeout
+      const transformStartTime = Date.now();
       const transformPromise = this.performTransformationWithLock(op, againstOp);
       const result = await Promise.race([transformPromise, timeoutPromise]);
-      const duration = Date.now() - Date.now(); // Will be calculated in calling context
+      const duration = Date.now() - transformStartTime;
       
       // Record transformation metrics
       MetricsCollector.recordOperationTransform(
