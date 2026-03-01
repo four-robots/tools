@@ -228,9 +228,9 @@ describe('Whiteboard Template Application - Basic Functionality', () => {
       expect(rollbackOperations).toHaveLength(2);
       
       // Verify rollback operations can be executed
-      rollbackOperations.reverse().forEach(async (rollback) => {
+      for (const rollback of rollbackOperations.reverse()) {
         await rollback();
-      });
+      }
     });
 
     it('should validate template data structure', () => {

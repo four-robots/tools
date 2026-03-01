@@ -108,11 +108,17 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
 
       const userId = req.user?.id;
       
+      const startTime = new Date(req.body.startTime);
+      const endTime = new Date(req.body.endTime);
+      if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid startTime or endTime format' });
+      }
+
       const metric = {
         ...req.body,
         userId,
-        startTime: new Date(req.body.startTime),
-        endTime: new Date(req.body.endTime)
+        startTime,
+        endTime
       };
 
       await analyticsService.recordPerformanceMetric(metric);
@@ -172,8 +178,8 @@ export function createAnalyticsRoutes(analyticsService: AnalyticsService): Route
       const query = {
         ...req.query,
         userId, // Only query own data
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        startDate: req.query.startDate ? (() => { const d = new Date(req.query.startDate as string); return Number.isNaN(d.getTime()) ? undefined : d; })() : undefined,
+        endDate: req.query.endDate ? (() => { const d = new Date(req.query.endDate as string); return Number.isNaN(d.getTime()) ? undefined : d; })() : undefined,
         limit: parseInt(req.query.limit as string) || 100,
         offset: parseInt(req.query.offset as string) || 0
       };

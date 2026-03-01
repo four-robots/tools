@@ -137,10 +137,11 @@ router.get('/events', async (req: Request, res: Response) => {
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
       offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined,
       eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') : undefined,
-      dateRange: req.query.startDate && req.query.endDate ? {
-        start: new Date(req.query.startDate as string),
-        end: new Date(req.query.endDate as string),
-      } : undefined,
+      dateRange: req.query.startDate && req.query.endDate ? (() => {
+        const start = new Date(req.query.startDate as string);
+        const end = new Date(req.query.endDate as string);
+        return Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) ? undefined : { start, end };
+      })() : undefined,
     };
 
     const events = await behaviorTrackingService.getUserEventHistory(userId, options);

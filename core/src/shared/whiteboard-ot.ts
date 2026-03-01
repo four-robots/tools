@@ -190,6 +190,14 @@ export function validateTimestamp(
   // Check for timestamp going backwards (potential replay attack)
   if (context?.previousOperationTime) {
     const previousTime = new Date(context.previousOperationTime).getTime();
+    if (Number.isNaN(previousTime)) {
+      return {
+        valid: false,
+        error: 'Invalid previous operation timestamp',
+        clockDrift: 0,
+        recommendation: 'Ensure timestamps are valid ISO 8601 date strings'
+      };
+    }
     if (operationTime.getTime() < previousTime - 1000) { // 1 second tolerance
       return {
         valid: false,

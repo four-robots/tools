@@ -196,11 +196,15 @@ export function createSearchAlertsRoutes(db: Pool): Router {
       // Parse date range if provided
       let dateRange;
       if (req.query.from && req.query.to) {
-        dateRange = {
-          from: new Date(req.query.from as string),
-          to: new Date(req.query.to as string),
-          granularity: (req.query.granularity as any) || 'day',
-        };
+        const from = new Date(req.query.from as string);
+        const to = new Date(req.query.to as string);
+        if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
+          dateRange = {
+            from,
+            to,
+            granularity: (req.query.granularity as any) || 'day',
+          };
+        }
       }
 
       const stats = await alertAnalyticsService.getUserAlertStats(userId, dateRange);
@@ -238,11 +242,15 @@ export function createSearchAlertsRoutes(db: Pool): Router {
       // Parse date range if provided
       let dateRange;
       if (req.query.from && req.query.to) {
-        dateRange = {
-          from: new Date(req.query.from as string),
-          to: new Date(req.query.to as string),
-          granularity: (req.query.granularity as any) || 'day',
-        };
+        const from = new Date(req.query.from as string);
+        const to = new Date(req.query.to as string);
+        if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
+          dateRange = {
+            from,
+            to,
+            granularity: (req.query.granularity as any) || 'day',
+          };
+        }
       }
 
       const engagement = await alertAnalyticsService.getNotificationEngagementMetrics(alertId, dateRange);
@@ -679,11 +687,15 @@ export function createSearchAlertsRoutes(db: Pool): Router {
       // Parse date range if provided
       let dateRange;
       if (req.query.from && req.query.to) {
-        dateRange = {
-          from: new Date(req.query.from as string),
-          to: new Date(req.query.to as string),
-          granularity: (req.query.granularity as any) || 'day',
-        };
+        const from = new Date(req.query.from as string);
+        const to = new Date(req.query.to as string);
+        if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime())) {
+          dateRange = {
+            from,
+            to,
+            granularity: (req.query.granularity as any) || 'day',
+          };
+        }
       }
 
       const analytics = await alertAnalyticsService.getAlertAnalytics(alertId, dateRange);
