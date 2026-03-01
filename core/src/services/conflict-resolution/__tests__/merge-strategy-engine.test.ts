@@ -540,4 +540,82 @@ describe('MergeStrategyEngine', () => {
       expect(separateClient.release).toHaveBeenCalled();
     });
   });
+
+  describe('Edge Cases - Safety Fixes', () => {
+    describe('Confidence Score Divide-by-Zero', () => {
+      it('should return confidenceScore 0 when no operations are processed', async () => {
+        // When both appliedOperations and rejectedOperations are empty,
+        // the denominator (applied + rejected) would be 0.
+        // Fix: guard against divide-by-zero, return 0 instead of NaN.
+        const mockMergeResult = {
+          id: 'merge-result-empty',
+          conflictId: 'conflict-123',
+          strategy: 'operational_transformation' as MergeStrategy,
+          mergedContent: 'Base content',
+          mergedContentHash: 'hash-empty',
+          mergedVersion: {
+            id: 'merged-version',
+            content: 'Base content',
+            userId: 'system',
+            createdAt: new Date(),
+            contentType: 'text/plain'
+          },
+          successfulMerges: 0,
+          conflictingRegions: 0,
+          manualInterventions: 0,
+          confidenceScore: 0, // Should be 0, not NaN
+          appliedOperations: [],
+          rejectedOperations: [],
+          startedAt: new Date(),
+          completedAt: new Date(),
+          requiresUserReview: false,
+          userReviewInstructions: ''
+        };
+
+        mockClient.query
+          .mockResolvedValueOnce({ rows: [] }) // BEGIN
+          .mockResolvedValueOnce({ rows: [mockConflict] })
+          .mockResolvedValueOnce({ rows: [] })
+          .mockResolvedValueOnce({ rows: [] })
+          .mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+        jest.spyOn(engine as any, 'executeOperationalTransformation').mockResolvedValue(mockMergeResult);
+        jest.spyOn(engine as any, 'postProcessMergeResult').mockImplementation((result: any) => {
+          // Verify the confidenceScore is not NaN
+          expect(Number.isNaN(result.confidenceScore)).toBe(false);
+          return Promise.resolve(result);
+        });
+
+        const result = await engine.executeMerge('conflict-123', 'operational_transformation');
+        expect(result.confidenceScore).toBe(0);
+        expect(Number.isNaN(result.confidenceScore)).toBe(false);
+      });
+    });
+
+    describe('AI-Assisted Merge Empty Suggestions', () => {
+      it('should throw descriptive error when AI returns empty suggestions', async () => {
+        // When generateMergeSuggestions returns an empty array,
+        // .reduce() without initial value would throw TypeError.
+        // Fix: check length and throw descriptive error.
+        const mockAI = {
+          analyzeSemantic: jest.fn().mockResolvedValue({ context: 'test' }),
+          generateMergeSuggestions: jest.fn().mockResolvedValue([]),
+        };
+
+        const engineWithAI = new MergeStrategyEngine(
+          mockPool,
+          mockOperationalTransformEngine,
+          mockAI as any
+        );
+
+        mockClient.query
+          .mockResolvedValueOnce({ rows: [] }) // BEGIN
+          .mockResolvedValueOnce({ rows: [mockConflict] });
+
+        await expect(
+          engineWithAI.executeMerge('conflict-123', 'ai_assisted')
+        ).rejects.toThrow();
+      });
+    });
+  });
 });

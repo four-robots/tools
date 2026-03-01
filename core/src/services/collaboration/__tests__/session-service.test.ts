@@ -351,4 +351,66 @@ describe('CollaborationSessionService', () => {
       await expect(service.deleteSession('non-existent')).rejects.toThrow('Session not found');
     });
   });
+
+  describe('Error Handling - Non-Error Thrown Values', () => {
+    it('should handle non-Error thrown values in createSession', async () => {
+      // When a non-Error value is thrown (e.g., a string), accessing
+      // error.message without instanceof check would fail silently.
+      // Fix: use `error instanceof Error ? error.message : String(error)`.
+      (mockPool.query as jest.Mock).mockRejectedValue('string error');
+
+      await expect(
+        service.createSession({
+          workspace_id: '550e8400-e29b-41d4-a716-446655440000',
+          session_name: 'Test',
+          session_type: 'search' as CollaborationSessionType,
+          created_by: '550e8400-e29b-41d4-a716-446655440001',
+          is_active: true,
+          settings: {},
+          max_participants: 10,
+          allow_anonymous: false,
+          require_approval: false,
+          context_data: {},
+          shared_state: {},
+          activity_summary: {}
+        })
+      ).rejects.toThrow('Failed to create collaboration session');
+    });
+
+    it('should handle non-Error thrown values in getSession', async () => {
+      (mockPool.query as jest.Mock).mockRejectedValue(42);
+
+      await expect(service.getSession('test-id'))
+        .rejects.toThrow('Failed to get collaboration session');
+    });
+
+    it('should handle non-Error thrown values in deleteSession', async () => {
+      (mockPool.query as jest.Mock).mockRejectedValue(null);
+
+      await expect(service.deleteSession('test-id'))
+        .rejects.toThrow('Failed to delete collaboration session');
+    });
+
+    it('should include error message string in thrown error', async () => {
+      (mockPool.query as jest.Mock).mockRejectedValue(new Error('DB connection lost'));
+
+      try {
+        await service.getSession('test-id');
+        fail('Should have thrown');
+      } catch (e: any) {
+        expect(e.message).toContain('DB connection lost');
+      }
+    });
+
+    it('should stringify non-Error values in error messages', async () => {
+      (mockPool.query as jest.Mock).mockRejectedValue('custom string error');
+
+      try {
+        await service.getSession('test-id');
+        fail('Should have thrown');
+      } catch (e: any) {
+        expect(e.message).toContain('custom string error');
+      }
+    });
+  });
 });
