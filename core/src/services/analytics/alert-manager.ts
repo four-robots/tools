@@ -410,7 +410,7 @@ export class AlertManager extends EventEmitter {
 
   // Rule management
   async createAlertRule(rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const newRule: AlertRule = {
       ...rule,
@@ -543,7 +543,7 @@ export class AlertManager extends EventEmitter {
   }
 
   private async triggerAlert(rule: AlertRule): Promise<void> {
-    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const currentValue = await this.getCurrentMetricValue(rule.condition.metric);
     

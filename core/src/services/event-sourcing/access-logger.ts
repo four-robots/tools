@@ -535,7 +535,7 @@ export class AccessLogger {
   }
 
   private generateLogId(): string {
-    return `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `log_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private inferPurpose(operation: string, resourceType: string): string {

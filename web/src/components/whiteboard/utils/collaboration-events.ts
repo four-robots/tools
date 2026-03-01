@@ -359,7 +359,7 @@ export function createComment(
   const now = new Date().toISOString();
   
   return {
-    id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: `comment_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     whiteboardId,
     elementId,
     position,
@@ -383,7 +383,7 @@ export function createReply(
   const now = new Date().toISOString();
   
   return {
-    id: `reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: `reply_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     whiteboardId,
     position: { x: 0, y: 0 }, // Replies don't have positions
     content,
@@ -456,12 +456,12 @@ export function validateEventData<T>(
  * Generate unique operation ID
  */
 export function generateOperationId(): string {
-  return `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
  * Generate unique session token
  */
 export function generateSessionToken(): string {
-  return `wb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `wb_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }

@@ -1180,7 +1180,7 @@ export class WhiteboardOTEngine {
    * Begin atomic transaction for compound operations
    */
   beginTransaction(userId: string): string {
-    const transactionId = `tx_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `tx_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const transaction: Transaction = {
       id: transactionId,

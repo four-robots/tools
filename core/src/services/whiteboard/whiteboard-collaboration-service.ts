@@ -125,7 +125,7 @@ export class WhiteboardCollaborationService {
       throw new Error('ACCESS_DENIED: User does not have access to this whiteboard');
     }
 
-    const sessionToken = `wb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionToken = `wb_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const sessionId = crypto.randomUUID();
 
     const session = {

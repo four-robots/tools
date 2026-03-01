@@ -79,7 +79,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     beforeEach(async () => {
       testSessionIds = [];
       // Create a base collaboration session (would normally come from collaboration service)
-      collaborationSessionId = 'collab-session-' + Math.random().toString(36).substr(2, 9);
+      collaborationSessionId = 'collab-session-' + Math.random().toString(36).substring(2, 11);
     });
 
     afterEach(async () => {
@@ -221,7 +221,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     beforeEach(async () => {
       // Create test session
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'Participant Test Session'
       };
@@ -320,7 +320,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     beforeEach(async () => {
       // Create test session and join
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'State Test Session'
       };
@@ -416,7 +416,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     beforeEach(async () => {
       // Create test session and join
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'Annotation Test Session'
       };
@@ -552,7 +552,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     beforeEach(async () => {
       // Create test session
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'WebSocket Test Session'
       };
@@ -742,7 +742,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     test('should handle permission errors for restricted operations', async () => {
       // Create session as user 1
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'Permission Test Session'
       };
@@ -761,7 +761,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     test('should handle concurrent operations correctly', async () => {
       // Create session
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'Concurrency Test Session'
       };
@@ -801,7 +801,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
       // Create multiple sessions concurrently
       const sessionCreations = Array.from({ length: 5 }, (_, i) => 
         testClient.post('/api/search-collaboration/search-sessions', {
-          collaboration_session_id: `collab-session-${i}-${Math.random().toString(36).substr(2, 9)}`,
+          collaboration_session_id: `collab-session-${i}-${Math.random().toString(36).substring(2, 11)}`,
           workspace_id: TEST_WORKSPACE_ID,
           session_name: `Performance Test Session ${i}`
         })
@@ -829,7 +829,7 @@ describe('Live Search Collaboration API Integration Tests', () => {
     test('should handle rapid state updates efficiently', async () => {
       // Create session
       const sessionData = {
-        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substr(2, 9),
+        collaboration_session_id: 'collab-session-' + Math.random().toString(36).substring(2, 11),
         workspace_id: TEST_WORKSPACE_ID,
         session_name: 'Rapid Updates Test Session'
       };

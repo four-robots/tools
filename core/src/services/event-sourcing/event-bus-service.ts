@@ -438,7 +438,7 @@ export class EventBus extends EventEmitter {
   }
 
   private generateSubscriptionId(): string {
-    return `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private setupDefaultHandlers(): void {

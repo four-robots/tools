@@ -537,7 +537,7 @@ export class QueryBuilderService {
    * Generate secure share token
    */
   private generateShareToken(): string {
-    return crypto.randomUUID().replace(/-/g, '') + Math.random().toString(36).substr(2, 9);
+    return crypto.randomUUID().replace(/-/g, '') + Math.random().toString(36).substring(2, 11);
   }
 
   /**

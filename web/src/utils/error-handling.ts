@@ -55,7 +55,7 @@ class ErrorManager {
     context: ErrorContext = {},
     category: string = 'general'
   ): ErrorReport {
-    const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const errorId = `error_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const errorReport: ErrorReport = {
       id: errorId,

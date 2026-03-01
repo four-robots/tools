@@ -70,7 +70,7 @@ export default function NewWorkspacePage() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Simulate successful creation
-      const workspaceId = Math.random().toString(36).substr(2, 9);
+      const workspaceId = Math.random().toString(36).substring(2, 11);
       router.push(`/workspaces/${workspaceId}`);
     } catch (err) {
       setError('Failed to create workspace. Please try again.');

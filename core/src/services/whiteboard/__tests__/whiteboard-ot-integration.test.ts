@@ -104,7 +104,7 @@ describe('Whiteboard OT Integration', () => {
     overrides: Partial<EnhancedWhiteboardOperation> = {}
   ): EnhancedWhiteboardOperation => {
     return {
-      id: `${type}_${elementId}_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      id: `${type}_${elementId}_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       type: type as any,
       elementId,
       userId,

@@ -189,7 +189,7 @@ export class MemoryProcessingService {
       const request: EmbeddingRequest = {
         id: `memory-processing-${Date.now()}`,
         text,
-        request_id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        request_id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       };
 
       const response = await this.deps.natsConnection.request(
