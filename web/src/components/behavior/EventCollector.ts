@@ -20,6 +20,7 @@ export class EventCollector {
   private isOnline: boolean = navigator.onLine;
   private retryAttempts: number = 3;
   private retryDelay: number = 1000;
+  private static readonly MAX_QUEUE_SIZE = 1000;
   private boundHandlers: Array<{ target: EventTarget; event: string; handler: EventListener }> = [];
 
   constructor(apiUrl: string, options: {
@@ -92,8 +93,11 @@ export class EventCollector {
       await this.sendEvents(eventsToSend);
     } catch (error) {
       console.error('Failed to send events:', error);
-      // Re-queue events for retry
+      // Re-queue events for retry (cap to prevent unbounded growth)
       this.eventQueue.unshift(...eventsToSend);
+      if (this.eventQueue.length > EventCollector.MAX_QUEUE_SIZE) {
+        this.eventQueue = this.eventQueue.slice(0, EventCollector.MAX_QUEUE_SIZE);
+      }
     }
   }
 

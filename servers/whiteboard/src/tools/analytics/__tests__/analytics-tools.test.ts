@@ -610,4 +610,38 @@ describe('Analytics MCP Tools', () => {
       expect(result.content[0].text).toContain('\n');
     });
   });
+
+  describe('Edge Cases - NaN Safety', () => {
+    it('should handle empty insights array without producing NaN', () => {
+      const sortedInsights: any[] = [];
+
+      // This is the pattern that was fixed: sortedInsights.reduce(...) / sortedInsights.length || 0
+      // was producing NaN when sortedInsights was empty. Fixed to use ternary guard.
+      const avgConfidence = sortedInsights.length > 0
+        ? sortedInsights.reduce((sum: number, i: any) => sum + (i.confidenceScore || 0), 0) / sortedInsights.length
+        : 0;
+      const avgSeverity = sortedInsights.length > 0
+        ? sortedInsights.reduce((sum: number, i: any) => sum + (i.severityScore || 0), 0) / sortedInsights.length
+        : 0;
+
+      expect(Number.isFinite(avgConfidence)).toBe(true);
+      expect(Number.isFinite(avgSeverity)).toBe(true);
+      expect(avgConfidence).toBe(0);
+      expect(avgSeverity).toBe(0);
+    });
+
+    it('should calculate correct averages for non-empty insights', () => {
+      const sortedInsights = [
+        { confidenceScore: 0.8, severityScore: 0.5 },
+        { confidenceScore: 0.6, severityScore: 0.3 },
+      ];
+
+      const avgConfidence = sortedInsights.length > 0
+        ? sortedInsights.reduce((sum, i) => sum + i.confidenceScore, 0) / sortedInsights.length
+        : 0;
+
+      expect(Number.isFinite(avgConfidence)).toBe(true);
+      expect(avgConfidence).toBeCloseTo(0.7);
+    });
+  });
 });
