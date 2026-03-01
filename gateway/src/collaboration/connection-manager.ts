@@ -259,7 +259,7 @@ export class ConnectionManager {
 
     } catch (error) {
       logger.error('Failed to update connection session', { error, connectionId, sessionId });
-      throw new Error(`Failed to update connection session: ${error.message}`);
+      throw new Error(`Failed to update connection session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

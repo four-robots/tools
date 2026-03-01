@@ -151,7 +151,7 @@ export class WebhookManager {
         try {
           await (provider as any).deleteWebhook(repository.url, webhook.webhookId);
         } catch (providerError) {
-          console.warn(`Failed to delete webhook from provider: ${providerError.message}`);
+          console.warn(`Failed to delete webhook from provider: ${providerError instanceof Error ? providerError.message : String(providerError)}`);
           // Continue with database cleanup even if provider deletion fails
         }
       }

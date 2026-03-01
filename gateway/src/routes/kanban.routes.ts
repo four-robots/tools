@@ -142,7 +142,7 @@ router.post('/cards', [
 
     res.status(201).success(card);
   } catch (error: any) {
-    return res.error('CREATE_ERROR', 'Failed to create card', error.message);
+    return res.error('CREATE_ERROR', 'Failed to create card', error instanceof Error ? error.message : String(error));
   }
 }));
 
