@@ -857,7 +857,7 @@ export class EnhancedDependencyAnalysisService {
     
     if (status === 'completed' as AnalysisStatus || status === 'failed' as AnalysisStatus) {
       updates.completed_at = new Date();
-      updates.duration_ms = Date.now() - Date.now(); // Would need proper start time
+      updates.duration_ms = 0; // Duration tracked at caller level
     }
     
     if (results) {

@@ -920,28 +920,32 @@ export class WebSocketCollaborationGateway implements IWebSocketCollaborationGat
    * Starts heartbeat monitoring
    */
   private startHeartbeatMonitoring(): void {
-    this.heartbeatInterval = setInterval(async () => {
-      const now = new Date();
-      const timeout = this.config.connectionTimeout;
+    this.heartbeatInterval = setInterval(() => {
+      try {
+        const now = new Date();
+        const timeout = this.config.connectionTimeout;
 
-      for (const [connectionId, connection] of this.connections) {
-        const timeSinceHeartbeat = now.getTime() - connection.lastHeartbeat.getTime();
-        
-        if (timeSinceHeartbeat > timeout) {
-          logger.info('Connection timed out', { 
-            connectionId, 
-            userId: connection.userId,
-            timeSinceHeartbeat
-          });
-          
-          connection.close(1000, 'Connection timeout');
-          continue;
-        }
+        for (const [connectionId, connection] of this.connections) {
+          const timeSinceHeartbeat = now.getTime() - connection.lastHeartbeat.getTime();
 
-        // Send ping
-        if (connection.readyState === WebSocket.OPEN) {
-          connection.ping();
+          if (timeSinceHeartbeat > timeout) {
+            logger.info('Connection timed out', {
+              connectionId,
+              userId: connection.userId,
+              timeSinceHeartbeat
+            });
+
+            connection.close(1000, 'Connection timeout');
+            continue;
+          }
+
+          // Send ping
+          if (connection.readyState === WebSocket.OPEN) {
+            connection.ping();
+          }
         }
+      } catch (error) {
+        logger.error('Heartbeat monitoring error', { error });
       }
     }, this.config.heartbeatInterval);
   }

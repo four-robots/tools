@@ -801,7 +801,9 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
       successfulMerges: appliedOperations.length,
       conflictingRegions: rejectedOperations.length,
       manualInterventions: rejectedOperations.length,
-      confidenceScore: appliedOperations.length / (appliedOperations.length + rejectedOperations.length),
+      confidenceScore: (appliedOperations.length + rejectedOperations.length) > 0
+        ? appliedOperations.length / (appliedOperations.length + rejectedOperations.length)
+        : 0,
       appliedOperations,
       rejectedOperations,
       startedAt: new Date(),
@@ -909,7 +911,10 @@ export class MergeStrategyEngine implements IMergeStrategyEngine {
     const suggestions = await this.aiAssistedMergeService.generateMergeSuggestions(aiContext);
     
     // Choose the best suggestion
-    const bestSuggestion = suggestions.reduce((best, current) => 
+    if (suggestions.length === 0) {
+      throw new Error('AI merge service returned no suggestions');
+    }
+    const bestSuggestion = suggestions.reduce((best, current) =>
       current.confidence > best.confidence ? current : best
     );
 
