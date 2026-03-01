@@ -320,8 +320,8 @@ export const getUsageInsights: Tool = {
                 criticalInsights: sortedInsights.filter(i => i.insightCategory === 'critical').length,
                 warningInsights: sortedInsights.filter(i => i.insightCategory === 'warning').length,
                 positiveInsights: sortedInsights.filter(i => i.insightCategory === 'positive').length,
-                avgConfidence: sortedInsights.reduce((sum, i) => sum + i.confidenceScore, 0) / sortedInsights.length || 0,
-                avgSeverity: sortedInsights.reduce((sum, i) => sum + i.severityScore, 0) / sortedInsights.length || 0,
+                avgConfidence: sortedInsights.length > 0 ? sortedInsights.reduce((sum, i) => sum + i.confidenceScore, 0) / sortedInsights.length : 0,
+                avgSeverity: sortedInsights.length > 0 ? sortedInsights.reduce((sum, i) => sum + i.severityScore, 0) / sortedInsights.length : 0,
               },
               metadata: {
                 whiteboardId: validatedWhiteboardId,

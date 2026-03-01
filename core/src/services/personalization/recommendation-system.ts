@@ -44,6 +44,7 @@ export class RecommendationSystem implements IRecommendationSystem {
   private db: Database;
   private config: RecommendationConfig;
   private recommendationCache = new Map<string, PersonalizedRecommendation[]>();
+  private static readonly MAX_CACHE_SIZE = 500;
 
   constructor(database: Database, config: RecommendationConfig) {
     this.db = database;
@@ -105,7 +106,11 @@ export class RecommendationSystem implements IRecommendationSystem {
       // Store recommendations
       await this.storeRecommendations(recommendations);
 
-      // Cache recommendations
+      // Cache recommendations (evict oldest entries if cache is full)
+      if (this.recommendationCache.size >= RecommendationSystem.MAX_CACHE_SIZE) {
+        const firstKey = this.recommendationCache.keys().next().value;
+        if (firstKey !== undefined) this.recommendationCache.delete(firstKey);
+      }
       this.recommendationCache.set(cacheKey, recommendations);
 
       const processingTime = Date.now() - startTime;
