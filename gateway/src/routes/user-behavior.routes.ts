@@ -134,8 +134,8 @@ router.get('/events', async (req: Request, res: Response) => {
     }
 
     const options = {
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : undefined,
       eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') : undefined,
       dateRange: req.query.startDate && req.query.endDate ? {
         start: new Date(req.query.startDate as string),
@@ -234,7 +234,7 @@ router.get('/patterns', async (req: Request, res: Response) => {
 router.post('/patterns/analyze', async (req: Request, res: Response) => {
   try {
     const userId = req.query.userId as string;
-    const timeWindow = req.query.timeWindow ? parseInt(req.query.timeWindow as string) : 30;
+    const timeWindow = req.query.timeWindow ? parseInt(req.query.timeWindow as string, 10) : 30;
 
     if (!userId) {
       return res.status(400).json({ success: false, message: 'userId is required' });
@@ -330,7 +330,7 @@ router.get('/insights', async (req: Request, res: Response) => {
     const options = {
       categories: req.query.categories ? (req.query.categories as string).split(',') : undefined,
       minImpactScore: req.query.minImpactScore ? parseFloat(req.query.minImpactScore as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
     };
 
     const insights = await insightGenerationService.getUserInsights(userId, options);
@@ -509,7 +509,7 @@ router.get('/analytics/cohorts', async (req: Request, res: Response) => {
   try {
     const cohortPeriod = (req.query.cohortPeriod as string) || 'month';
     const lookbackPeriods = req.query.lookbackPeriods 
-      ? parseInt(req.query.lookbackPeriods as string) 
+      ? parseInt(req.query.lookbackPeriods as string, 10)
       : 12;
 
     const cohortAnalysis = await behaviorAnalyticsService.performCohortAnalysis(

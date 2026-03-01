@@ -269,7 +269,7 @@ export class OpenAIModel implements EmbeddingModelInterface {
     if (error?.status === 429) {
       // Rate limited
       const retryAfter = error?.headers?.['retry-after'];
-      this.rateLimitDelay = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(this.rateLimitDelay * 2 + 1000, 30000);
+      this.rateLimitDelay = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(this.rateLimitDelay * 2 + 1000, 30000);
       
       console.warn(`Rate limited. Waiting ${this.rateLimitDelay}ms before next request.`);
       await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));

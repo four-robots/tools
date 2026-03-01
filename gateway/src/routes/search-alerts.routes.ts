@@ -128,8 +128,8 @@ export function createSearchAlertsRoutes(db: Pool): Router {
       }
 
       const options = AlertListOptionsSchema.parse({
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+        page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
         sortBy: req.query.sortBy || 'updatedAt',
         sortOrder: req.query.sortOrder || 'desc',
         isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
@@ -165,7 +165,7 @@ export function createSearchAlertsRoutes(db: Pool): Router {
       }
 
       const templateType = req.query.type as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
 
       const templates = await notificationService.listTemplates(userId, templateType, limit);
 
@@ -482,8 +482,8 @@ export function createSearchAlertsRoutes(db: Pool): Router {
         return res.status(404).json({ error: 'Alert not found' });
       }
 
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
 
       // Get execution history (simplified - in production, you'd have a proper service method)
       const client = await db.connect();
