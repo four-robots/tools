@@ -722,7 +722,7 @@ export class InsightGenerationService extends EventEmitter {
     return Array.from(sessions.values()).map(sessionEvents => {
       if (sessionEvents.length < 2) return 0;
       
-      const timestamps = sessionEvents.map(e => e.eventTimestamp.getTime()).sort();
+      const timestamps = sessionEvents.map(e => e.eventTimestamp.getTime()).sort((a, b) => a - b);
       return timestamps[timestamps.length - 1] - timestamps[0];
     }).filter(duration => duration > 0);
   }

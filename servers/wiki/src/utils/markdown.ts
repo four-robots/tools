@@ -224,7 +224,7 @@ export class MarkdownProcessor {
   htmlToMarkdown(html: string): string {
     return html
       .replace(/<h([1-6]).*?>(.*?)<\/h[1-6]>/g, (_, level, text) => {
-        return '#'.repeat(parseInt(level)) + ' ' + text + '\n\n';
+        return '#'.repeat(parseInt(level, 10)) + ' ' + text + '\n\n';
       })
       .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
       .replace(/<strong>(.*?)<\/strong>/g, '**$1**')

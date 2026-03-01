@@ -41,6 +41,11 @@ export const exportAsPng = async (
       return { success: false, error: 'Failed to generate SVG' };
     }
 
+    // Guard against SSR — document is not available on server
+    if (typeof document === 'undefined') {
+      return { success: false, error: 'Canvas export is not available during server-side rendering' };
+    }
+
     // Convert SVG to PNG using canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');

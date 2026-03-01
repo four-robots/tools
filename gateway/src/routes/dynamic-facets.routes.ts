@@ -60,8 +60,8 @@ router.get('/', async (req: Request, res: Response) => {
       data: {
         facets,
         total: facets.length,
-        limit: parseInt(limit as string),
-        offset: parseInt(offset as string)
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10)
       }
     });
   } catch (error) {

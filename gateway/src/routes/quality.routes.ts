@@ -337,7 +337,7 @@ router.get('/trends', validateRequest(TrendsRequestSchema, 'query'), async (req:
     
     const trends = await qualityService.getQualityTrends(
       metricName as string,
-      parseInt(days as string) || 30
+      parseInt(days as string, 10) || 30
     );
 
     res.json({
@@ -512,7 +512,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
     const metrics = await qualityService['db'].getQualityMetrics(
       'mcp-tools',
       metricType as string,
-      parseInt(limit as string) || 100
+      parseInt(limit as string, 10) || 100
     );
 
     res.json({
