@@ -109,7 +109,11 @@ export const OperationHistory: React.FC<OperationHistoryProps> = ({
       currentIndex,
       timestamp: new Date().toISOString()
     };
-    localStorage.setItem('whiteboard_operation_history', JSON.stringify(historyData));
+    try {
+      localStorage.setItem('whiteboard_operation_history', JSON.stringify(historyData));
+    } catch {
+      // Quota exceeded or storage unavailable — skip persistence
+    }
   }, [operations, currentIndex, maxHistorySize]);
 
   // Keyboard shortcuts

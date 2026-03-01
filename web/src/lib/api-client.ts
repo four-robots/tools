@@ -77,19 +77,40 @@ export class ApiClient {
     );
   }
 
-  private getAuthToken(): string | null {
-    // Get token from localStorage, cookies, or other storage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+  private safeGetItem(key: string): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
     }
-    return null;
+  }
+
+  private safeSetItem(key: string, value: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Quota exceeded or private browsing — silently fail
+    }
+  }
+
+  private safeRemoveItem(key: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Storage access denied — silently fail
+    }
+  }
+
+  private getAuthToken(): string | null {
+    return this.safeGetItem('auth_token');
   }
 
   private async refreshToken(): Promise<void> {
     // Implement token refresh logic
-    const refreshToken = typeof window !== 'undefined' 
-      ? localStorage.getItem('refresh_token') 
-      : null;
+    const refreshToken = this.safeGetItem('refresh_token');
     
     if (!refreshToken) {
       throw new Error('No refresh token available');
@@ -101,19 +122,15 @@ export class ApiClient {
 
     const { accessToken, refreshToken: newRefreshToken } = response.data.data;
     
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', accessToken);
-      localStorage.setItem('refresh_token', newRefreshToken);
-    }
+    this.safeSetItem('auth_token', accessToken);
+    this.safeSetItem('refresh_token', newRefreshToken);
   }
 
   private handleAuthError() {
-    // Clear stored tokens
+    this.safeRemoveItem('auth_token');
+    this.safeRemoveItem('refresh_token');
+
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      
-      // Redirect to login page
       window.location.href = '/auth/login';
     }
   }
@@ -138,11 +155,9 @@ export class ApiClient {
     
     const { accessToken, refreshToken } = response.data.data;
     
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
-    }
-    
+    this.safeSetItem('auth_token', accessToken);
+    this.safeSetItem('refresh_token', refreshToken);
+
     return response.data;
   }
 
@@ -159,10 +174,8 @@ export class ApiClient {
     try {
       await this.client.post('/api/auth/logout');
     } finally {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-      }
+      this.safeRemoveItem('auth_token');
+      this.safeRemoveItem('refresh_token');
     }
   }
 

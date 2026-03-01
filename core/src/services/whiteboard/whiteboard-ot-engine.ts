@@ -812,7 +812,7 @@ export class WhiteboardOTEngine {
 
     // Last-write-wins strategy
     this.resolutionStrategies.set('last-write-wins', async (conflict) => {
-      const operations = conflict.operations.sort((a, b) => 
+      const operations = [...conflict.operations].sort((a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       return operations[0]; // Return the most recent operation
