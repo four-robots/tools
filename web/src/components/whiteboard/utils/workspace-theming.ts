@@ -35,6 +35,11 @@ export const darkWorkspaceTheme: WorkspaceTheme = {
  * Apply workspace theme to tldraw
  */
 export const applyWorkspaceTheme = (theme: WorkspaceTheme): void => {
+  // Guard against SSR — document is not available on server
+  if (typeof document === 'undefined') {
+    return;
+  }
+
   // Apply CSS custom properties for tldraw theming
   const root = document.documentElement;
   
