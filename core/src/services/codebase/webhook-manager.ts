@@ -58,12 +58,15 @@ export class WebhookManager {
 
   constructor(
     db: DatabaseManager,
-    webhookSecret: string = process.env.WEBHOOK_SECRET || 'default-secret',
-    baseWebhookUrl: string = process.env.BASE_WEBHOOK_URL || 'http://localhost:3001'
+    webhookSecret?: string,
+    baseWebhookUrl?: string
   ) {
     this.db = db;
-    this.webhookSecret = webhookSecret;
-    this.baseWebhookUrl = baseWebhookUrl;
+    this.webhookSecret = webhookSecret || process.env.WEBHOOK_SECRET || '';
+    this.baseWebhookUrl = baseWebhookUrl || process.env.BASE_WEBHOOK_URL || 'http://localhost:3001';
+    if (!this.webhookSecret) {
+      console.warn('WARNING: WEBHOOK_SECRET not configured — webhook signature verification is disabled');
+    }
   }
 
   /**

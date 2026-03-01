@@ -108,9 +108,18 @@ export class AttachmentStorageService {
   /**
    * Delete a file and its thumbnail
    */
+  private resolveUploadPath(relativePath: string): string {
+    const uploadsBase = path.resolve(process.cwd(), 'uploads');
+    const resolved = path.resolve(uploadsBase, relativePath);
+    if (!resolved.startsWith(uploadsBase + path.sep) && resolved !== uploadsBase) {
+      throw new Error('Path traversal detected');
+    }
+    return resolved;
+  }
+
   async deleteFile(attachment: WikiAttachment): Promise<void> {
-    const fullPath = path.join(process.cwd(), 'uploads', attachment.storage_path);
-    
+    const fullPath = this.resolveUploadPath(attachment.storage_path);
+
     try {
       await fs.unlink(fullPath);
     } catch (error) {
@@ -118,7 +127,7 @@ export class AttachmentStorageService {
     }
 
     if (attachment.thumbnail_path) {
-      const thumbnailFullPath = path.join(process.cwd(), 'uploads', attachment.thumbnail_path);
+      const thumbnailFullPath = this.resolveUploadPath(attachment.thumbnail_path);
       try {
         await fs.unlink(thumbnailFullPath);
       } catch (error) {
@@ -131,7 +140,7 @@ export class AttachmentStorageService {
    * Get file stream for download
    */
   async getFileStream(attachment: WikiAttachment): Promise<NodeJS.ReadableStream> {
-    const fullPath = path.join(process.cwd(), 'uploads', attachment.storage_path);
+    const fullPath = this.resolveUploadPath(attachment.storage_path);
     return (await import('fs')).createReadStream(fullPath);
   }
 
@@ -143,7 +152,7 @@ export class AttachmentStorageService {
       return null;
     }
     
-    const fullPath = path.join(process.cwd(), 'uploads', attachment.thumbnail_path);
+    const fullPath = this.resolveUploadPath(attachment.thumbnail_path);
     try {
       return (await import('fs')).createReadStream(fullPath);
     } catch {
