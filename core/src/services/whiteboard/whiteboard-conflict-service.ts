@@ -829,7 +829,7 @@ export class WhiteboardConflictService {
 
     switch (strategy) {
       case 'last-write-wins':
-        return conflict.operations.sort((a, b) => 
+        return [...conflict.operations].sort((a, b) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         )[0];
       

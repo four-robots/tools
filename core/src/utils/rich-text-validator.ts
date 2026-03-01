@@ -596,7 +596,7 @@ export class RichTextValidator {
   private preserveMentions(content: string): string {
     // @mentions are already handled by the mention parser
     // This ensures they're not corrupted during HTML sanitization
-    return content.replace(/@([a-zA-Z0-9._-]{1,50}|"[^"\\]{1,50}")/, (match) => {
+    return content.replace(/@([a-zA-Z0-9._-]{1,50}|"[^"\\]{1,50}")/g, (match) => {
       // Additional validation for mention content
       if (match.includes('<') || match.includes('>') || match.includes('&')) {
         return ''; // Remove potentially dangerous mentions

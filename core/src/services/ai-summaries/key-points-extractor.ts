@@ -375,7 +375,7 @@ Extract the most important key points from this content.`;
     } catch (error) {
       console.error('Key points organization failed:', error);
       // Return points sorted by importance as fallback
-      return keyPoints
+      return [...keyPoints]
         .sort((a, b) => b.importance - a.importance)
         .map((point, index) => ({ ...point, position: index + 1 }));
     }
