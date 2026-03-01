@@ -113,7 +113,11 @@ router.get('/', [
       }
     });
   } catch (error) {
-    handleRouteError(error, req, res, null);
+    console.error('Failed to list workspaces:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to list workspaces'
+    });
   }
 }));
 
@@ -152,7 +156,11 @@ router.post('/', [
       data: workspace
     });
   } catch (error) {
-    handleRouteError(error, req, res, null);
+    console.error('Failed to create workspace:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create workspace'
+    });
   }
 }));
 
