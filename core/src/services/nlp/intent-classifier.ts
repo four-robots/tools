@@ -254,7 +254,7 @@ export class IntentClassifier {
       alternatives.push({ intent: 'search', confidence: 0.4 });
     }
     // Question patterns
-    else if (features.hasQuestionWords && (query.includes('?') || features.hasQuestionWords)) {
+    else if (features.hasQuestionWords || query.includes('?')) {
       primaryIntent = 'question';
       primaryConfidence = 0.75;
       reasoning = 'Contains question words or question mark';
