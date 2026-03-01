@@ -225,7 +225,7 @@ router.get('/search/history', async (req: Request, res: Response) => {
         timestamp: search.search_timestamp,
         confidenceScore: search.confidence_score,
         responseTime: search.response_time_ms,
-        factorCount: JSON.parse(search.personalization_factors).length
+        factorCount: (() => { try { return JSON.parse(search.personalization_factors).length; } catch { return 0; } })()
       }))
     });
 

@@ -325,7 +325,11 @@ export class QueryBuilderService {
       .where('share_token', '=', shareToken)
       .execute();
 
-    return JSON.parse(sharedFilter.filter_tree);
+    try {
+      return JSON.parse(sharedFilter.filter_tree);
+    } catch {
+      throw new Error('Failed to parse shared filter tree from database');
+    }
   }
 
   /**
@@ -571,12 +575,20 @@ export class QueryBuilderService {
   /**
    * Database mapping helpers
    */
+  private safeParseJson(data: string, context: string): any {
+    try {
+      return JSON.parse(data);
+    } catch {
+      throw new Error(`Failed to parse ${context} from database`);
+    }
+  }
+
   private mapTemplateFromDb(row: any): FilterTemplate {
     return {
       id: row.id,
       name: row.name,
       description: row.description,
-      filterTree: JSON.parse(row.filter_tree),
+      filterTree: this.safeParseJson(row.filter_tree, 'filter template tree'),
       category: row.category,
       tags: row.tags || [],
       isPublic: row.is_public,
@@ -592,7 +604,7 @@ export class QueryBuilderService {
       id: row.id,
       userId: row.user_id,
       name: row.name,
-      filterTree: JSON.parse(row.filter_tree),
+      filterTree: this.safeParseJson(row.filter_tree, 'filter preset tree'),
       shortcutKey: row.shortcut_key,
       isDefault: row.is_default,
       usageCount: row.usage_count,
@@ -604,7 +616,7 @@ export class QueryBuilderService {
     return {
       id: row.id,
       userId: row.user_id,
-      filterTree: JSON.parse(row.filter_tree),
+      filterTree: this.safeParseJson(row.filter_tree, 'filter history tree'),
       queryGenerated: row.query_generated,
       executionTimeMs: row.execution_time_ms,
       resultCount: row.result_count,

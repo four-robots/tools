@@ -616,7 +616,7 @@ export class WorkspaceIntegrationService {
       }
     } catch (error) {
       await this.updateIntegrationStatus(integrationId, 'error');
-      await this.recordIntegrationError(integrationId, error.message);
+      await this.recordIntegrationError(integrationId, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -640,7 +640,7 @@ export class WorkspaceIntegrationService {
     } catch (error) {
       return { 
         success: false, 
-        message: error.message, 
+        message: error instanceof Error ? error.message : String(error), 
         details: { error: error.stack } 
       };
     }
@@ -666,7 +666,7 @@ export class WorkspaceIntegrationService {
     } catch (error) {
       return { 
         success: false, 
-        message: error.message, 
+        message: error instanceof Error ? error.message : String(error), 
         syncedItems: 0 
       };
     }

@@ -552,7 +552,7 @@ export class EventSourcingMetricsService {
 
     } catch (error) {
       logger.error('Failed to flush metrics', {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         metricsCount: metricsToFlush.length
       });
       

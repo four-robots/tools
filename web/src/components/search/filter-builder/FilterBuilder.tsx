@@ -548,11 +548,11 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                     } else {
                       const error = await response.json();
                       console.error('Failed to save template:', error);
-                      alert('Failed to save template: ' + (error.message || 'Unknown error'));
+                      alert('Failed to save template: ' + ((error as any)?.message || 'Unknown error'));
                     }
                   } catch (error) {
                     console.error('Error saving template:', error);
-                    alert('Error saving template: ' + error.message);
+                    alert('Error saving template: ' + (error instanceof Error ? error.message : String(error)));
                   }
                 }}
               />

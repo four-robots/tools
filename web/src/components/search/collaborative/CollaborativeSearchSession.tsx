@@ -152,7 +152,7 @@ export function CollaborativeSearchSession({
       console.error('Failed to create session:', error);
       toast({
         title: 'Failed to create session',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     } finally {
@@ -177,7 +177,7 @@ export function CollaborativeSearchSession({
       console.error('Failed to leave session:', error);
       toast({
         title: 'Failed to leave session',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     }
@@ -213,7 +213,7 @@ export function CollaborativeSearchSession({
       console.error('Search failed:', error);
       toast({
         title: 'Search failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive'
       });
     } finally {

@@ -172,7 +172,7 @@ export function useCollaborativeSearch({
 
       return await response.json();
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request cancelled');
       }
       throw error;
@@ -482,7 +482,7 @@ export function useCollaborativeSearch({
           console.error('Failed to auto-join session:', error);
           toast({
             title: 'Failed to join session',
-            description: error.message,
+            description: error instanceof Error ? error.message : String(error),
             variant: 'destructive'
           });
         });

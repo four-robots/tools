@@ -459,7 +459,7 @@ export class WorkspaceMembershipService {
           results.success++;
         } catch (error) {
           results.failed++;
-          results.errors.push({ userId, error: error.message });
+          results.errors.push({ userId, error: error instanceof Error ? error.message : String(error) });
         }
       }
 

@@ -526,7 +526,7 @@ export class PredictiveAnalyticsService {
     });
 
     const avgWeeklyActivity = weeklyPattern.reduce((sum, val) => sum + val, 0) / 7;
-    const todayMultiplier = weeklyPattern[dayOfWeek] / avgWeeklyActivity;
+    const todayMultiplier = avgWeeklyActivity > 0 ? weeklyPattern[dayOfWeek] / avgWeeklyActivity : 1;
 
     return {
       dayOfWeek: todayMultiplier,
@@ -599,7 +599,7 @@ export class PredictiveAnalyticsService {
     const recentIntensity = workloadData.slice(0, 7).reduce((sum, d) => sum + d.value, 0) / 7;
     const historicalAverage = workloadData.reduce((sum, d) => sum + d.value, 0) / workloadData.length;
     
-    const intensityRatio = recentIntensity / historicalAverage;
+    const intensityRatio = historicalAverage > 0 ? recentIntensity / historicalAverage : 1;
     const combinedRisk = (intensityRatio * 0.6 + stressLevel * 0.4);
     
     return Math.min(1, Math.max(0, combinedRisk));

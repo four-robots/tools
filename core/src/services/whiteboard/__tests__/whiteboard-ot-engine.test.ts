@@ -649,4 +649,48 @@ describe('Performance Benchmarks', () => {
       - Conflicts: ${result.conflicts.length}
     `);
   });
+
+  describe('Edge Cases - Safety Fixes', () => {
+    it('should throw descriptive error when priority-user strategy receives empty operations', async () => {
+      // Previously .reduce() without initial value would throw
+      // "TypeError: Reduce of empty array with no initial value"
+      // Fix: guard with operations.length check
+      const emptyConflict: ConflictInfo = {
+        id: 'conflict-empty',
+        type: 'concurrent_modification',
+        severity: 'high',
+        operations: [],
+        detectedAt: new Date(),
+        affectedElements: [],
+        vectorClockDivergence: 0,
+      };
+
+      const resolver = (engine as any).resolutionStrategies.get('priority-user');
+      expect(resolver).toBeDefined();
+
+      await expect(resolver(emptyConflict))
+        .rejects.toThrow('Cannot resolve conflict with no operations');
+    });
+
+    it('should resolve priority-user strategy with single operation', async () => {
+      const singleOpConflict: ConflictInfo = {
+        id: 'conflict-single',
+        type: 'concurrent_modification',
+        severity: 'low',
+        operations: [{
+          ...sampleOperation,
+          userId: 'user-alpha',
+        }],
+        detectedAt: new Date(),
+        affectedElements: ['elem-1'],
+        vectorClockDivergence: 0,
+      };
+
+      const resolver = (engine as any).resolutionStrategies.get('priority-user');
+      const result = await resolver(singleOpConflict);
+
+      expect(result).toBeDefined();
+      expect(result.userId).toBe('user-alpha');
+    });
+  });
 });

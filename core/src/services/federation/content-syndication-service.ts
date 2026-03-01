@@ -489,20 +489,34 @@ export class ContentSyndicationService {
 
     return rules
       .filter(rule => {
-        const contentTypes = JSON.parse(rule.content_types as string);
-        return contentTypes.includes(contentType) || contentTypes.includes('*');
+        try {
+          const contentTypes = JSON.parse(rule.content_types as string);
+          return contentTypes.includes(contentType) || contentTypes.includes('*');
+        } catch {
+          logger.warn('Failed to parse content_types for syndication rule', { ruleId: rule.id });
+          return false;
+        }
       })
       .map(rule => validateContentSyndicationRule(rule))
       .sort((a, b) => {
         // Sort by specificity (more specific rules first)
-        const aSpecificity = JSON.parse(a.content_types).length;
-        const bSpecificity = JSON.parse(b.content_types).length;
-        return bSpecificity - aSpecificity;
+        try {
+          const aSpecificity = JSON.parse(a.content_types).length;
+          const bSpecificity = JSON.parse(b.content_types).length;
+          return bSpecificity - aSpecificity;
+        } catch {
+          return 0;
+        }
       });
   }
 
   private async getTargetNodes(rule: ContentSyndicationRule, tenantId: string): Promise<any[]> {
-    const targetOrgs = JSON.parse(rule.target_organizations);
+    let targetOrgs: string[];
+    try {
+      targetOrgs = JSON.parse(rule.target_organizations);
+    } catch {
+      throw new Error(`Failed to parse target_organizations for syndication rule ${rule.id}`);
+    }
     
     if (rule.sharing_scope === 'public') {
       // Get all active federation nodes

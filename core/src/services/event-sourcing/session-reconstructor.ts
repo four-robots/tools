@@ -275,7 +275,7 @@ export class SessionReconstructor {
       logger.error(`Failed to reconstruct session ${sessionId}`, {
         sessionId,
         pointInTime,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -301,7 +301,7 @@ export class SessionReconstructor {
     } catch (error) {
       logger.error(`Failed to get timeline for session ${sessionId}`, {
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -318,7 +318,7 @@ export class SessionReconstructor {
       logger.error(`Failed to replay events from time for session ${sessionId}`, {
         sessionId,
         fromTime,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -362,7 +362,7 @@ export class SessionReconstructor {
       logger.error(`Failed to get session state at time for ${sessionId}`, {
         sessionId,
         timestamp,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -447,7 +447,7 @@ export class SessionReconstructor {
       logger.error('Failed to find sessions with criteria', {
         criteria,
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -508,7 +508,7 @@ export class SessionReconstructor {
       logger.error(`Failed to get participant activity for user ${userId}`, {
         userId,
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -545,7 +545,7 @@ export class SessionReconstructor {
     } catch (error) {
       logger.error(`Failed to generate audit trail for session ${sessionId}`, {
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }

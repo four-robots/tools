@@ -275,7 +275,7 @@ export class TemporalAnalyticsService {
     } catch (error) {
       logger.error('Failed to generate collaboration metrics', {
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -331,7 +331,7 @@ export class TemporalAnalyticsService {
       logger.error('Failed to analyze user engagement patterns', {
         userId,
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -458,7 +458,7 @@ export class TemporalAnalyticsService {
     } catch (error) {
       logger.error('Failed to analyze conflict resolution trends', {
         timeRange,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -567,7 +567,7 @@ export class TemporalAnalyticsService {
     } catch (error) {
       logger.error('Failed to generate session insights', {
         sessionId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }

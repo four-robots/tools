@@ -125,7 +125,7 @@ router.post('/initialize', async (req: Request, res: Response) => {
     logger.error('Failed to initialize federation:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to initialize federation'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to initialize federation'
     });
   }
 });
@@ -155,7 +155,7 @@ router.get('/status', async (req: Request, res: Response) => {
     logger.error('Failed to get federation status:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get federation status'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get federation status'
     });
   }
 });
@@ -185,7 +185,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
     logger.error('Failed to get federation metrics:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get federation metrics'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get federation metrics'
     });
   }
 });
@@ -228,7 +228,7 @@ router.post('/nodes/register', async (req: Request, res: Response) => {
     logger.error('Failed to register federation node:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to register federation node'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to register federation node'
     });
   }
 });
@@ -272,7 +272,7 @@ router.get('/nodes/discover', async (req: Request, res: Response) => {
     logger.error('Failed to discover nodes:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to discover nodes'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to discover nodes'
     });
   }
 });
@@ -310,7 +310,7 @@ router.get('/nodes/:nodeId', async (req: Request, res: Response) => {
     logger.error('Failed to get node details:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get node details'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get node details'
     });
   }
 });
@@ -353,7 +353,7 @@ router.post('/search', async (req: Request, res: Response) => {
     logger.error('Failed to execute federation search:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to execute federation search'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to execute federation search'
     });
   }
 });
@@ -395,7 +395,7 @@ router.get('/search/history', async (req: Request, res: Response) => {
     logger.error('Failed to get search history:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get search history'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get search history'
     });
   }
 });
@@ -426,7 +426,7 @@ router.get('/search/:searchId', async (req: Request, res: Response) => {
     logger.error('Failed to get search details:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get search details'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get search details'
     });
   }
 });
@@ -458,7 +458,7 @@ router.post('/search/:searchId/cancel', async (req: Request, res: Response) => {
     logger.error('Failed to cancel search:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to cancel search'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to cancel search'
     });
   }
 });
@@ -501,7 +501,7 @@ router.post('/syndication/rules', async (req: Request, res: Response) => {
     logger.error('Failed to create syndication rule:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to create syndication rule'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to create syndication rule'
     });
   }
 });
@@ -539,7 +539,7 @@ router.post('/syndication/content', async (req: Request, res: Response) => {
     logger.error('Failed to syndicate content:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to syndicate content'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to syndicate content'
     });
   }
 });
@@ -581,7 +581,7 @@ router.get('/syndication/content', async (req: Request, res: Response) => {
     logger.error('Failed to get syndicated content:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get syndicated content'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get syndicated content'
     });
   }
 });
@@ -611,7 +611,7 @@ router.get('/syndication/statistics', async (req: Request, res: Response) => {
     logger.error('Failed to get syndication statistics:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get syndication statistics'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get syndication statistics'
     });
   }
 });
@@ -660,7 +660,7 @@ router.post('/security/certificates', async (req: Request, res: Response) => {
     logger.error('Failed to generate federation certificate:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to generate federation certificate'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to generate federation certificate'
     });
   }
 });
@@ -690,7 +690,7 @@ router.get('/security/metrics', async (req: Request, res: Response) => {
     logger.error('Failed to get security metrics:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get security metrics'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get security metrics'
     });
   }
 });
@@ -733,7 +733,7 @@ router.post('/compliance/audit-trail', async (req: Request, res: Response) => {
     logger.error('Failed to generate audit trail:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to generate audit trail'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to generate audit trail'
     });
   }
 });
@@ -776,7 +776,7 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
     logger.error('Failed to generate compliance report:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to generate compliance report'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to generate compliance report'
     });
   }
 });
@@ -830,7 +830,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
     logger.error('Failed to process federation webhook:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to process webhook'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to process webhook'
     });
   }
 });
@@ -872,7 +872,7 @@ router.get('/dashboard', async (req: Request, res: Response) => {
     logger.error('Failed to get dashboard metrics:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get dashboard metrics'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get dashboard metrics'
     });
   }
 });
@@ -902,7 +902,7 @@ router.get('/health', async (req: Request, res: Response) => {
     logger.error('Failed to get federation health:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get federation health'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get federation health'
     });
   }
 });
@@ -932,7 +932,7 @@ router.get('/nodes/summary', async (req: Request, res: Response) => {
     logger.error('Failed to get node summaries:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get node summaries'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to get node summaries'
     });
   }
 });
@@ -969,7 +969,7 @@ router.post('/search/managed', async (req: Request, res: Response) => {
     logger.error('Failed to execute managed federation search:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to execute search'
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to execute search'
     });
   }
 });
