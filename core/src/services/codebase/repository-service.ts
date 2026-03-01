@@ -54,10 +54,13 @@ export class RepositoryService {
 
   constructor(
     db: DatabaseManager,
-    encryptionSecret: string = process.env.ENCRYPTION_SECRET || 'default-secret'
+    encryptionSecret?: string
   ) {
     this.db = db;
-    this.encryptionSecret = encryptionSecret;
+    this.encryptionSecret = encryptionSecret || process.env.ENCRYPTION_SECRET || '';
+    if (!this.encryptionSecret) {
+      console.warn('WARNING: ENCRYPTION_SECRET not configured — encrypted token storage is disabled');
+    }
     this.gitProviderFactory = GitProviderFactory.getInstance();
     this.webhookManager = new WebhookManager(db);
     this.fileScanService = new FileScanService(db);

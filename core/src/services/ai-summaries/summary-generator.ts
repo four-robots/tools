@@ -483,6 +483,7 @@ ${source.url ? `URL: ${source.url}` : ''}
     const answerWords = answer.toLowerCase().split(/\s+/);
     
     const addressedConcepts = questionWords.filter(word => answerWords.includes(word)).length;
+    if (questionWords.length === 0) return 0;
     return Math.min(addressedConcepts / questionWords.length, 1.0);
   }
 

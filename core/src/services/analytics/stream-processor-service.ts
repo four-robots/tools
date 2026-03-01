@@ -538,8 +538,8 @@ export class KafkaStreamProcessor extends EventEmitter implements StreamProcesso
   private async evaluateRateOfChange(metric: StreamMetric, maxChangePercent: number): Promise<boolean> {
     try {
       const previousValue = await this.getPreviousValue(metric.name);
-      if (previousValue === null) return false;
-      
+      if (previousValue === null || previousValue === 0) return false;
+
       const changePercent = Math.abs((metric.value - previousValue) / previousValue) * 100;
       return changePercent > maxChangePercent;
       

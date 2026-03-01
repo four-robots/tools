@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import type { DependencyHealth, SeverityLevel } from '../types.js';
 
 export interface DependencyScannerConfig {
@@ -109,7 +109,7 @@ export class DependencyScanner {
     const outdatedMap = new Map<string, OutdatedPackage>();
 
     try {
-      const result = execSync('npm outdated --json', {
+      const result = execFileSync('npm', ['outdated', '--json'], {
         cwd: projectPath,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe']
@@ -195,7 +195,7 @@ export class DependencyScanner {
 
   private async getPackageInfo(packageName: string): Promise<PackageInfo | null> {
     try {
-      const result = execSync(`npm view ${packageName} --json`, {
+      const result = execFileSync('npm', ['view', packageName, '--json'], {
         encoding: 'utf-8',
         timeout: 30000
       });
