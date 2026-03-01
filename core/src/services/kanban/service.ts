@@ -57,32 +57,36 @@ export class KanbanService {
     return baseSlug;
   }
 
+  private static readonly MAX_SLUG_ATTEMPTS = 1000;
+
   private async ensureUniqueBoardSlug(baseSlug: string, excludeId?: string): Promise<string> {
     let slug = baseSlug;
     let counter = 1;
-    
-    while (true) {
+
+    while (counter <= KanbanService.MAX_SLUG_ATTEMPTS) {
       const existing = await this.database.kysely
         .selectFrom('boards')
         .select('id')
         .where('slug', '=', slug)
         .where((eb) => excludeId ? eb('id', '!=', excludeId) : eb.lit(true))
         .executeTakeFirst();
-        
+
       if (!existing) {
         return slug;
       }
-      
+
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
+
+    throw new Error(`Failed to generate unique board slug after ${KanbanService.MAX_SLUG_ATTEMPTS} attempts`);
   }
 
   private async ensureUniqueCardSlug(boardId: string, baseSlug: string, excludeId?: string): Promise<string> {
     let slug = baseSlug;
     let counter = 1;
-    
-    while (true) {
+
+    while (counter <= KanbanService.MAX_SLUG_ATTEMPTS) {
       const existing = await this.database.kysely
         .selectFrom('cards')
         .select('id')
@@ -90,14 +94,16 @@ export class KanbanService {
         .where('slug', '=', slug)
         .where((eb) => excludeId ? eb('id', '!=', excludeId) : eb.lit(true))
         .executeTakeFirst();
-        
+
       if (!existing) {
         return slug;
       }
-      
+
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
+
+    throw new Error(`Failed to generate unique card slug after ${KanbanService.MAX_SLUG_ATTEMPTS} attempts`);
   }
 
   // Board operations

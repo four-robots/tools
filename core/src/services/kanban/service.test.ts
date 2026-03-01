@@ -920,4 +920,39 @@ describe('KanbanService', () => {
       });
     });
   });
+
+  describe('Slug Generation Safety', () => {
+    it('should return base slug when unique', async () => {
+      const ensureUniqueBoardSlug = (service as any).ensureUniqueBoardSlug.bind(service);
+
+      // First query returns no match — slug is unique
+      const mockQuery = createMockQueryBuilder(undefined);
+      mockDb.kysely.selectFrom.mockReturnValue(mockQuery);
+
+      const result = await ensureUniqueBoardSlug('test-board');
+      expect(result).toBe('test-board');
+    });
+
+    it('should append counter when base slug exists', async () => {
+      const ensureUniqueBoardSlug = (service as any).ensureUniqueBoardSlug.bind(service);
+
+      // First call: slug exists
+      const existingQuery = createMockQueryBuilder({ id: 'existing-id' });
+      mockDb.kysely.selectFrom.mockReturnValueOnce(existingQuery);
+
+      // Second call: slug-1 is unique
+      const uniqueQuery = createMockQueryBuilder(undefined);
+      mockDb.kysely.selectFrom.mockReturnValueOnce(uniqueQuery);
+
+      const result = await ensureUniqueBoardSlug('test-board');
+      expect(result).toBe('test-board-1');
+    });
+
+    it('should have a max attempt limit to prevent infinite loops', () => {
+      // Verify the constant exists and is reasonable
+      expect((KanbanService as any).MAX_SLUG_ATTEMPTS).toBeDefined();
+      expect((KanbanService as any).MAX_SLUG_ATTEMPTS).toBeGreaterThan(0);
+      expect((KanbanService as any).MAX_SLUG_ATTEMPTS).toBeLessThanOrEqual(10000);
+    });
+  });
 });

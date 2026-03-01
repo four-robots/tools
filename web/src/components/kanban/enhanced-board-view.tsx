@@ -521,7 +521,7 @@ export function EnhancedBoardView({
                           key={card.id}
                           card={card}
                           onClick={() => handleCardClick(card)}
-                          isCompact={isCompact}
+                          isCompact={isCompactView}
                           onQuickEdit={() => handleCardClick(card)}
                           onStartTimer={() => {
                             // Handle start timer
